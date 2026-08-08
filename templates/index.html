@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Athena — Hand-Poured Soy Candles</title>
+<meta name="description" content="Athena: high-quality soy wax candles, hand-poured, smooth colors, high-concentration fragrance. No soot. No shortcuts.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,400;1,6..96,500&family=Archivo:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/tokens.css">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<!-- ===== LOADER ===== -->
+<div id="loader">
+  <div class="loader-panel panel-left"></div>
+  <div class="loader-panel panel-right"></div>
+  <div class="loader-center">
+    <svg id="loader-candle" width="56" height="104" viewBox="0 0 56 104" fill="none">
+      <rect x="12" y="34" width="32" height="62" rx="2" fill="#F1E7D6"/>
+      <rect x="26.5" y="14" width="3" height="22" rx="1.5" fill="#D8C6A8"/>
+      <path id="wick-flame" d="M28 14C28 14 23 7 28 0C33 7 28 14 28 14Z" fill="#E39A3E" opacity="0"/>
+      <circle id="flame-glow" cx="28" cy="5" r="14" fill="#F0AF52" opacity="0"/>
+    </svg>
+    <p class="loader-label">ATHENA</p>
+  </div>
+</div>
+
+<!-- ===== NAV ===== -->
+<nav id="site-nav">
+  <div class="nav-inner container">
+    <a href="index.html" class="nav-logo">Athena</a>
+    <div class="nav-links">
+      <a href="#coastal">Coastal Line</a>
+      <a href="#jars">Jar Candles</a>
+      <a href="custom-candle.html">Make Your Own</a>
+      <a href="#all-products">Shop All</a>
+    </div>
+    <a href="#all-products" class="nav-cta">Shop Now</a>
+  </div>
+</nav>
+
+<!-- ===== HERO — scroll-scrub "video" ===== -->
+<section id="hero">
+  <div class="hero-sticky">
+    <div class="hero-frame-stage">
+      <video
+        id="hero-video"
+        class="hero-video"
+        poster="img/hero-poster.png"
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="auto">
+        <source src="img/hero.mp4" type="video/mp4">
+      </video>
+      <div class="hero-scrim"></div>
+    </div>
+    <div class="hero-content">
+      <p class="eyebrow hero-eyebrow">Hand-Poured · Soy Wax</p>
+      <h1 class="hero-title">Light,<br><em>slowly.</em></h1>
+      <p class="hero-sub">No soot. No shortcuts. Just clean-burning soy wax,<br class="br-desktop">smooth color, and fragrance you can actually smell across a room.</p>
+    </div>
+    <div class="hero-scroll-cue">
+      <span></span>
+      <p>Scroll</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CREDIBILITY ===== -->
+<section id="credibility">
+  <div class="container">
+    <p class="eyebrow center-text">Since day one</p>
+    <h2 class="cred-headline">Trusted by <span class="counter" data-target="300">0</span>+ homes<br>who chose a slower evening.</h2>
+    <div class="cred-row">
+      <div class="cred-stat">
+        <span class="counter" data-target="100">0</span><span class="stat-suffix">%</span>
+        <p>Soy wax, always</p>
+      </div>
+      <div class="cred-divider"></div>
+      <div class="cred-stat">
+        <span class="counter" data-target="0">0</span>
+        <p>Soot, ever</p>
+      </div>
+      <div class="cred-divider"></div>
+      <div class="cred-stat">
+        <span class="counter" data-target="4.9">0</span>
+        <p>Average rating</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== MAKE YOUR OWN CANDLE ===== -->
+<section id="custom">
+  <div class="custom-panel-doors">
+    <div class="cdoor cdoor-left"></div>
+    <div class="cdoor cdoor-right"></div>
+  </div>
+  <div class="container custom-inner">
+    <div class="custom-copy">
+      <p class="eyebrow">A New Service</p>
+      <h2>Make your own candle.</h2>
+      <p class="story-text">
+        Choose your mold. Choose your color. Choose your scent. Every Athena candle starts as a decision
+        someone made on purpose — now you can make those decisions yourself. Build something that's
+        entirely, only, yours.
+      </p>
+      <a href="custom-candle.html" class="btn btn-dark">Start Designing →</a>
+    </div>
+    <div class="custom-visual">
+      <div class="custom-step-stack">
+        <div class="custom-step" data-step="1">
+          <span class="custom-step-num">01</span>
+          <p>Pick a mold</p>
+        </div>
+        <div class="custom-step" data-step="2">
+          <span class="custom-step-num">02</span>
+          <p>Pick a color</p>
+        </div>
+        <div class="custom-step" data-step="3">
+          <span class="custom-step-num">03</span>
+          <p>Pick a scent</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== COASTAL / SHELL LINE ===== -->
+<section id="coastal">
+  <div class="coastal-tint"></div>
+  <div class="coastal-doors">
+    <div class="gyp-door gyp-door-left"></div>
+    <div class="gyp-door gyp-door-right"></div>
+  </div>
+
+  <div class="container coastal-intro">
+    <div class="coastal-visual">
+      <img src="img/scallop-dishes-a.webp" alt="A set of scallop-shaped candle dishes in the Athena coastal collection" loading="lazy">
+    </div>
+    <div class="coastal-copy">
+      <p class="eyebrow">The Coastal Line</p>
+      <h2>Cast from the shoreline.</h2>
+      <p class="story-text">
+        Every shell in this line is real — pressed into the mold before the wax ever goes in, so no two
+        candles fall exactly the same way. Hand-poured in our signature soy wax, smooth-colored, scented
+        without going heavy-handed on it.
+      </p>
+    </div>
+  </div>
+
+  <div class="hscroll-wrap">
+    <div id="coastal-track" class="hscroll-track">
+      <div class="track-loading">Loading candles...</div>
+    </div>
+  </div>
+
+  <div class="section-cta"><a href="#all-products" class="btn btn-outline">See All Products</a></div>
+</section>
+
+<!-- ===== JAR CANDLES ===== -->
+<section id="jars">
+  <div class="container jars-intro">
+    <div class="jars-copy">
+      <p class="eyebrow">Best Scents</p>
+      <h2>Poured into glass, built for evenings.</h2>
+      <p class="story-text">
+        Our jar line is where scent throw matters most. Most are wooden wick and full soy wax, like everything
+        else we make — a few are a soy-paraffin blend with a standard cotton wick, and we say so clearly on
+        every listing. Nothing hidden, ever.
+      </p>
+    </div>
+    <div class="jars-visual">
+      <img src="img/jar-hex-pink-unlit.webp" alt="Hexagonal glass jar candle in pink soy wax" loading="lazy">
+    </div>
+  </div>
+
+  <div class="hscroll-wrap">
+    <div id="jars-track" class="hscroll-track">
+      <div class="track-loading">Loading candles...</div>
+    </div>
+  </div>
+
+  <div class="section-cta"><a href="#all-products" class="btn btn-outline-light">See All Products</a></div>
+</section>
+
+<!-- ===== ALL PRODUCTS ===== -->
+<section id="all-products">
+  <div class="container">
+    <p class="eyebrow center-text">The Full Collection</p>
+    <h2 class="all-heading">Everything, in one place.</h2>
+
+    <div id="product-grid" class="all-grid">
+      <div class="grid-loading">Loading candles...</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== TESTIMONIALS ===== -->
+<section id="testimonials">
+  <div class="container">
+    <p class="eyebrow center-text light-eyebrow">What people notice first</p>
+    <h2 class="testi-headline">The scent throw, mostly.<br>Then the shape.</h2>
+
+    <div class="testi-track">
+      <figure class="testi-card">
+        <blockquote>"Lit it in the hallway and could smell it in the bedroom twenty minutes later. Didn't expect that from something this small."</blockquote>
+        <figcaption>— Priya S., verified buyer</figcaption>
+      </figure>
+      <figure class="testi-card">
+        <blockquote>"The shell candle sits on my bathroom shelf even after the wax is gone. Genuinely didn't think I'd want to keep it."</blockquote>
+        <figcaption>— Marco D., verified buyer</figcaption>
+      </figure>
+      <figure class="testi-card">
+        <blockquote>"No soot on the jar rim after three full burns. First soy candle that's actually held up to that claim for me."</blockquote>
+        <figcaption>— Aisha K., verified buyer</figcaption>
+      </figure>
+      <figure class="testi-card">
+        <blockquote>"Ordered Rose & Peony not expecting much and now I've bought it four times. Just tell me when it's back in stock."</blockquote>
+        <figcaption>— Helena R., verified buyer</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer id="site-footer">
+  <div class="container footer-top">
+    <div class="footer-brand">
+      <p class="footer-logo">Athena</p>
+      <p class="footer-tag">Hand-poured soy candles.<br>No soot. No shortcuts.</p>
+    </div>
+    <div class="footer-col">
+      <p class="footer-head">Shop</p>
+      <a href="#coastal">Coastal Line</a>
+      <a href="#jars">Jar Candles</a>
+      <a href="custom-candle.html">Make Your Own</a>
+      <a href="#all-products">All Products</a>
+    </div>
+    <div class="footer-col">
+      <p class="footer-head">Studio</p>
+      <a href="#">Our Story</a>
+      <a href="#">Materials</a>
+      <a href="#">Contact</a>
+    </div>
+    <div class="footer-col">
+      <p class="footer-head">Stay in touch</p>
+      <form class="footer-form" onsubmit="return false;">
+        <input type="email" placeholder="Email address" required>
+        <button type="submit" aria-label="Subscribe">→</button>
+      </form>
+    </div>
+  </div>
+  <div class="container footer-bottom">
+    <p>© 2026 Athena. All rights reserved.</p>
+    <p>Placeholder storefront — built for demonstration.</p>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="/static/script.js"></script>
+<script src="/static/items.js"></script>
+</body>
+</html>
+

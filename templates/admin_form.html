@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Portal | Markazus Sunnah</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='global.css') }}">
+</head>
+<body class="min-h-screen flex items-center justify-center p-6">
+
+    <div class="w-full max-w-md">
+        <div class="bg-[#fcfcfc] rounded-[40px] p-10 md:p-12 border-2 border-gray-300 shadow-sm">
+            <div class="text-center mb-10">
+                <h1 class="heading-font text-2xl font-black uppercase tracking-tighter mb-2">Markazus Sunnah</h1>
+                <p class="text-[10px] uppercase tracking-[0.3em] font-bold text-gray-400">Restricted Access</p>
+            </div>
+
+            <div id="message-container" class="hidden mb-6 p-4 rounded-2xl text-xs font-bold uppercase tracking-widest text-center border"></div>
+
+            <form id="login-form" class="space-y-6">
+                <div>
+                    <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gray-500 mb-2 ml-1">Username</label>
+                    <input type="text" name="username" class="input-field" placeholder="Admin username" required>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gray-500 mb-2 ml-1">Password</label>
+                    <input type="password" name="password" class="input-field" placeholder="••••••••" required>
+                </div>
+
+                <div class="pt-4">
+                    <button type="submit" id="submit-btn" class="w-full bg-black text-white py-5 rounded-full hover:bg-gray-800 transition duration-300 uppercase text-[10px] tracking-[0.3em] font-bold flex items-center justify-center gap-3">
+                        <span>Authenticate</span>
+                        <svg id="spinner" class="animate-spin h-4 w-4 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.827 2.627 8.24l3.373-2.949z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/admin_form.js"></script>
+</body>
+</html>

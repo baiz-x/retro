@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Ledger | Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: '#0a192f',
+                        'navy-light': '#112240',
+                        gold: '#d4af37',
+                    },
+                    fontFamily: {
+                        sans: ['Quicksand', 'sans-serif'],
+                        heading: ['Poppins', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .tab-content { display: none; opacity: 0; transition: opacity 0.3s ease; }
+        .tab-content.active { display: block; opacity: 1; }
+        
+        .input-field {
+            width: 100%;
+            margin-top: 0.5rem;
+            background-color: transparent;
+            padding: 0.5rem;
+            color: #0a192f;
+            font-size: 0.875rem;
+            border-bottom: 1px solid rgba(10, 25, 47, 0.2);
+            transition: border-color 0.2s;
+        }
+        .input-field:focus {
+            outline: none;
+            border-bottom-color: #d4af37;
+        }
+    </style>
+</head>
+<body class="bg-[#fcfcfc] text-navy font-sans h-screen flex flex-col overflow-hidden">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm p-5 flex justify-between items-center z-10 border-b-2 border-gray-200">
+        <div>
+            <h1 class="font-heading text-xl font-black uppercase tracking-tighter">Zenfox Command</h1>
+            <p class="text-[9px] uppercase tracking-[0.3em] font-bold text-gray-400">Master Ledger</p>
+        </div>
+        <div class="text-xs font-bold text-gold tracking-widest" id="clock">--:--</div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto p-4 md:p-8 pb-24 no-scrollbar">
+        
+        <!-- TAB 1: REVENUE -->
+        <section id="tab-revenue" class="tab-content active max-w-4xl mx-auto">
+            <h2 class="font-heading text-xl font-bold uppercase tracking-widest mb-6 border-b border-navy/10 pb-2 text-navy">Ledger Stats</h2>
+            
+            <div class="grid grid-cols-2 gap-4 mb-8">
+                <div class="bg-white p-6 rounded-xl border border-navy/10 shadow-sm flex flex-col items-center justify-center">
+                    <p class="text-[10px] uppercase font-bold text-gray-400 tracking-widest">Total Volume</p>
+                    <p class="text-3xl font-black text-navy mt-2" id="rev-total">৳0.00</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl border border-navy/10 shadow-sm flex flex-col items-center justify-center">
+                    <p class="text-[10px] uppercase font-bold text-gray-400 tracking-widest">Units Moved</p>
+                    <p class="text-3xl font-black text-gold mt-2" id="rev-count">0</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl border border-navy/10 shadow-sm overflow-hidden">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-navy text-gold uppercase text-[10px] tracking-widest">
+                        <tr>
+                            <th class="p-4">Asset Name</th>
+                            <th class="p-4">Qty</th>
+                            <th class="p-4 text-right">Gross Yield</th>
+                        </tr>
+                    </thead>
+                    <tbody id="revenue-table-body" class="divide-y divide-navy/10 font-medium text-navy/80"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- TAB 2: UPLOAD -->
+        <section id="tab-upload" class="tab-content max-w-3xl mx-auto">
+            <h2 class="font-heading text-xl font-bold uppercase tracking-widest mb-6 border-b border-navy/10 pb-2 text-navy">Asset Registration</h2>
+            
+            <form id="uploadForm" class="bg-white p-6 md:p-8 rounded-2xl border border-navy/10 shadow-sm space-y-6">
+                <input type="hidden" name="product_id" id="edit_product_id" value="">
+                <div>
+                    <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gold mb-1">Asset Designation (Name)</label>
+                    <input type="text" name="name" required class="input-field" placeholder="e.g. Real Madrid Home Jersey 24/25">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gold mb-1">Asset Description</label>
+                    <textarea name="description" rows="2" class="input-field" placeholder="Detailed product description..."></textarea>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gold mb-1">Base Price</label>
+                        <input type="number" step="0.01" name="price" required class="input-field" placeholder="0.00">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gold mb-1">Base Stock</label>
+                        <input type="number" name="stock" required class="input-field" placeholder="0">
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-navy/10">
+                    <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gold mb-3">Product Type</label>
+                    <div class="flex flex-wrap gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="collection_type" value="jersey" class="collection-cb w-4 h-4 accent-navy">
+                            <span class="text-sm font-semibold text-navy/80">Jersey</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="collection_type" value="boots" class="collection-cb w-4 h-4 accent-navy">
+                            <span class="text-sm font-semibold text-navy/80">Boots</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="collection_type" value="others" class="collection-cb w-4 h-4 accent-navy">
+                            <span class="text-sm font-semibold text-navy/80">Others</span>
+                        </label>
+                    </div>
+                    <p class="text-[9px] text-gray-400 font-bold uppercase mt-2">Select exactly one product type</p>
+                    <input type="hidden" name="collection_tags" id="collection_tags_input">
+                </div>
+
+                <div class="pt-4 border-t border-navy/10">
+                    <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gold mb-2">Inventory Architecture</label>
+                    <select name="variant_mode" id="variant_mode" class="input-field !mt-0 font-semibold text-navy">
+                        <option value="unified">Unified (Shared Price/Stock across all choices)</option>
+                        <option value="per_variant">Per Variant (Individual Price/Stock per combo)</option>
+                    </select>
+                </div>
+
+                <div id="dynamic-fields-container" class="bg-gray-50 p-5 rounded-xl border border-navy/10 hidden space-y-4 shadow-inner">
+                    <h3 class="text-[10px] uppercase font-bold text-navy tracking-widest border-b border-navy/10 pb-2">Variant Axes Configuration</h3>
+                    <p class="text-[10px] text-gray-500 font-bold uppercase">Enter comma-separated values (e.g. Red, Blue)</p>
+                    <div id="dynamic-inputs" class="space-y-4"></div>
+                </div>
+
+                <div id="matrix-container" class="hidden pt-4 border-t border-navy/10">
+                    <h3 class="text-[10px] uppercase font-bold text-navy tracking-widest mb-3">SKU Matrix Generator</h3>
+                    <div class="bg-white rounded border border-navy/20 overflow-hidden">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-navy text-gold uppercase text-[9px] tracking-widest">
+                                <tr>
+                                    <th class="p-2">Combination</th>
+                                    <th class="p-2 w-24">Price (৳)</th>
+                                    <th class="p-2 w-24">Stock</th>
+                                </tr>
+                            </thead>
+                            <tbody id="matrix-body" class="divide-y divide-navy/10"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-6 pt-4 border-t border-navy/10">
+                    <label class="block">
+                        <span class="text-[10px] uppercase font-bold text-gold">Primary Thumbnail</span>
+                        <input type="file" name="image" accept="image/*" class="w-full mt-2 text-xs text-navy/60 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[10px] file:font-bold file:uppercase file:bg-navy file:text-gold hover:file:bg-navy-light cursor-pointer">
+                    </label>
+
+                    <label class="block">
+                        <span class="text-[10px] uppercase font-bold text-gold">Gallery Images</span>
+                        <input type="file" name="gallery" accept="image/*" multiple class="w-full mt-2 text-xs text-navy/60 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-[10px] file:font-bold file:uppercase file:bg-navy file:text-gold hover:file:bg-navy-light cursor-pointer">
+                    </label>
+                </div>
+
+                <button type="submit" id="upload-btn" class="w-full bg-navy text-gold py-5 rounded uppercase font-bold tracking-[0.2em] text-[10px] hover:bg-navy-light transition-all mt-6 shadow-md flex justify-center items-center gap-2">
+                    <span id="upload-btn-label">Submit Asset to Ledger</span>
+                </button>
+                <button type="button" id="cancel-edit-btn" class="w-full hidden text-navy/50 py-2 text-[9px] uppercase font-bold tracking-widest hover:text-navy transition-colors">
+                    Cancel Edit
+                </button>
+            </form>
+        </section>
+
+        <!-- TAB 3: ORDERS -->
+        <section id="tab-orders" class="tab-content max-w-4xl mx-auto">
+            <h2 class="font-heading text-xl font-bold uppercase tracking-widest mb-6 border-b border-navy/10 pb-2 text-navy">Order Dispatch</h2>
+            
+            <div class="flex gap-2 overflow-x-auto no-scrollbar mb-6">
+                <button class="status-filter px-5 py-2 rounded-full bg-navy text-gold text-[10px] tracking-widest uppercase font-bold whitespace-nowrap shadow-sm" data-status="all">All</button>
+                <button class="status-filter px-5 py-2 rounded-full bg-white border border-navy/20 text-navy/60 text-[10px] tracking-widest uppercase font-bold whitespace-nowrap shadow-sm" data-status="Pending">Pending</button>
+                <button class="status-filter px-5 py-2 rounded-full bg-white border border-navy/20 text-navy/60 text-[10px] tracking-widest uppercase font-bold whitespace-nowrap shadow-sm" data-status="Packaged">Packaged</button>
+                <button class="status-filter px-5 py-2 rounded-full bg-white border border-navy/20 text-navy/60 text-[10px] tracking-widest uppercase font-bold whitespace-nowrap shadow-sm" data-status="Delivering">Transit</button>
+                <button class="status-filter px-5 py-2 rounded-full bg-white border border-navy/20 text-navy/60 text-[10px] tracking-widest uppercase font-bold whitespace-nowrap shadow-sm" data-status="Delivered">Complete</button>
+            </div>
+            
+            <div id="orders-container" class="space-y-4"></div>
+        </section>
+
+        <!-- TAB 4: EDIT / INVENTORY -->
+        <section id="tab-edit" class="tab-content max-w-4xl mx-auto">
+            <h2 class="font-heading text-xl font-bold uppercase tracking-widest mb-6 border-b border-navy/10 pb-2 text-navy">Inventory Matrix</h2>
+            <div id="products-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        </section>
+
+    </main>
+
+    <!-- Toast Notifications (survives tab switches — for async upload/update results) -->
+    <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 w-[90%] max-w-sm pointer-events-none"></div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bg-white border-t border-gray-200 fixed bottom-0 w-full flex justify-around p-2 pb-safe z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <button data-tab="revenue" class="nav-btn text-navy flex flex-col items-center gap-1 w-1/4 p-2 transition-colors">
+            <i class="fa-solid fa-chart-pie text-lg"></i>
+            <span class="text-[9px] uppercase tracking-widest font-bold">Ledger</span>
+        </button>
+        <button data-tab="upload" class="nav-btn text-gray-400 hover:text-navy flex flex-col items-center gap-1 w-1/4 p-2 transition-colors">
+            <i class="fa-solid fa-plus-square text-lg"></i>
+            <span class="text-[9px] uppercase tracking-widest font-bold">Deploy</span>
+        </button>
+        <button data-tab="orders" class="nav-btn text-gray-400 hover:text-navy flex flex-col items-center gap-1 w-1/4 p-2 transition-colors">
+            <i class="fa-solid fa-dolly text-lg"></i>
+            <span class="text-[9px] uppercase tracking-widest font-bold">Dispatch</span>
+        </button>
+        <button data-tab="edit" class="nav-btn text-gray-400 hover:text-navy flex flex-col items-center gap-1 w-1/4 p-2 transition-colors">
+            <i class="fa-solid fa-boxes-stacked text-lg"></i>
+            <span class="text-[9px] uppercase tracking-widest font-bold">Stock</span>
+        </button>
+    </nav>
+
+    <script src="/static/dashboard.js"></script>
+</body>
+</html>
+
+
+

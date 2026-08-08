@@ -1,0 +1,120 @@
+/* ============================================================
+   ATHENA — DESIGN TOKENS
+   Type scale: golden ratio (φ = 1.618), base 16px
+   16 → 26 → 42 → 68 → 110 → 178
+   Spacing: strict multiples of 8px
+   ============================================================ */
+
+:root{
+  /* ---- COLOR: cream-coffee, refined ---- */
+  --cream:        #FAF6EF;   /* page background */
+  --cream-deep:   #F1E9DA;   /* card / section alt background */
+  --sand:         #E4D5BC;   /* borders, dividers */
+  --coffee-mid:   #9C7C5C;   /* secondary text, meta */
+  --coffee:       #6B4A34;   /* accent, links, price */
+  --espresso:     #2B1E16;   /* headline ink, dark sections */
+  --espresso-90:  #201610;   /* deepest — footer / dark hero bg */
+  --white:        #FFFFFF;
+
+  /* ---- TYPE FAMILIES ---- */
+  --font-display: 'Bodoni Moda', 'Times New Roman', serif;
+  --font-body:    'Archivo', -apple-system, sans-serif;
+
+  /* ---- TYPE SCALE (golden ratio, base 16px) ---- */
+  --step--1:  10px;   /* 16 ÷ φ — micro-labels, legal */
+  --step-0:   16px;   /* body */
+  --step-1:   26px;   /* 16 × φ — sub-headline */
+  --step-2:   42px;   /* 26 × φ — section headline (h2) */
+  --step-3:   68px;   /* 42 × φ — large headline */
+  --step-4:  110px;   /* 68 × φ — hero headline (desktop) */
+  --step-5:  178px;   /* 110 × φ — reserved: full-bleed statement */
+
+  /* ---- SPACING (strict 8px multiples) ---- */
+  --sp-1:   8px;
+  --sp-2:  16px;
+  --sp-3:  24px;
+  --sp-4:  32px;
+  --sp-5:  40px;
+  --sp-6:  48px;
+  --sp-8:  64px;
+  --sp-10: 80px;
+  --sp-12: 96px;
+  --sp-16: 128px;
+  --sp-20: 160px;
+  --sp-24: 192px;
+
+  --ease-luxe: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-soft: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --radius: 2px; /* near-zero — luxury edges are sharp, not bubbly */
+}
+
+*{ margin:0; padding:0; box-sizing:border-box; }
+html{ scroll-behavior:smooth; }
+body{
+  background:var(--cream);
+  color:var(--espresso);
+  font-family:var(--font-body);
+  font-weight:400;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+img{ display:block; max-width:100%; }
+a{ color:inherit; text-decoration:none; }
+
+h1,h2,h3{
+  font-family:var(--font-display);
+  font-weight:500;
+  line-height:1.05;
+  letter-spacing:-0.01em;
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration:0.001ms !important; transition-duration:0.001ms !important; scroll-behavior:auto !important; }
+}
+
+::selection{ background:var(--coffee); color:var(--cream); }
+
+:focus-visible{ outline:2px solid var(--coffee); outline-offset:3px; }
+
+/* ---- SHARED PRIMITIVES ---- */
+.eyebrow{
+  font-family:var(--font-body);
+  font-size:var(--step--1);
+  letter-spacing:0.22em;
+  text-transform:uppercase;
+  color:var(--coffee-mid);
+  font-weight:500;
+}
+.container{
+  max-width:1320px;
+  margin:0 auto;
+  padding-left:var(--sp-4);
+  padding-right:var(--sp-4);
+}
+@media (max-width:700px){
+  .container{ padding-left:var(--sp-3); padding-right:var(--sp-3); }
+}
+
+.btn{
+  display:inline-flex;
+  align-items:center;
+  gap:var(--sp-1);
+  padding:var(--sp-3) var(--sp-5);
+  font-family:var(--font-body);
+  font-size:13px;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  font-weight:500;
+  border-radius:var(--radius);
+  border:1px solid transparent;
+  cursor:pointer;
+  transition:transform 0.5s var(--ease-luxe), background 0.5s var(--ease-luxe), color 0.5s var(--ease-luxe), border-color 0.5s var(--ease-luxe);
+}
+.btn-dark{ background:var(--espresso); color:var(--cream); }
+.btn-dark:hover{ background:var(--coffee); transform:translateY(-2px); }
+.btn-outline{ border-color:var(--espresso); color:var(--espresso); }
+.btn-outline:hover{ background:var(--espresso); color:var(--cream); transform:translateY(-2px); }
+.btn-outline-light{ border-color:var(--cream); color:var(--cream); }
+.btn-outline-light:hover{ background:var(--cream); color:var(--espresso); transform:translateY(-2px); }
+
