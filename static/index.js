@@ -1,229 +1,245 @@
-/**
- * MARKAZUS SUNNAH | Full Enterprise Production Logic
- * Optimized for: Render, Vercel, and slow-loading cloud assets
- */
+lucide.createIcons();
 
-// --- CONFIGURATION & GLOBAL VARIABLES ---
-const PRODUCT_API = '/api/products';
-let currentSlide = 0;
-let isAnimating = false;
+/* ---------------- Product rendering (card markup unchanged) ---------------- */
+const API_BASE = '/api';
 
-// --- 1. CORE INITIALIZATION ENGINE ---
-window.addEventListener('load', () => {
-    gsap.registerPlugin(ScrollTrigger, Draggable);
+const currency = n => '₹' + Number(n).toLocaleString('en-IN');
 
-    setupHeroSlider();
-    setupCollectionScroll();
-    initStatsCounter();
-    
-    fetchProducts().then(() => {
-        setTimeout(() => {
-            initScrollAnimations();
-            ScrollTrigger.refresh();
-        }, 800);
-    });
+function productCard(p) {
+  return `
+    <div class="product-card snap-card shrink-0 w-[168px] sm:w-[220px]">
+      <a href="/product/${encodeURIComponent(p.slug ?? '')}" class="block">
+        <div class="product-media relative rounded-xl overflow-hidden bg-sand-100 aspect-[3/4]">
+          <img src="${p.img}" alt="${p.name}" class="img-a w-full h-full object-cover" loading="lazy" />
+          ${p.img2 ? `<img src="${p.img2}" alt="" class="img-b w-full h-full object-cover" loading="lazy" />` : ''}
+          ${p.badge ? `<span class="absolute top-2 left-2 bg-clay text-cream-50 text-[10px] font-bold px-2 py-0.5 rounded-full">${p.badge}</span>` : ''}
+          ${p.oos ? `<span class="absolute top-2 left-2 bg-slate-800/85 text-cream-50 text-[10px] font-bold px-2 py-0.5 rounded-full">Out of Stock</span>` : ''}
+          ${!p.oos ? `<button class="add-btn absolute bottom-2 right-2 bg-cream-50 text-slate-800 text-[10px] font-bold uppercase tracking-wide px-3 py-1.5 rounded-full hover:bg-sage-400 hover:text-cream-50 transition-colors" data-name="${p.name}">Add</button>` : ''}
+        </div>
+        <div class="mt-2.5">
+          <p class="text-sm text-slate-800 font-medium leading-snug line-clamp-2">${p.name}</p>
+          <p class="text-sm mt-1">
+            <span class="font-bold text-slate-800">${currency(p.price)}</span>
+            ${p.mrp ? `<span class="text-slate-500/50 line-through text-xs ml-1.5">${currency(p.mrp)}</span>` : ''}
+          </p>
+        </div>
+      </a>
+    </div>`;
+}
 
-    const langBtn = document.getElementById('lang-toggle');
-    if (langBtn) {
-        const savedLang = localStorage.getItem('site_lang') || 'en';
-        applyLanguage(savedLang);
-        langBtn.addEventListener('click', () => {
-            const newLang = localStorage.getItem('site_lang') === 'en' ? 'bn' : 'en';
-            applyLanguage(newLang);
-        });
+// Maps a raw backend product (to_dict() shape) onto the fields productCard()
+// expects. mrp/badge are left undefined on purpose — no discount/original-
+// price field exists on the Product model, so no strike-through or badge
+// renders for real products. That's a real gap versus the old mock data,
+// not a silent fabrication of pricing that isn't there.
+function mapProductToCard(product) {
+  return {
+    name: product.name || 'Untitled product',
+    price: product.price,
+    img: product.image || 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=600&auto=format&fit=crop',
+    img2: (Array.isArray(product.gallery) && product.gallery[0]) ? product.gallery[0] : null,
+    oos: !product.stock || product.stock <= 0,
+    slug: product.slug,
+  };
+}
+
+const arrivalsRailEl = document.getElementById('arrivalsRail');
+const discoveryRailEl = document.getElementById('discoveryRail');
+
+async function loadArrivals() {
+  try {
+    const res = await fetch(`${API_BASE}/products?limit=7`);
+    const payload = await res.json();
+    if (payload.status === 'success' && Array.isArray(payload.data)) {
+      arrivalsRailEl.innerHTML = payload.data.map(mapProductToCard).map(productCard).join('');
+      lucide.createIcons();
     }
+  } catch (err) {
+    console.error('Failed to load new arrivals:', err);
+  }
+}
 
-    setTimeout(() => { ScrollTrigger.refresh(); }, 2500);
+async function loadDiscovery() {
+  try {
+    const res = await fetch(`${API_BASE}/products/random?limit=5`);
+    const payload = await res.json();
+    if (payload.status === 'success' && Array.isArray(payload.data)) {
+      // insertAdjacentHTML('beforeend') — same as before, so the hardcoded
+      // promo tile stays first in the rail and cards are appended after it.
+      discoveryRailEl.insertAdjacentHTML('beforeend', payload.data.map(mapProductToCard).map(productCard).join(''));
+      lucide.createIcons();
+    }
+  } catch (err) {
+    console.error('Failed to load random discovery:', err);
+  }
+}
+
+loadArrivals();
+loadDiscovery();
+
+/* ---------------- Cart ---------------- */
+let cartCount = 0;
+const cartCountEl = document.getElementById('cartCount');
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.add-btn');
+  if (!btn) return;
+  e.preventDefault();
+  cartCount++;
+  cartCountEl.textContent = cartCount;
+  btn.textContent = 'Added';
+  setTimeout(() => { btn.textContent = 'Add'; }, 900);
 });
 
-// --- 2. API & RENDERING ---
-async function fetchProducts() {
-    const grid = document.getElementById('product-grid');
-    if (!grid) return;
-
-    try {
-        const response = await fetch(PRODUCT_API);
-        const result = await response.json();
-        if (result.status === 'success') {
-            renderProductCards(result.data, grid);
-        }
-    } catch (error) {
-        console.error("Critical API Failure:", error);
-    }
+const cartOverlay = document.getElementById('cartOverlay');
+const cartDrawer = document.getElementById('cartDrawer');
+function openCart() {
+  cartOverlay.classList.add('open');
+  cartDrawer.classList.add('open');
+  document.body.style.overflow = 'hidden';
 }
-
-function renderProductCards(products, container) {
-    container.innerHTML = products.map(product => `
-        <div class="product-card bg-white group shadow-sm reveal-item rounded-2xl opacity-0 translate-y-8 scale-95 transition-all">
-            <a href="/product?id=${product.id}" class="block">
-                <div class="relative overflow-hidden bg-gray-400 aspect-square mb-4 rounded-2xl">
-                    <img src="${product.image || '/static/img/placeholder.webp'}" 
-                         alt="${product.name}" 
-                         class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
-                </div>
-                <div class="p-4">
-                    <p class="text-sm text-gray-500 mb-1" data-bn="মারকাযুস সুন্নাহ">Markazus Sunnah</p>
-                    <h3 class="heading-font text-xl font-semibold mb-2" data-bn="${product.name_bn || product.name}">${product.name}</h3>
-                    <p class="text-lg font-semibold" data-bn="৳${product.price}">${product.price} taka</p>
-                </div>
-            </a>
-        </div>
-    `).join('');
-    applyLanguage(localStorage.getItem('site_lang') || 'en');
+function closeCart() {
+  cartOverlay.classList.remove('open');
+  cartDrawer.classList.remove('open');
+  document.body.style.overflow = '';
 }
+document.getElementById('cartBtn').addEventListener('click', openCart);
+document.getElementById('mobileCartBtn').addEventListener('click', openCart);
+document.getElementById('cartCloseBtn').addEventListener('click', closeCart);
+document.getElementById('cartOverlay').addEventListener('click', closeCart);
+document.getElementById('cartStartShoppingBtn').addEventListener('click', () => {
+  closeCart();
+  document.getElementById('new-arrivals').scrollIntoView({ behavior: 'smooth' });
+});
 
-// --- 3. ANIMATION MODULES ---
-function initScrollAnimations() {
-    ScrollTrigger.create({
-        start: "top -50",
-        onEnter: () => gsap.to("#navbar", { height: 65, backgroundColor: "rgba(255,255,255,0.95)", backdropFilter: "blur(10px)", duration: 0.4 }),
-        onLeaveBack: () => gsap.to("#navbar", { height: 80, backgroundColor: "rgba(255,255,255,1)", backdropFilter: "blur(0px)", duration: 0.4 })
+/* ---------------- Search ---------------- */
+const searchOverlay = document.getElementById('searchOverlay');
+function openSearch() {
+  searchOverlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('searchInput').focus(), 100);
+}
+function closeSearch() {
+  searchOverlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.getElementById('searchBtn').addEventListener('click', openSearch);
+document.getElementById('mobileSearchBtn').addEventListener('click', openSearch);
+document.getElementById('searchCloseBtn').addEventListener('click', closeSearch);
+searchOverlay.addEventListener('click', e => { if (e.target === searchOverlay) closeSearch(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeSearch(); closeCart(); }
+});
+
+/* ---------------- Mobile menu ---------------- */
+const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+const mobileMenu = document.getElementById('mobileMenu');
+mobileMenuBtn.addEventListener('click', () => {
+  const isOpen = mobileMenu.classList.toggle('open');
+  mobileMenuBtn.setAttribute('aria-expanded', isOpen);
+  mobileMenuBtn.innerHTML = isOpen ? '<i data-lucide="x" class="w-6 h-6"></i>' : '<i data-lucide="menu" class="w-6 h-6"></i>';
+  lucide.createIcons();
+});
+
+/* ---------------- Theme toggle (visual, capsule navbar) ---------------- */
+const themeToggleBtn = document.getElementById('themeToggleBtn');
+let isDarkIcon = true;
+themeToggleBtn.addEventListener('click', () => {
+  isDarkIcon = !isDarkIcon;
+  themeToggleBtn.innerHTML = isDarkIcon
+    ? '<i data-lucide="moon" class="w-[18px] h-[18px]"></i>'
+    : '<i data-lucide="sun" class="w-[18px] h-[18px]"></i>';
+  lucide.createIcons();
+});
+
+/* ---------------- Our Categories — scroll-filling timeline ---------------- */
+(function () {
+  const wrap = document.getElementById('timelineWrap');
+  const fill = document.getElementById('timelineFill');
+  const dots = document.querySelectorAll('.timeline-dot');
+  if (!wrap || !fill) return;
+
+  function updateTimeline() {
+    const rect = wrap.getBoundingClientRect();
+    const viewportH = window.innerHeight;
+    const viewportCenter = viewportH * 0.55;
+
+    // Fill percentage: how far the viewport center has progressed through the wrap
+    const progressPx = viewportCenter - rect.top;
+    const pct = Math.min(100, Math.max(0, (progressPx / rect.height) * 100));
+    fill.style.height = pct + '%';
+
+    // Activate dots whose card has been passed
+    dots.forEach(dot => {
+      const dotRect = dot.getBoundingClientRect();
+      const passed = dotRect.top < viewportCenter;
+      dot.classList.toggle('bg-sage-400', passed);
+      dot.classList.toggle('border-sage-400', passed);
+      dot.classList.toggle('bg-cream-50', !passed);
+      dot.classList.toggle('border-sand-300', !passed);
+      dot.style.boxShadow = passed ? '0 0 0 4px rgba(124,144,130,0.18)' : 'none';
     });
+  }
 
-    gsap.utils.toArray('.reveal-item').forEach(item => {
-        gsap.to(item, {
-            opacity: 1, y: 0, scale: 1,
-            duration: 1.1, ease: "power4.out",
-            scrollTrigger: { trigger: item, start: "top 90%" }
-        });
-    });
+  window.addEventListener('scroll', updateTimeline, { passive: true });
+  window.addEventListener('resize', updateTimeline);
+  updateTimeline();
+})();
 
-    gsap.set(".item-left", { xPercent: -150, y: 100, rotation: -30, autoAlpha: 0 });
-    gsap.set(".item-right", { xPercent: 150, y: -100, rotation: 30, autoAlpha: 0 });
-    gsap.set(".hero-title", { xPercent: -100, autoAlpha: 0 });
-
-    const sceneTl = gsap.timeline({
-        scrollTrigger: {
-            trigger: ".scene-container",
-            start: "top top",
-            end: "+=200%",
-            scrub: 1.5,
-            pin: true,
-            anticipatePin: 1,
-            invalidateOnRefresh: true
-        }
-    });
-
-    sceneTl
-        .to(".bg-layer", { scale: 1.1, autoAlpha: 0.8, duration: 2 })
-        .to(".hero-title", { xPercent: 0, autoAlpha: 1, duration: 2 }, "-=1.5")
-        .to(".item-left", { xPercent: 0, y: 0, rotation: 0, autoAlpha: 1, duration: 3, ease: "power2.out" }, "-=1.8")
-        .to(".item-right", { xPercent: 0, y: 0, rotation: 0, autoAlpha: 1, duration: 3, ease: "power2.out" }, "-=3");
+/* ---------------- Hero slider ---------------- */
+const heroSlides = document.querySelectorAll('.hero-slide');
+const heroDots = document.querySelectorAll('.hero-dot');
+let heroIndex = 0;
+function showHero(i) {
+  heroSlides.forEach((s, idx) => s.classList.toggle('active', idx === i));
+  heroDots.forEach((d, idx) => {
+    d.classList.toggle('w-6', idx === i);
+    d.classList.toggle('bg-sage-300', idx === i);
+    d.classList.toggle('w-1.5', idx !== i);
+    d.classList.toggle('bg-cream-50/40', idx !== i);
+    d.setAttribute('aria-selected', idx === i);
+  });
+  heroIndex = i;
 }
+heroDots.forEach(dot => dot.addEventListener('click', () => showHero(Number(dot.dataset.index))));
+setInterval(() => showHero((heroIndex + 1) % heroSlides.length), 5000);
 
-function setupHeroSlider() {
-    const slides = document.querySelectorAll('.hero-slide');
-    const dots = document.querySelectorAll('.hero-dot');
-    if (!slides.length) return;
+/* ---------------- FAQ accordion ---------------- */
+const faqData = [
+  { q: 'How long does shipping take?', a: 'We offer free express shipping nationwide. Expected delivery is within 9–15 working days from the date of order.' },
+  { q: 'Do you offer Cash on Delivery (COD)?', a: 'Yes, we support COD. To secure your order and prevent fraudulent requests, all COD deliveries require a small advance payment at checkout.' },
+  { q: 'Can I track my order?', a: 'Absolutely. Once your order has been dispatched from our warehouse, you\'ll receive tracking information via email and SMS.' },
+];
 
-    gsap.set(slides, { autoAlpha: 0 });
-    gsap.set(slides[0], { autoAlpha: 1 });
-    gsap.set(dots[0], { width: 48, backgroundColor: "white" });
+const faqList = document.getElementById('faqList');
+faqList.innerHTML = faqData.map((item, i) => `
+  <div class="faq-item">
+    <button class="faq-toggle w-full flex items-center justify-between gap-4 py-5 text-left" data-index="${i}" aria-expanded="false">
+      <span class="font-semibold text-slate-800 text-sm sm:text-base">${item.q}</span>
+      <i data-lucide="chevron-down" class="faq-chevron w-5 h-5 text-sage-500 shrink-0"></i>
+    </button>
+    <div class="faq-answer" id="faq-answer-${i}">
+      <p class="text-sm text-slate-500/80 leading-relaxed pb-5 pr-8">${item.a}</p>
+    </div>
+  </div>
+`).join('');
+lucide.createIcons();
 
-    gsap.fromTo(slides[0].querySelector('.hero-img'), { scale: 1.15 }, { scale: 1, duration: 8, ease: "power2.out" });
+faqList.addEventListener('click', e => {
+  const toggle = e.target.closest('.faq-toggle');
+  if (!toggle) return;
+  const answer = document.getElementById(`faq-answer-${toggle.dataset.index}`);
+  const chevron = toggle.querySelector('.faq-chevron');
+  const isOpen = answer.classList.contains('open');
 
-    function changeSlide(index) {
-        if (isAnimating || index === currentSlide) return;
-        isAnimating = true;
-        const oldSlide = slides[currentSlide];
-        const newSlide = slides[index];
-        dots.forEach((dot, i) => gsap.to(dot, { width: i === index ? 48 : 12, backgroundColor: i === index ? "white" : "rgba(255,255,255,0.2)", duration: 0.5 }));
-        const tl = gsap.timeline({ onComplete: () => { currentSlide = index; isAnimating = false; }});
-        tl.to(oldSlide, { autoAlpha: 0, scale: 0.98, duration: 1.2, ease: "expo.inOut" }, 0);
-        tl.fromTo(newSlide, { autoAlpha: 0, scale: 1.02 }, { autoAlpha: 1, scale: 1, duration: 1.2, ease: "expo.inOut" }, 0);
-        tl.fromTo(newSlide.querySelector('.hero-img'), { scale: 1.15 }, { scale: 1, duration: 6, ease: "power2.out" }, 0);
-    }
-    dots.forEach((dot, i) => dot.addEventListener('click', () => changeSlide(i)));
-    setInterval(() => changeSlide((currentSlide + 1) % slides.length), 8000);
-}
+  document.querySelectorAll('.faq-answer.open').forEach(el => el.classList.remove('open'));
+  document.querySelectorAll('.faq-chevron.open').forEach(el => el.classList.remove('open'));
+  document.querySelectorAll('.faq-toggle').forEach(el => el.setAttribute('aria-expanded', 'false'));
 
-function setupCollectionScroll() {
-    const wrapper = document.getElementById('collectionsWrapper');
-    if (!wrapper) return;
-
-    const cards = wrapper.querySelectorAll('.collection-card');
-    const gap = 24; 
-    let autoTimer, draggable;
-
-    function getBounds() {
-        // Correctly calculates the 'Right Wall' by subtracting the viewport width from total content width
-        return {
-            minX: -(wrapper.scrollWidth - wrapper.parentElement.offsetWidth),
-            maxX: 0
-        };
-    }
-
-    draggable = Draggable.create(wrapper, {
-        type: "x",
-        inertia: true,
-        bounds: getBounds(),
-        edgeResistance: 0.7, // Adds a tactile feel when hitting the right boundary
-        onPress() {
-            gsap.killTweensOf(wrapper);
-            clearInterval(autoTimer);
-            this.update(); // Recalculate bounds in case screen size changed
-        },
-        onRelease() {
-            const step = cards[0].offsetWidth + gap;
-            // Snap the card to the nearest place in the wall
-            let target = Math.round(this.x / step) * step;
-            
-            // Safety Clamp to ensure we don't snap past the wall
-            const bounds = getBounds();
-            target = Math.max(bounds.minX, Math.min(bounds.maxX, target));
-
-            gsap.to(wrapper, {
-                x: target,
-                duration: 0.6,
-                ease: "power3.out",
-                onComplete: startAuto
-            });
-        }
-    })[0];
-
-    function moveNext() {
-        const step = cards[0].offsetWidth + gap;
-        const bounds = getBounds();
-        const currentX = gsap.getProperty(wrapper, "x");
-        let target = currentX - step;
-        if (target < bounds.minX - 10) target = 0;
-        gsap.to(wrapper, { x: target, duration: 0.9, ease: "power3.inOut" });
-    }
-
-    function startAuto() {
-        clearInterval(autoTimer);
-        autoTimer = setInterval(moveNext, 4000);
-    }
-
-    startAuto();
-    wrapper.addEventListener('mouseenter', () => { clearInterval(autoTimer); gsap.killTweensOf(wrapper); });
-    wrapper.addEventListener('mouseleave', startAuto);
-
-    window.addEventListener('resize', () => {
-        draggable.applyBounds(getBounds());
-    });
-}
-
-function initStatsCounter() {
-    gsap.utils.toArray('.count-up').forEach(el => {
-        const target = parseInt(el.dataset.target);
-        gsap.to(el, {
-            innerText: target, duration: 4, snap: { innerText: 1 },
-            scrollTrigger: { trigger: el, start: "top 90%" }
-        });
-    });
-}
-
-// --- 4. LANGUAGE SYSTEM ---
-function applyLanguage(lang) {
-    document.body.classList.toggle('lang-bn', lang === 'bn');
-    document.querySelectorAll('[data-bn]').forEach(el => {
-        if (!el.dataset.en) el.dataset.en = el.innerHTML;
-        el.innerHTML = lang === 'bn' ? el.dataset.bn : el.dataset.en;
-    });
-    const lb = document.getElementById('lang-toggle');
-    if (lb) lb.textContent = lang === 'bn' ? 'EN' : 'BN';
-    localStorage.setItem('site_lang', lang);
-}
+  if (!isOpen) {
+    answer.classList.add('open');
+    chevron.classList.add('open');
+    toggle.setAttribute('aria-expanded', 'true');
+  }
+});
 
 

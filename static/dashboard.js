@@ -18,11 +18,7 @@ let editingProductId = null;
 const COLLECTION_FIELDS = {
     "jersey": [
         { name: "jersey_fabric", label: "Fabric Type", type: "text" },
-        { name: "jersey_size", label: "Size", type: "text" },
-        { name: "jersey_edition", label: "Edition", type: "checkbox-group", options: ["Player", "Fan"] },
-        { name: "jersey_version", label: "Version", type: "checkbox-group", options: ["BD", "BD Premium", "China", "Thai"] },
-        { name: "jersey_kit_type", label: "Kit Type", type: "checkbox-group", options: ["Home", "Away", "National"] },
-        { name: "jersey_club", label: "Club / Team", type: "text" }
+        { name: "jersey_size", label: "Size", type: "text" }
     ],
     "boots": [
         { name: "boots_size", label: "Size (EU)", type: "text" },
@@ -482,6 +478,11 @@ function enterEditMode(productId) {
     form.querySelector('[name="description"]').value = prod.description || '';
     form.querySelector('[name="price"]').value = prod.price ?? '';
     form.querySelector('[name="stock"]').value = prod.stock ?? '';
+    form.querySelector('[name="club"]').value = prod.club || '';
+    form.querySelector('[name="category"]').value = prod.category || '';
+    form.querySelector('[name="edition"]').value = prod.edition || '';
+    form.querySelector('[name="version"]').value = prod.version || '';
+    form.querySelector('[name="kit_type"]').value = prod.kit_type || '';
 
     const tags = prod.collection_tags || [];
     document.querySelectorAll('.collection-cb').forEach(cb => {
@@ -695,6 +696,8 @@ async function adjustStock(productId, delta) {
         alert(`Error: ${err.message}`);
     }
 }
+
+
 
 
 

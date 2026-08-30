@@ -21,12 +21,15 @@ to a single-focus jerseys & clothing brand.
     None of that logic was collection-specific; it was already generic
     over axis names, so the jersey/boots/others pivot needed no
     changes there. Only the field-name constant below changes.
-  - Fixed-option fields (jersey_edition, jersey_version,
-    jersey_kit_type) are rendered as checkboxes in the dashboard
-    instead of free text, per Hasan's confirmed choice — but that is
-    a frontend-only distinction. This file only needs to know the
-    field NAME, not which widget renders it, since the value still
-    lands in variants.axes the same way either way.
+  - edition/version/kit_type (formerly jersey_edition/jersey_version/
+    jersey_kit_type checkbox-group axes inside variants.axes) are now
+    real top-level columns instead — one value per product listing,
+    not a variant. Promoted for the same reason as club/category:
+    filterable dimensions need to be real columns so /products?edition=
+    Player etc. can do a plain column comparison instead of a JSONB
+    path query. Dashboard now renders these as single-select dropdowns,
+    not checkboxes. jersey_fabric/jersey_size remain genuine variant
+    axes inside variants.axes, unchanged.
 """
 
 from datetime import datetime
@@ -47,7 +50,7 @@ from . import db
 # earlier in this build. Promote to a table later if you want
 # collections/field-sets defined through the UI instead of code.
 COLLECTION_EXTRA_FIELDS = {
-    "jersey": ["jersey_fabric", "jersey_size", "jersey_edition", "jersey_version", "jersey_kit_type", "jersey_club"],
+    "jersey": ["jersey_fabric", "jersey_size"],
     "boots": ["boots_size", "boots_material", "boots_color", "boots_type"],
     "others": ["fabric_type", "gsm", "size", "color"],
 }
@@ -74,7 +77,48 @@ def get_extra_fields_for_collection(collection_tags):
 class Product(db.Model):
     __tablename__ = "products"
 
+    # Composite index backing filter_products_service's club/category/price
+    # query (product_service.py) — the actual "multi-column index" Hasan
+    # asked for. This only works because club/category are real columns,
+    # not variants JSON keys; jersey_edition stays JSON-only (fixed
+    # checkbox options, no typo risk) and is filtered via JSONB path
+    # query instead — it cannot ride this index, flagged in product_service.py.
+    __table_args__ = (
+        db.Index('idx_products_club_category_price', 'club', 'category', 'price'),
+    )
+
     id = db.Column(db.Integer, primary_key=True)
+
+    # URL-safe unique identifier, generated once at creation time from
+    # name (see product_service.py create_slug/create_product) and never
+    # regenerated on update — so a shared/bookmarked product URL never
+    # breaks from a later name edit. Nullable for now so this migrates
+    # cleanly onto existing rows without a backfill; new rows always get one.
+    slug = db.Column(db.String(255), unique=True, nullable=True, index=True)
+
+    # Real, indexed columns (not variants JSON) — both promoted from
+    # free-text/no-field-at-all specifically so they're typo-safe and
+    # filterable via a real composite index (see idx_products_club_category_price
+    # below), per Hasan's confirmed decision. club used to be a free-text
+    # variant axis (jersey_club); category didn't exist anywhere before.
+    # Existing rows will have both as NULL after migration — nothing
+    # back-fills automatically from the old variants.axes.jersey_club data.
+    club = db.Column(db.String(120), nullable=True, index=True)
+    category = db.Column(db.String(120), nullable=True, index=True)
+
+    # Promoted out of variants.axes (was jersey_edition/jersey_version/
+    # jersey_kit_type, checkbox-group axes) into real columns, per
+    # Hasan's confirmed decision — one edition/version/kit_type per
+    # product listing, not a variant. Same reasoning as club/category:
+    # filterable dimensions need to be real columns, not JSON axes,
+    # and it makes /products?edition=Player actually work instead of
+    # relying on a JSONB path query. Jersey-specific in practice (boots/
+    # others never populate these) but kept ungated at the model level,
+    # same as club/category, rather than adding collection-conditional
+    # columns.
+    edition = db.Column(db.String(60), nullable=True, index=True)
+    version = db.Column(db.String(60), nullable=True)
+    kit_type = db.Column(db.String(60), nullable=True)
 
     # ---- PERMANENT FIELDS (every product has these) ----
     name = db.Column(db.String(200), nullable=False)
@@ -104,18 +148,20 @@ class Product(db.Model):
     variant_mode = db.Column(db.String(20), nullable=False, default="unified")  # "unified" | "per_variant"
 
     # ---- VARIANTS — one JSON blob, shape below ----
+    # For jersey products, jersey_size is now the only axis — edition/
+    # version/kit_type moved to the real columns above. axis_images
+    # examples below use jersey_size accordingly; boots/others keep
+    # their own multi-axis examples unchanged.
     # {
     #   "axes": {
-    #     "jersey_size":       ["S", "M", "L", "XL"],
-    #     "jersey_kit_type":   ["Home", "Away"],
-    #     "jersey_edition":    ["Player", "Fan"]
+    #     "jersey_size":       ["S", "M", "L", "XL"]
     #   },
     #   "combinations": [
-    #     {"jersey_size": "M", "jersey_kit_type": "Home", "jersey_edition": "Fan", "price": 1800, "stock": 12},
-    #     {"jersey_size": "L", "jersey_kit_type": "Home", "jersey_edition": "Fan", "price": 1800, "stock": 5}
+    #     {"jersey_size": "M", "price": 1800, "stock": 12},
+    #     {"jersey_size": "L", "price": 1800, "stock": 5}
     #   ],
     #   "axis_images": {
-    #     "jersey_kit_type": {"Home": "https://.../home.jpg", "Away": "https://.../away.jpg"}
+    #     "jersey_size": {"M": "https://.../m.jpg", "L": "https://.../l.jpg"}
     #   }
     # }
     #
@@ -137,12 +183,18 @@ class Product(db.Model):
     def to_dict(self):
         return {
             "id": self.id,
+            "slug": self.slug,
             "name": self.name,
             "description": self.description,
             "image": self.image,
             "gallery": self.gallery or [],
             "collection_tags": self.collection_tags or [],
             "collection_label": self.collection_label,
+            "club": self.club,
+            "category": self.category,
+            "edition": self.edition,
+            "version": self.version,
+            "kit_type": self.kit_type,
             "price": self.price,
             "stock": self.stock,
             "variant_mode": self.variant_mode,
@@ -151,4 +203,6 @@ class Product(db.Model):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+
+
 

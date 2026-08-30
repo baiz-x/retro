@@ -1,4 +1,6 @@
 import os
+import re
+import uuid
 import json
 import cloudinary
 import cloudinary.uploader
@@ -6,6 +8,7 @@ from datetime import datetime
 from functools import wraps
 
 from flask import request, jsonify, current_app
+from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -31,9 +34,17 @@ def extract_public_id(image_url):
     except (ValueError, IndexError):
         return None
 
-def get_all_products():
+def get_all_products(limit=None):
     try:
-        products = Product.query.all()
+        query = Product.query
+        if limit is not None:
+            # Ordering only kicks in when a limit is requested — the plain,
+            # unparinated call (used by the admin dashboard's product list)
+            # stays exactly as it was: Product.query.all(), no ORDER BY.
+            # No created_at column exists on this model, so "newest" is
+            # approximated via highest id (auto-increment == insertion order).
+            query = query.order_by(Product.id.desc()).limit(int(limit))
+        products = query.all()
         return [product.to_dict() for product in products]
     except SQLAlchemyError as e:
         current_app.logger.error(f"Database error in get_all_products: {str(e)}")
@@ -45,6 +56,21 @@ def get_product_by_id(product_id):
     except SQLAlchemyError as e:
         current_app.logger.error(f"Database error in get_product_by_id: {str(e)}")
         raise
+
+def get_product_by_slug_service(slug):
+    try:
+        return Product.query.filter_by(slug=slug).first()
+    except SQLAlchemyError as e:
+        current_app.logger.error(f"Database error in get_product_by_slug_service: {str(e)}")
+        raise
+
+def create_slug(title):
+    # Lowercase and strip common stop words before hyphenating
+    slug = title.lower()
+    slug = re.sub(r'\b(for|a|of|or|the|and|in|is)\b', '', slug)
+    # Replace non-alphanumeric with a single hyphen
+    slug = re.sub(r'[^a-z0-9]+', '-', slug)
+    return slug.strip('-')
 
 def create_product(data, image_file, gallery_files=None):
     """
@@ -70,10 +96,11 @@ def create_product(data, image_file, gallery_files=None):
                     gallery_urls.append(res.get('secure_url'))
 
         # 4. Determine Price & Stock
-        # variants are keyed by axis (e.g. jersey_size/jersey_kit_type),
-        # e.g. {"axes": {"jersey_size": [...]}, "combinations": [...],
-        # "axis_images": {...}} — not by size with per-variant price/stock
-        # baked into a flat {v['size']: v} shape. See models.py for the
+        # variants are keyed by axis (e.g. jersey_size for jerseys,
+        # boots_size for boots), e.g. {"axes": {"jersey_size": [...]},
+        # "combinations": [...], "axis_images": {...}} — not by size
+        # with per-variant price/stock baked into a flat {v['size']: v}
+        # shape. See models.py for the
         # full shape. This part of the schema is unchanged by the Retro
         # Studio pivot — it was already generic over axis names.
         base_price = float(data.get('price', 0))
@@ -90,11 +117,25 @@ def create_product(data, image_file, gallery_files=None):
         if isinstance(collection_tags, str):
             collection_tags = json.loads(collection_tags) if collection_tags else []
 
+        # Generate unique slug
+        base_slug = create_slug(data.get('name'))
+        unique_slug = base_slug
+
+        # Conflict resolution: append 4 random characters if it already exists
+        while Product.query.filter_by(slug=unique_slug).first() is not None:
+            unique_slug = f"{base_slug}-{uuid.uuid4().hex[:4]}"
+
         # 5. Create Database Entry
         new_product = Product(
+            slug=unique_slug,
             name=data.get('name'),
             collection_tags=collection_tags,
             collection_label=data.get('collection_label'),
+            club=data.get('club'),
+            category=data.get('category'),
+            edition=data.get('edition'),
+            version=data.get('version'),
+            kit_type=data.get('kit_type'),
             price=base_price,
             stock=total_stock,
             description=data.get('description'),
@@ -123,6 +164,11 @@ def update_product(product_id, data, image_file=None, gallery_files=None):
         if 'description' in data: product.description = data['description']
         if 'price' in data: product.price = float(data['price'])
         if 'stock' in data: product.stock = int(data['stock'])
+        if 'club' in data: product.club = data['club']
+        if 'category' in data: product.category = data['category']
+        if 'edition' in data: product.edition = data['edition']
+        if 'version' in data: product.version = data['version']
+        if 'kit_type' in data: product.kit_type = data['kit_type']
 
         if 'collection_label' in data: product.collection_label = data['collection_label']
         if 'collection_tags' in data:
@@ -195,15 +241,124 @@ def delete_product(product_id):
     except Exception as e:
         db.session.rollback()
         return False, f"Deletion failed: {str(e)}"
-        
+
+def filter_products_service(filters):
+    """
+    Filters products for the storefront. club/category/price ride the
+    real composite index (idx_products_club_category_price in models.py)
+    since all three are plain typed columns — the fast path. edition
+    stays inside the variants JSON blob (fixed checkbox options, no
+    typo risk, so it never needed column promotion) and is queried via
+    JSONB path lookup instead — this cannot use the composite index and
+    is the slower path; flagged since it's the one filter field that
+    doesn't get the "multi-column index" guarantee the others do.
+
+    Excludes stock=0 products, per confirmed decision (no is_available
+    column exists on this model — stock is the only availability signal).
+    """
+    try:
+        # Enforce availability first, matching the index root layout —
+        # same pattern as Robin's is_available gate, re-targeted to stock
+        # since that's this model's actual availability signal.
+        query = Product.query.filter(Product.stock > 0)
+
+        # club/category: exact match on real columns — ride the composite index
+        if filters.get('club'):
+            query = query.filter(Product.club == filters['club'])
+
+        if filters.get('category'):
+            query = query.filter(Product.category == filters['category'])
+
+        # search: partial, case-insensitive match on name only — not club or
+        # category, since club is already its own filter field and matching
+        # category risks unrelated partial-word overlaps. ILIKE, not the
+        # composite index (that's exact-match only) — a plain scan/trigram
+        # lookup depending on whether pg_trgm + a GIN index on name exists.
+        if filters.get('search'):
+            query = query.filter(Product.name.ilike(f"%{filters['search']}%"))
+
+        # price: range match — third column in the composite index
+        if filters.get('min_price'):
+            query = query.filter(Product.price >= float(filters['min_price']))
+        if filters.get('max_price'):
+            query = query.filter(Product.price <= float(filters['max_price']))
+
+        # edition: exact match on real column, same as club/category —
+        # previously a JSONB path query against variants.axes.jersey_edition,
+        # replaced per Hasan's confirmed decision to promote edition/
+        # version/kit_type out of variants JSON entirely (one value per
+        # product listing, not a variant axis). This also fixes the
+        # reported bug: the JSONB query was unverified and returned zero
+        # results even on freshly-typed test data.
+        if filters.get('edition'):
+            query = query.filter(Product.edition == filters['edition'])
+
+        # version: exact match on real column, same pattern as edition
+        if filters.get('version'):
+            query = query.filter(Product.version == filters['version'])
+
+        products = query.all()
+        return [product.to_dict() for product in products]
+    except SQLAlchemyError as e:
+        current_app.logger.error(f"Database error in filter_products_service: {str(e)}")
+        raise
+
+def get_distinct_categories_service():
+    """
+    Backs the products page's Category filter dropdown. Returns every
+    distinct, non-null, non-empty category value currently in the DB —
+    replaces the free-text Category filter input, which silently broke
+    on any typo/casing mismatch between what was typed in the admin
+    dashboard and what a customer typed here (both were free text,
+    exact-match against each other). A dropdown sourced from the DB
+    itself makes a mismatch impossible: a customer can only pick a
+    value that's guaranteed to already exist. Same mechanism as Robin's
+    get_distinct_locations, re-targeted to category. Sorted alphabetically
+    for a stable, predictable dropdown order.
+    """
+    try:
+        rows = (
+            db.session.query(Product.category)
+            .filter(Product.category.isnot(None), Product.category != '')
+            .distinct()
+            .order_by(Product.category.asc())
+            .all()
+        )
+        return [row[0] for row in rows]
+    except SQLAlchemyError as e:
+        current_app.logger.error(f"Database error in get_distinct_categories_service: {str(e)}")
+        raise
+
+def get_random_products_service(limit=5):
+    """
+    Backs the homepage's Random Discovery rail. Excludes stock=0, same
+    availability rule as filter_products_service — every public-facing
+    read endpoint on this model treats stock as the availability signal.
+    Uses PostgreSQL's RANDOM() for true per-request shuffling (not a
+    stable/cacheable order — each call can return a different set).
+    """
+    try:
+        products = (
+            Product.query
+            .filter(Product.stock > 0)
+            .order_by(func.random())
+            .limit(int(limit))
+            .all()
+        )
+        return [product.to_dict() for product in products]
+    except SQLAlchemyError as e:
+        current_app.logger.error(f"Database error in get_random_products_service: {str(e)}")
+        raise
+
 def reduce_variant_stock(product, selected_variants, quantity):
     """
     Adjusts stock by `quantity` (positive = reduce, negative = increase —
     same signed convention as before).
 
-    selected_variants: dict of axis->choice, e.g. {"jersey_size": "M",
-    "jersey_kit_type": "Home"}, or None/{} for a manual top-level
-    adjustment that doesn't target one specific combination.
+    selected_variants: dict of axis->choice, e.g. {"jersey_size": "M"}
+    or {"boots_size": "42", "boots_color": "Black"}, or None/{} for a
+    manual top-level adjustment that doesn't target one specific
+    combination.
 
     Branches on product.variant_mode, per the confirmed design:
       - "unified" (default): every combination shares ONE stock number
@@ -272,6 +427,7 @@ def reduce_variant_stock(product, selected_variants, quantity):
         db.session.rollback()
         current_app.logger.error(f"Stock update failed: {str(e)}")
         return False, str(e)
+
 
 
 

@@ -1,141 +1,370 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Collection | Markazus Sunnah</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='global.css') }}">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Shop All Jerseys — Kit Collective</title>
+<meta name="description" content="Browse the full Kit Collective catalog — club and national team jerseys, retro drops, and matchday gear. Filter by club, category, price, and edition." />
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<!-- Icons -->
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+<!-- Styles -->
+<link rel="stylesheet" href="/static/products.css">
 </head>
-<body class="min-h-screen flex flex-col">
-<nav class="bg-white border-b sticky top-0 z-50 w-full">
-<div class="max-w-7xl mx-auto px-4">
-<div class="flex justify-between items-center h-20">
-<div class="text-2xl heading-font font-extrabold tracking-tight">
-<a href="/" class="text-gray-900">Markazus Sunnah</a>
+
+<body class="bg-cream-50 text-slate-800 antialiased">
+
+<!-- ============ TOP ANNOUNCEMENT BAR ============ -->
+<div class="bg-sage-300 text-sage-950 text-center text-[11px] sm:text-xs font-semibold tracking-wide py-2 px-4">
+  Free delivery on all prepaid orders
 </div>
-<div class="hidden md:flex space-x-8 font-medium">
-<a href="/products" class="nav-link text-gray-900 font-bold">Shop</a>
-<a href="/products" class="nav-link text-gray-600 hover:text-gray-900">New Arrivals</a>
-<a href="/products" class="nav-link text-gray-600 hover:text-gray-900">Best Sellers</a>
-</div>
-<div class="flex items-center space-x-4">
-<a href="/cart" class="font-bold text-gray-700 hover:text-black text-sm uppercase tracking-widest">Cart</a>
-</div>
-</div>
-</div>
-</nav>
-<header class="py-16 bg-white">
-<div class="max-w-7xl mx-auto px-4 text-center">
-<h1 class="heading-font text-5xl md:text-7xl font-black mb-4 tracking-tighter">The Collection</h1>
-<p class="text-gray-500 uppercase tracking-[0.3em] text-[10px] font-bold">Curated Excellence</p>
-</div>
+
+<!-- ============ HEADER / NAV (floating capsule) ============ -->
+<header class="sticky top-0 z-40 pt-3 pb-2 px-3 sm:px-4">
+  <div class="max-w-6xl mx-auto">
+    <div class="flex items-center justify-between h-[60px] px-3 sm:px-4 rounded-full bg-sand-50 text-sage-950 shadow-lg shadow-sage-950/20 border border-sage-200/60">
+
+      <!-- Mobile menu button -->
+      <button id="mobileMenuBtn" aria-label="Open menu" aria-expanded="false" class="lg:hidden p-2 text-sage-800 hover:text-sage-500 transition-colors">
+        <i data-lucide="menu" class="w-5 h-5"></i>
+      </button>
+
+      <!-- Theme toggle (visual only) -->
+      <button id="themeToggleBtn" aria-label="Toggle theme" class="hidden sm:inline-flex p-2 text-sage-800 hover:text-sage-500 transition-colors">
+        <i data-lucide="moon" class="w-[18px] h-[18px]"></i>
+      </button>
+
+      <!-- Logo -->
+      <a href="/" class="flex items-center gap-2 group absolute left-1/2 -translate-x-1/2 lg:static lg:translate-x-0" aria-label="Kit Collective home">
+        <svg width="28" height="28" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg" class="shrink-0">
+          <path d="M17 1L31 8.5V19.5C31 26.4 24.9 31.6 17 33C9.1 31.6 3 26.4 3 19.5V8.5L17 1Z" stroke="#657d69" stroke-width="1.7"/>
+          <path d="M17 7L25 11.2V18.2C25 22.4 21.5 25.6 17 26.5C12.5 25.6 9 22.4 9 18.2V11.2L17 7Z" fill="#a7bda2"/>
+          <path d="M17 12L14 17H16.3L14.7 22L21 15.5H18.2L20 12H17Z" fill="#2C3531"/>
+        </svg>
+        <span class="font-display text-lg sm:text-xl tracking-wider text-sage-950 whitespace-nowrap">KIT COLLECTIVE</span>
+      </a>
+
+      <!-- Desktop category pills -->
+      <nav class="hidden lg:flex items-center gap-0.5 text-[12px] font-semibold uppercase tracking-wide" aria-label="Primary categories">
+        <a href="/products" class="px-2.5 py-2 rounded-full bg-sage-100 text-sage-950 transition-colors">All Products</a>
+        <a href="/" class="px-2.5 py-2 rounded-full text-sage-700 hover:bg-sage-100 hover:text-sage-950 transition-colors">Home</a>
+        <a href="#" class="px-2.5 py-2 rounded-full text-clay hover:bg-sage-100 transition-colors">Clearance</a>
+      </nav>
+
+      <!-- Right icons -->
+      <div class="flex items-center gap-0.5 sm:gap-1">
+        <button id="searchBtn" aria-label="Search catalog" class="p-2 text-sage-800 hover:text-sage-500 transition-colors">
+          <i data-lucide="search" class="w-5 h-5"></i>
+        </button>
+        <button id="filtersBtn" aria-label="Open filters" class="relative p-2 text-sage-800 hover:text-sage-500 transition-colors">
+          <i data-lucide="sliders-horizontal" class="w-5 h-5"></i>
+          <span id="filtersActiveDot" class="hidden absolute top-1 right-1 w-2 h-2 rounded-full bg-clay"></span>
+        </button>
+        <button id="cartBtn" aria-label="Open bag, 0 items" class="relative p-2 text-sage-800 hover:text-sage-500 transition-colors">
+          <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+          <span id="cartCount" class="absolute -top-0.5 -right-0.5 bg-clay text-sand-50 text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">0</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile menu -->
+    <div id="mobileMenu" class="mobile-menu lg:hidden mt-2 rounded-3xl bg-sand-50 text-sage-950 shadow-lg shadow-sage-950/20 border border-sage-200/60 overflow-hidden">
+      <nav class="flex flex-col py-2 px-2 text-sm font-semibold uppercase tracking-wide" aria-label="Mobile categories">
+        <a href="/products" class="px-3 py-3 rounded-2xl bg-sage-100 text-sage-950">All Products</a>
+        <a href="/" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">Home</a>
+        <a href="#" class="px-3 py-3 rounded-2xl text-clay hover:bg-sage-100">Clearance Sale</a>
+      </nav>
+    </div>
+  </div>
 </header>
-<section class="sticky top-20 z-40 bg-white/80 backdrop-blur-lg border-y border-gray-100">
-<div class="max-w-7xl mx-auto px-4 py-4">
-<div class="flex flex-col md:flex-row items-center gap-4">
-        <div class="relative w-full md:w-64 flex-shrink-0">
-            <input type="text" id="search-input" placeholder="Search..." 
-                class="w-full border-b border-gray-200 py-2 focus:border-black outline-none text-sm font-bold transition bg-transparent">
-        </div>
 
-        <div class="flex items-center gap-3 w-full overflow-hidden">
-            <button id="reset-filters-btn" class="flex-shrink-0 w-10 h-10 rounded-full border border-gray-200 hover:bg-black hover:text-white transition-all flex items-center justify-center text-xl font-light">×</button>
-            <div id="parent-filter-container" class="no-scrollbar flex gap-2 p-1 bg-gray-50 rounded-full border border-gray-100 w-full">
-                </div>
-        </div>
+<main>
 
-        <div class="relative flex-shrink-0" id="sort-wrapper">
-            <button type="button" id="sort-button" class="flex items-center gap-3 bg-white/40 backdrop-blur-md border border-white/20 px-5 py-2.5 rounded-full hover:bg-white/60 transition shadow-sm active:scale-95">
-                <span class="text-[9px] uppercase tracking-[0.2em] font-black text-gray-400">Sort:</span>
-                <span id="sort-label" class="text-[10px] uppercase font-black tracking-widest text-gray-900">New Arrivals</span>
-                <svg id="sort-icon" class="w-3 h-3 text-gray-400 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-            </button>
+  <!-- ============ PAGE HEADER ============ -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 pt-8 sm:pt-10 pb-4">
+    <h1 class="font-display text-3xl sm:text-4xl text-slate-800 uppercase tracking-wide">Shop All Jerseys</h1>
+    <div class="flex items-center justify-between mt-2 flex-wrap gap-2">
+      <p class="text-sage-600/80 text-sm">
+        <span id="productCount" class="font-semibold text-slate-800">0</span> products
+      </p>
+      <button id="filtersBtnMobile" class="sm:hidden inline-flex items-center gap-1.5 text-sm font-semibold text-sage-600 hover:text-slate-800 transition-colors">
+        <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
+        Filters
+      </button>
+    </div>
+  </section>
 
-            <div id="sort-dropdown" class="hidden absolute right-0 mt-3 w-56 rounded-2xl bg-white/90 backdrop-blur-xl border border-white/40 shadow-2xl z-50 overflow-hidden transform transition-all duration-200 opacity-0 scale-95">
-                <div class="p-1">
-                    <button class="sort-opt w-full text-left px-4 py-3 text-[10px] uppercase font-black tracking-widest text-gray-600 hover:bg-black hover:text-white rounded-xl transition-all" data-value="newest">New Arrivals</button>
-                    <button class="sort-opt w-full text-left px-4 py-3 text-[10px] uppercase font-black tracking-widest text-gray-600 hover:bg-black hover:text-white rounded-xl transition-all" data-value="price-low">Price: Low to High</button>
-                    <button class="sort-opt w-full text-left px-4 py-3 text-[10px] uppercase font-black tracking-widest text-gray-600 hover:bg-black hover:text-white rounded-xl transition-all" data-value="price-high">Price: High to Low</button>
-                </div>
+  <!-- ============ CATALOG ============ -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 pb-16">
+    <div class="flex flex-col lg:flex-row gap-8">
+
+      <!-- Desktop filter sidebar -->
+      <aside class="hidden lg:block w-64 shrink-0">
+        <div class="sticky top-24 bg-sand-50 border border-sage-200/60 rounded-2xl p-5">
+          <h3 class="font-display text-lg text-slate-800 uppercase tracking-wide mb-4">Filters</h3>
+          <form id="filterFormDesktop" class="space-y-5">
+            <div>
+              <label class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Club / Team</label>
+              <input type="text" name="club" placeholder="e.g. Real Madrid" class="w-full h-10 px-3 rounded-xl border border-sand-300 bg-cream-50 text-sm text-slate-800 placeholder:text-slate-500/50 focus:border-sage-400 outline-none" />
             </div>
+            <div>
+              <label class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Category</label>
+              <select name="category" id="categorySelectDesktop" class="w-full h-10 px-3 rounded-xl border border-sand-300 bg-cream-50 text-sm text-slate-800 focus:border-sage-400 outline-none">
+                <option value="">Any category</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Version</label>
+              <select name="version" class="w-full h-10 px-3 rounded-xl border border-sand-300 bg-cream-50 text-sm text-slate-800 focus:border-sage-400 outline-none">
+                <option value="">Any version</option>
+                <option value="BD">BD</option>
+                <option value="BD Premium">BD Premium</option>
+                <option value="China">China</option>
+                <option value="Thai">Thai</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Price range (৳)</label>
+              <div class="grid grid-cols-2 gap-2">
+                <input type="number" name="min_price" min="0" placeholder="Min" class="w-full h-10 px-3 rounded-xl border border-sand-300 bg-cream-50 text-sm text-slate-800 placeholder:text-slate-500/50 focus:border-sage-400 outline-none" />
+                <input type="number" name="max_price" min="0" placeholder="Max" class="w-full h-10 px-3 rounded-xl border border-sand-300 bg-cream-50 text-sm text-slate-800 placeholder:text-slate-500/50 focus:border-sage-400 outline-none" />
+              </div>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Edition</label>
+              <select name="edition" class="w-full h-10 px-3 rounded-xl border border-sand-300 bg-cream-50 text-sm text-slate-800 focus:border-sage-400 outline-none">
+                <option value="">Any edition</option>
+                <option value="Player">Player</option>
+                <option value="Fan">Fan</option>
+              </select>
+            </div>
+          </form>
+          <div class="flex items-center gap-2 mt-5">
+            <button id="applyFiltersDesktop" class="flex-1 h-10 rounded-full bg-sage-400 text-cream-50 font-bold text-xs uppercase tracking-wide hover:bg-sage-500 transition-colors">
+              Apply
+            </button>
+            <button id="clearFiltersDesktop" type="button" aria-label="Reset filters" class="w-10 h-10 shrink-0 rounded-full border border-sand-300 hover:bg-sand-100 flex items-center justify-center transition-colors">
+              <i data-lucide="rotate-ccw" class="w-4 h-4 text-sage-700"></i>
+            </button>
+          </div>
         </div>
+      </aside>
+
+      <!-- Grid + states -->
+      <div class="flex-1 min-w-0">
+
+        <!-- Loading skeleton -->
+        <div id="loadingState" class="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-5">
+          <div class="skeleton-pulse">
+            <div class="aspect-[3/4] rounded-xl bg-sand-100"></div>
+            <div class="h-3.5 w-3/4 bg-sand-100 rounded mt-2.5"></div>
+            <div class="h-3.5 w-1/3 bg-sand-100 rounded mt-1.5"></div>
+          </div>
+          <div class="skeleton-pulse">
+            <div class="aspect-[3/4] rounded-xl bg-sand-100"></div>
+            <div class="h-3.5 w-3/4 bg-sand-100 rounded mt-2.5"></div>
+            <div class="h-3.5 w-1/3 bg-sand-100 rounded mt-1.5"></div>
+          </div>
+          <div class="skeleton-pulse hidden sm:block">
+            <div class="aspect-[3/4] rounded-xl bg-sand-100"></div>
+            <div class="h-3.5 w-3/4 bg-sand-100 rounded mt-2.5"></div>
+            <div class="h-3.5 w-1/3 bg-sand-100 rounded mt-1.5"></div>
+          </div>
+        </div>
+
+        <!-- Product grid -->
+        <div id="productGrid" class="hidden grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-5"></div>
+
+        <!-- Empty state -->
+        <div id="emptyState" class="hidden text-center py-20 border border-sand-200 rounded-2xl bg-sand-50">
+          <p class="font-display text-xl text-slate-800 uppercase tracking-wide mb-1">No jerseys match your search</p>
+          <p class="text-sage-600/70 text-sm">Try widening your filters or clearing them to see the full catalog.</p>
+        </div>
+
+        <!-- Error state -->
+        <div id="errorState" class="hidden text-center py-20 border border-sand-200 rounded-2xl bg-sand-50">
+          <p class="font-display text-xl text-slate-800 uppercase tracking-wide mb-1">Couldn't load the catalog</p>
+          <p class="text-sage-600/70 text-sm">Something went wrong reaching the server. Please try again.</p>
+        </div>
+
+      </div>
     </div>
+  </section>
 
-    <div id="sub-filter-area" class="no-scrollbar gap-2 hidden pt-4 border-t border-gray-50 mt-4">
-        </div>
-</div>
-
-</section>
-<main class="flex-grow max-w-7xl mx-auto px-4 w-full py-12">
-<div id="products-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-12">
-<div class="col-span-full py-20 text-center text-gray-400 uppercase text-[10px] font-bold tracking-widest animate-pulse">Accessing Vault...</div>
-</div>
-<div id="pagination" class="flex justify-center items-center space-x-2 mt-20"></div>
 </main>
-<footer class="bg-[#080808] text-[#999] py-8 px-6 border-t border-[#1a1a1a] font-sans text-[12px]">
-  <div class="max-w-7xl mx-auto">
-    
-    <div class="flex flex-wrap gap-x-6 gap-y-2 border-b border-[#111] pb-6 mb-6 uppercase tracking-wider font-semibold text-[#c5a059]">
-      <div class="flex items-center gap-2">
-        <span class="text-[10px]">🚚</span>
-        <span data-bn="সারা বাংলাদেশে ডেলিভারি">Full BD Delivery</span>
-      </div>
-      <div class="flex items-center gap-2 border-l border-[#222] pl-6">
-        <span class="text-[10px]">✨</span>
-        <span data-bn="আসল/আমদানিকৃত পারফিউম অয়েল">Authentic Imported Oils (Dubai, France, India)</span>
-      </div>
-      <div class="flex items-center gap-2 border-l border-[#222] pl-6">
-        <span class="text-[10px]">🔄</span>
-        <span data-bn="রিটার্ন পলিসি">Return Policy</span>
-      </div>
-      <div class="flex items-center gap-2 border-l border-[#222] pl-6">
-        <span class="text-[10px]">💵</span>
-        <span data-bn="ক্যাশ অন ডেলিভারি">COD Available</span>
-      </div>
-    </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-      
-      <div class="space-y-4">
-        <h2 class="text-white text-lg font-bold tracking-tighter">Markazus Sunnah</h2>
-        <div class="flex gap-4 text-[14px]">
-          <a href="https://www.facebook.com/share/1K7QCmj53c/" class="hover:text-white">FB</a>
-          <a href="https://www.tiktok.com/@markazus_sunnah?_r=1&_t=ZT-93e3S0FKEvt" class="hover:text-white">Tiktok</a>
-          <a href="https://www.instagram.com/markazussunnah313?igsh=MXM1MzljaDVpOTN6Ng==" class="hover:text-white">Insta</a>
+<!-- ============ FOOTER ============ -->
+<footer class="bg-slate-900 text-cream-50/90">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-8 mb-10">
+      <div class="col-span-2 sm:col-span-1">
+        <div class="flex items-center gap-2 mb-3">
+          <svg width="26" height="26" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg" class="shrink-0">
+            <path d="M17 1L31 8.5V19.5C31 26.4 24.9 31.6 17 33C9.1 31.6 3 26.4 3 19.5V8.5L17 1Z" stroke="#a7bda2" stroke-width="1.7"/>
+            <path d="M17 7L25 11.2V18.2C25 22.4 21.5 25.6 17 26.5C12.5 25.6 9 22.4 9 18.2V11.2L17 7Z" fill="#526857"/>
+            <path d="M17 12L14 17H16.3L14.7 22L21 15.5H18.2L20 12H17Z" fill="#FBF9F5"/>
+          </svg>
+          <span class="font-display text-lg tracking-wider text-cream-50">KIT COLLECTIVE</span>
         </div>
+        <p class="text-sm text-cream-50/60 leading-relaxed max-w-[220px]">Premium club and national team jerseys, retro drops, and matchday gear.</p>
       </div>
 
-      <div class="flex gap-12">
-        <ul class="space-y-1">
-          <li><a href="/products" class="hover:text-white" data-bn="সব প্রোডাক্ট">Shop</a></li>
-          <li><a href="#" class="hover:text-white" data-bn="অর্ডার ট্র্যাক করুন">Track</a></li>
-        </ul>
-        <ul class="space-y-1">
-          <li><a href="#" class="hover:text-white" data-bn="রিটার্ন পলিসি">Returns</a></li>
-          <li><a href="#" class="hover:text-white" data-bn="শর্তাবলী">Terms</a></li>
+      <div>
+        <h4 class="text-xs font-bold uppercase tracking-widest text-sage-300 mb-4">Shop</h4>
+        <ul class="space-y-2.5 text-sm text-cream-50/70">
+          <li><a href="/products" class="hover:text-cream-50 transition-colors">All Products</a></li>
+          <li><a href="#" class="hover:text-cream-50 transition-colors">New Season 26/27</a></li>
+          <li><a href="#" class="hover:text-cream-50 transition-colors">Retro Jerseys</a></li>
+          <li><a href="#" class="hover:text-cream-50 transition-colors">Accessories</a></li>
         </ul>
       </div>
 
-      <div class="text-right md:border-l border-[#1a1a1a] md:pl-8">
-        <p class="text-white font-bold mb-1" data-bn="অফিস লোকেশন:">OFFICE LOCATION</p>
-        <p class="leading-relaxed opacity-80 uppercase" data-bn="রাস্তা নং ৮, প্রথম ভবন, মেরিট মাইন আইডিয়াল স্কুলের পাশে, আরশাদুল্লাহ রোড, শনির আখড়া, যাত্রাবাড়ী, ঢাকা।">
-          STREET NO. 8, FIRST BUILDING, BESIDE MERIT MINE IDEAL SCHOOL, ARSHADULLAH ROAD, SHANIR AKHRA, JATRABARI, DHAKA
-        </p>
-        <p class="mt-2 text-[#c5a059] font-bold">01819040383</p>
+      <div>
+        <h4 class="text-xs font-bold uppercase tracking-widest text-sage-300 mb-4">Support</h4>
+        <ul class="space-y-2.5 text-sm text-cream-50/70">
+          <li><a href="#" class="hover:text-cream-50 transition-colors">Track Your Order</a></li>
+          <li><a href="#" class="hover:text-cream-50 transition-colors">Shipping Policy</a></li>
+          <li><a href="#" class="hover:text-cream-50 transition-colors">Contact Us</a></li>
+        </ul>
       </div>
     </div>
 
-    <div class="mt-8 pt-4 border-t border-[#111] flex justify-between items-center text-[10px] opacity-50">
-      <p data-bn="© ২০২৬ অফিস এআর।">© 2026 Markazus Sunnah</p>
-      <p>Accepted: BKASH / COD</p>
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 text-xs text-cream-50/50">
+      <p>© 2026 Kit Collective. All rights reserved.</p>
+      <div class="flex items-center gap-5">
+        <a href="#" class="hover:text-cream-50 transition-colors">Privacy Policy</a>
+        <a href="#" class="hover:text-cream-50 transition-colors">Terms of Service</a>
+        <a href="#" class="hover:text-cream-50 transition-colors">Refund Policy</a>
+      </div>
     </div>
-
   </div>
 </footer>
-<script src="/static/products.js"></script>
+
+<!-- ============ MOBILE STICKY BAR ============ -->
+<div class="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-cream-50/95 backdrop-blur border-t border-sand-200 px-4 py-2.5 flex items-center justify-around">
+  <a href="/" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1">
+    <i data-lucide="home" class="w-5 h-5"></i>
+    <span class="text-[10px] font-medium">Home</span>
+  </a>
+  <a href="/products" class="flex flex-col items-center gap-1 text-sage-500 px-3 py-1">
+    <i data-lucide="shirt" class="w-5 h-5"></i>
+    <span class="text-[10px] font-medium">Shop</span>
+  </a>
+  <button id="mobileSearchBtn" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1">
+    <i data-lucide="search" class="w-5 h-5"></i>
+    <span class="text-[10px] font-medium">Search</span>
+  </button>
+  <button id="mobileCartBtn" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1 relative">
+    <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+    <span class="text-[10px] font-medium">Bag</span>
+  </button>
+</div>
+
+<!-- ============ FILTER DRAWER (mobile) ============ -->
+<div id="filterOverlay" class="filter-overlay fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50"></div>
+<aside id="filterDrawer" class="filter-drawer fixed top-0 left-0 h-full w-full sm:w-[380px] bg-cream-50 z-50 flex flex-col" role="dialog" aria-modal="true" aria-label="Filters">
+  <div class="flex items-center justify-between px-5 py-4 border-b border-sand-200">
+    <h2 class="font-display text-xl text-slate-800 uppercase tracking-wide">Filters</h2>
+    <button id="filterDrawerCloseBtn" aria-label="Close filters" class="p-2 text-slate-500/80 hover:text-slate-800">
+      <i data-lucide="x" class="w-5 h-5"></i>
+    </button>
+  </div>
+  <form id="filterFormMobile" class="flex-1 overflow-y-auto px-5 py-5 space-y-5">
+    <div>
+      <label class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Club / Team</label>
+      <input type="text" name="club" placeholder="e.g. Real Madrid" class="w-full h-11 px-3 rounded-xl border border-sand-300 bg-sand-50 text-sm text-slate-800 placeholder:text-slate-500/50 focus:border-sage-400 outline-none" />
+    </div>
+    <div>
+      <label class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Category</label>
+      <select name="category" id="categorySelectMobile" class="w-full h-11 px-3 rounded-xl border border-sand-300 bg-sand-50 text-sm text-slate-800 focus:border-sage-400 outline-none">
+        <option value="">Any category</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Version</label>
+      <select name="version" class="w-full h-11 px-3 rounded-xl border border-sand-300 bg-sand-50 text-sm text-slate-800 focus:border-sage-400 outline-none">
+        <option value="">Any version</option>
+        <option value="BD">BD</option>
+        <option value="BD Premium">BD Premium</option>
+        <option value="China">China</option>
+        <option value="Thai">Thai</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Price range (৳)</label>
+      <div class="grid grid-cols-2 gap-2">
+        <input type="number" name="min_price" min="0" placeholder="Min" class="w-full h-11 px-3 rounded-xl border border-sand-300 bg-sand-50 text-sm text-slate-800 placeholder:text-slate-500/50 focus:border-sage-400 outline-none" />
+        <input type="number" name="max_price" min="0" placeholder="Max" class="w-full h-11 px-3 rounded-xl border border-sand-300 bg-sand-50 text-sm text-slate-800 placeholder:text-slate-500/50 focus:border-sage-400 outline-none" />
+      </div>
+    </div>
+    <div>
+      <label class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Edition</label>
+      <select name="edition" class="w-full h-11 px-3 rounded-xl border border-sand-300 bg-sand-50 text-sm text-slate-800 focus:border-sage-400 outline-none">
+        <option value="">Any edition</option>
+        <option value="Player">Player</option>
+        <option value="Fan">Fan</option>
+      </select>
+    </div>
+  </form>
+  <div class="flex items-center gap-3 px-5 py-4 border-t border-sand-200 shrink-0">
+    <button id="applyFiltersMobile" class="flex-1 h-12 rounded-full bg-sage-400 text-cream-50 font-bold text-sm uppercase tracking-wide hover:bg-sage-500 transition-colors">
+      Apply Filters
+    </button>
+    <button id="clearFiltersMobile" type="button" aria-label="Reset filters" class="w-12 h-12 shrink-0 rounded-full border border-sand-300 hover:bg-sand-100 flex items-center justify-center transition-colors">
+      <i data-lucide="rotate-ccw" class="w-4 h-4 text-sage-700"></i>
+    </button>
+  </div>
+</aside>
+
+<!-- ============ CART DRAWER ============ -->
+<div id="cartOverlay" class="cart-overlay fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50"></div>
+<aside id="cartDrawer" class="cart-drawer fixed top-0 right-0 h-full w-full sm:w-[400px] bg-cream-50 z-50 flex flex-col" role="dialog" aria-modal="true" aria-label="Shopping bag">
+  <div class="flex items-center justify-between px-5 py-4 border-b border-sand-200">
+    <h2 class="font-display text-xl text-slate-800 uppercase tracking-wide">Your Bag</h2>
+    <button id="cartCloseBtn" aria-label="Close bag" class="p-2 text-slate-500/80 hover:text-slate-800">
+      <i data-lucide="x" class="w-5 h-5"></i>
+    </button>
+  </div>
+  <div class="flex-1 flex flex-col items-center justify-center px-8 text-center gap-4">
+    <div class="w-16 h-16 rounded-full bg-sand-100 flex items-center justify-center">
+      <i data-lucide="shopping-bag" class="w-7 h-7 text-sage-500"></i>
+    </div>
+    <div>
+      <p class="font-semibold text-slate-800 mb-1">Your bag is empty</p>
+      <p class="text-sm text-slate-500/70">Looks like you haven't added any jerseys yet.</p>
+    </div>
+    <button id="cartStartShoppingBtn" class="mt-2 bg-sage-400 text-cream-50 font-bold uppercase text-sm tracking-wide px-6 py-3 rounded-full hover:bg-sage-500 transition-colors">
+      Start Shopping
+    </button>
+  </div>
+</aside>
+
+<!-- ============ SEARCH OVERLAY ============ -->
+<div id="searchOverlay" class="search-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-start justify-center px-4 pt-20 sm:pt-28">
+  <div class="search-panel w-full max-w-xl bg-cream-50 border border-sand-200 rounded-2xl p-5 sm:p-6" role="dialog" aria-modal="true" aria-label="Search the catalog">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="font-display text-xl text-slate-800 uppercase tracking-wide">Find your next jersey</h2>
+      <button id="searchCloseBtn" aria-label="Close search" class="p-1.5 text-slate-500/80 hover:text-slate-800">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <label for="searchInput" class="sr-only">Search the catalog</label>
+    <div class="relative">
+      <i data-lucide="search" class="w-4 h-4 text-slate-500/50 absolute left-4 top-1/2 -translate-y-1/2"></i>
+      <input id="searchInput" type="text" placeholder="Search the catalog" class="w-full bg-sand-100 border border-sand-200 rounded-full pl-11 pr-4 py-3 text-sm text-slate-800 placeholder:text-slate-500/50 focus:border-sage-400 outline-none" />
+    </div>
+    <p class="text-xs text-slate-500/50 mt-3">Try searches like Messi, Barcelona, Argentina, or Real Madrid.</p>
+  </div>
+</div>
+
+<script src="/static/products.js" defer></script>
+
 </body>
 </html>
 

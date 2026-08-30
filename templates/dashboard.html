@@ -116,6 +116,47 @@
                     </div>
                 </div>
 
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gold mb-1">Club / Team</label>
+                        <input type="text" name="club" class="input-field" placeholder="e.g. Real Madrid">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gold mb-1">Category</label>
+                        <input type="text" name="category" class="input-field" placeholder="e.g. World Cup, La Liga">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gold mb-1">Edition</label>
+                        <select name="edition" class="input-field">
+                            <option value="">— Select —</option>
+                            <option value="Player">Player</option>
+                            <option value="Fan">Fan</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gold mb-1">Version</label>
+                        <select name="version" class="input-field">
+                            <option value="">— Select —</option>
+                            <option value="BD">BD</option>
+                            <option value="BD Premium">BD Premium</option>
+                            <option value="China">China</option>
+                            <option value="Thai">Thai</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gold mb-1">Kit Type</label>
+                        <select name="kit_type" class="input-field">
+                            <option value="">— Select —</option>
+                            <option value="Home">Home</option>
+                            <option value="Away">Away</option>
+                            <option value="National">National</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="pt-4 border-t border-navy/10">
                     <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gold mb-3">Product Type</label>
                     <div class="flex flex-wrap gap-4">
@@ -236,6 +277,8 @@
     <script src="/static/dashboard.js"></script>
 </body>
 </html>
+
+
 
 
 

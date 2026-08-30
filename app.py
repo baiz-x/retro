@@ -6,7 +6,7 @@ import os
 # use db from your models package
 from models import db, Product
 from wall import setup_security
-
+from sqlalchemy import text
 # Load env
 load_dotenv()
 
@@ -84,7 +84,7 @@ def robots():
         "Disallow: /register",
         "Disallow: /api/",
         "",
-        "Sitemap: https://markazussunnahbd.com/sitemap.xml"
+        "Sitemap: http://127.0.0.1:5000/sitemap.xml"
     ]
     return Response("\n".join(lines), mimetype="text/plain")
 
@@ -95,7 +95,7 @@ def sitemap():
     The curated tour guide for Google.
     Matches your exact 'product?id=' structure.
     """
-    base_url = "https://markazussunnahbd.com"
+    base_url = "http://127.0.0.1:5000"
     pages = []
 
     # 1. High-Value Static Pages
@@ -133,8 +133,17 @@ def sitemap():
 
 
 with app.app_context():
-        db.create_all()
+    try:
+        # 1. Force the extension to enable FIRST
+        db.session.execute(text('CREATE EXTENSION IF NOT EXISTS pg_trgm;'))
+        db.session.commit()
+        print("pg_trgm extension auto-enabled successfully!")
+    except Exception as e:
+        db.session.rollback()
+        print(f"Warning: Could not enable pg_trgm extension: {e}")
 
+    # 2. NOW it is safe to create your tables and search indexes
+    db.create_all()
 # ---------- Main ----------
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
