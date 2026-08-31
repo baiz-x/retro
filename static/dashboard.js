@@ -8,29 +8,44 @@ let allProducts = [];
 let activeOrderFilter = 'all';
 let editingProductId = null;
 
-// Each field is either type "text" (free-typed comma-separated values,
-// same behavior as the old gypsum/candle axes) or type "checkbox-group"
-// (fixed known options — prevents typo'd duplicate axis values like
-// "Home" vs "home" silently becoming two different SKU rows). Either
-// type ends up as a .variant-axis-input element with the same
-// data-axis attribute, so renderDynamicFields' consumers (updateMatrixUI,
-// generateCombinations, handleProductUpload) don't need to branch on it.
+// v4 field split — per Hasan's confirmed spec, every field is now one
+// of two kinds, distinguished by `axis: true`:
+//   - IDENTITY fields (axis: false/absent): one value per product
+//     listing. Rendered as plain named inputs (name="fabric", "brand",
+//     etc.) that ride straight through FormData — these map 1:1 to
+//     real Product columns (see models.py) and are read directly by
+//     name in handleProductUpload/enterEditMode, NOT looped over as
+//     .variant-axis-input like the old extra-fields system did.
+//   - VARIANT AXIS fields (axis: true): per-SKU, drive the price/stock
+//     matrix. Rendered as .variant-axis-input (same mechanism as v3) —
+//     comma-separated text, feeds generateCombinations/updateMatrixUI.
+// select_options presence means "render as a dropdown"; its absence
+// means free-typed text input. Confirmed per-type axis split:
+//   jersey: size only | boots: size x color | others: size only
+//   (others' color is identity, fixed per listing — NOT an axis)
 const COLLECTION_FIELDS = {
     "jersey": [
-        { name: "jersey_fabric", label: "Fabric Type", type: "text" },
-        { name: "jersey_size", label: "Size", type: "text" }
+        { name: "club", label: "Club / Team", axis: false },
+        { name: "edition", label: "Edition", axis: false, select_options: ["Player", "Fan"] },
+        { name: "version", label: "Version", axis: false, select_options: ["BD", "BD Premium", "China", "Thai"] },
+        { name: "kit_type", label: "Kit Type", axis: false, select_options: ["Home", "Away", "National"] },
+        { name: "fabric", label: "Fabric", axis: false },
+        { name: "size", label: "Size", axis: true }
     ],
     "boots": [
-        { name: "boots_size", label: "Size (EU)", type: "text" },
-        { name: "boots_material", label: "Material", type: "text" },
-        { name: "boots_color", label: "Color", type: "text" },
-        { name: "boots_type", label: "Type", type: "text" }
+        { name: "brand", label: "Brand", axis: false },
+        { name: "type", label: "Type", axis: false, select_options: ["Sports", "Running", "Casual", "Old Money"] },
+        { name: "material", label: "Material", axis: false },
+        { name: "size", label: "Size (EU)", axis: true },
+        { name: "color", label: "Color", axis: true }
     ],
     "others": [
-        { name: "fabric_type", label: "Fabric Type", type: "text" },
-        { name: "gsm", label: "GSM", type: "text" },
-        { name: "size", label: "Size", type: "text" },
-        { name: "color", label: "Color", type: "text" }
+        { name: "brand", label: "Brand", axis: false },
+        { name: "type", label: "Type", axis: false, select_options: ["Strip", "Old Money", "Casual", "Solid Color"] },
+        { name: "fabric", label: "Fabric", axis: false },
+        { name: "gsm", label: "GSM", axis: false },
+        { name: "color", label: "Color", axis: false },
+        { name: "size", label: "Size", axis: true }
     ]
 };
 
@@ -247,71 +262,80 @@ function renderAnalytics() {
 function renderDynamicFields() {
     const checkedRadio = document.querySelector('.collection-cb:checked');
     // Backend/DB still expect collection_tags as a JSON array (see
-    // models.py get_extra_fields_for_collection) — a single selection
-    // is sent as a 1-element array so product_service.py's existing
-    // parsing needs no changes.
+    // models.py) — a single selection is sent as a 1-element array so
+    // product_service.py's existing parsing needs no changes.
     const activeTags = checkedRadio ? [checkedRadio.value] : [];
 
     const tagsInput = document.getElementById('collection_tags_input');
     if (tagsInput) tagsInput.value = JSON.stringify(activeTags);
 
-    const container = document.getElementById('dynamic-fields-container');
-    const target = document.getElementById('dynamic-inputs');
+    const identityContainer = document.getElementById('identity-fields-container');
+    const identityTarget = document.getElementById('identity-inputs');
+    const axisContainer = document.getElementById('dynamic-fields-container');
+    const axisTarget = document.getElementById('dynamic-inputs');
 
-    if (!container || !target) return;
+    if (!identityContainer || !identityTarget || !axisContainer || !axisTarget) return;
 
     if (activeTags.length === 0) {
-        container.classList.add('hidden');
-        target.innerHTML = '';
+        identityContainer.classList.add('hidden');
+        identityTarget.innerHTML = '';
+        axisContainer.classList.add('hidden');
+        axisTarget.innerHTML = '';
         updateMatrixUI();
         return;
     }
 
     const fields = COLLECTION_FIELDS[activeTags[0]] || [];
+    const identityFields = fields.filter(f => !f.axis);
+    const axisFields = fields.filter(f => f.axis);
 
-    container.classList.remove('hidden');
-    target.innerHTML = fields.map(field => {
-        if (field.type === 'checkbox-group') {
-            const optionsHtml = field.options.map(opt => `
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" value="${opt}" data-axis="${field.name}" class="variant-axis-option w-4 h-4 accent-navy">
-                    <span class="text-xs font-semibold text-navy/80">${opt}</span>
-                </label>
-            `).join('');
+    // Identity fields: plain named inputs (name="fabric", "brand", etc.)
+    // — these ride straight through FormData as real column values, NOT
+    // through the .variant-axis-input matrix mechanism. select_options
+    // renders a dropdown (data-quality only, no server-side enum);
+    // otherwise a free-text input.
+    identityContainer.classList.remove('hidden');
+    identityTarget.innerHTML = identityFields.map(field => {
+        if (field.select_options) {
+            const optionsHtml = field.select_options.map(opt =>
+                `<option value="${opt}">${opt}</option>`
+            ).join('');
             return `
                 <div>
-                    <label class="block text-[9px] uppercase font-bold text-navy/70 mb-2 tracking-widest">${field.label}</label>
-                    <div class="flex flex-wrap gap-3">${optionsHtml}</div>
-                    <input type="hidden" data-axis="${field.name}" class="variant-axis-input variant-axis-checkbox-group">
+                    <label class="block text-[9px] uppercase font-bold text-navy/70 mb-1 tracking-widest">${field.label}</label>
+                    <select name="${field.name}" class="identity-field input-field !mt-0 !text-xs">
+                        <option value="">— Select —</option>
+                        ${optionsHtml}
+                    </select>
                 </div>
             `;
         }
         return `
             <div>
                 <label class="block text-[9px] uppercase font-bold text-navy/70 mb-1 tracking-widest">${field.label}</label>
-                <input type="text" data-axis="${field.name}" class="variant-axis-input input-field !mt-0 !text-xs" placeholder="e.g. Value1, Value2">
+                <input type="text" name="${field.name}" class="identity-field input-field !mt-0 !text-xs" placeholder="${field.label}">
             </div>
         `;
     }).join('');
 
-    // Free-text axis inputs feed the matrix directly on input.
-    document.querySelectorAll('.variant-axis-input:not(.variant-axis-checkbox-group)').forEach(input => {
-        input.addEventListener('input', updateMatrixUI);
-    });
+    // Variant axis fields: unchanged mechanism from v3 — free-typed
+    // comma-separated values feeding the SKU matrix generator.
+    if (axisFields.length > 0) {
+        axisContainer.classList.remove('hidden');
+        axisTarget.innerHTML = axisFields.map(field => `
+            <div>
+                <label class="block text-[9px] uppercase font-bold text-navy/70 mb-1 tracking-widest">${field.label}</label>
+                <input type="text" data-axis="${field.name}" class="variant-axis-input input-field !mt-0 !text-xs" placeholder="e.g. Value1, Value2">
+            </div>
+        `).join('');
 
-    // Checkbox-group options write their checked values into the
-    // paired hidden .variant-axis-input so updateMatrixUI/handleProductUpload
-    // can read every axis the same way regardless of which UI produced it.
-    document.querySelectorAll('.variant-axis-option').forEach(opt => {
-        opt.addEventListener('change', (e) => {
-            const axis = e.currentTarget.dataset.axis;
-            const checked = document.querySelectorAll(`.variant-axis-option[data-axis="${axis}"]:checked`);
-            const values = Array.from(checked).map(c => c.value);
-            const hiddenInput = document.querySelector(`.variant-axis-checkbox-group[data-axis="${axis}"]`);
-            if (hiddenInput) hiddenInput.value = values.join(', ');
-            updateMatrixUI();
+        document.querySelectorAll('.variant-axis-input').forEach(input => {
+            input.addEventListener('input', updateMatrixUI);
         });
-    });
+    } else {
+        axisContainer.classList.add('hidden');
+        axisTarget.innerHTML = '';
+    }
 
     updateMatrixUI();
 }
@@ -478,31 +502,31 @@ function enterEditMode(productId) {
     form.querySelector('[name="description"]').value = prod.description || '';
     form.querySelector('[name="price"]').value = prod.price ?? '';
     form.querySelector('[name="stock"]').value = prod.stock ?? '';
-    form.querySelector('[name="club"]').value = prod.club || '';
     form.querySelector('[name="category"]').value = prod.category || '';
-    form.querySelector('[name="edition"]').value = prod.edition || '';
-    form.querySelector('[name="version"]').value = prod.version || '';
-    form.querySelector('[name="kit_type"]').value = prod.kit_type || '';
 
     const tags = prod.collection_tags || [];
     document.querySelectorAll('.collection-cb').forEach(cb => {
         cb.checked = tags.includes(cb.value);
     });
 
+    // renderDynamicFields() builds the per-type identity/axis inputs
+    // fresh (they don't exist in the DOM before a type is selected) —
+    // must run before we can populate identity-field values below.
     renderDynamicFields();
+
+    // Identity fields (club, edition, fabric, brand, type, material,
+    // color, gsm, etc.) — plain named inputs, populate directly from
+    // the product's own columns. Guarded with `?.` since only the
+    // fields for this product's type exist in the DOM right now.
+    ['club', 'edition', 'version', 'kit_type', 'fabric', 'brand', 'type', 'material', 'color', 'gsm'].forEach(fieldName => {
+        const input = form.querySelector(`[name="${fieldName}"]`);
+        if (input) input.value = prod[fieldName] ?? '';
+    });
 
     const axes = (prod.variants && prod.variants.axes) || {};
     document.querySelectorAll('.variant-axis-input').forEach(input => {
         const vals = axes[input.dataset.axis];
         if (vals && vals.length) input.value = vals.join(', ');
-    });
-
-    // Checkbox-group fields also need their visible option checkboxes
-    // re-checked to match — the loop above only fills the paired
-    // hidden input, which drives the matrix but isn't itself visible.
-    document.querySelectorAll('.variant-axis-option').forEach(opt => {
-        const vals = axes[opt.dataset.axis] || [];
-        opt.checked = vals.includes(opt.value);
     });
 
     const variantModeSelect = document.getElementById('variant_mode');
@@ -540,7 +564,7 @@ function exitEditMode() {
     const idInput = document.getElementById('edit_product_id');
     if (idInput) idInput.value = '';
     const label = document.getElementById('upload-btn-label');
-    if (label) label.innerText = 'Submit Asset to Ledger';
+    if (label) label.innerText = 'Add Product';
     const cancelBtn = document.getElementById('cancel-edit-btn');
     if (cancelBtn) cancelBtn.classList.add('hidden');
 }
@@ -696,6 +720,7 @@ async function adjustStock(productId, delta) {
         alert(`Error: ${err.message}`);
     }
 }
+
 
 
 

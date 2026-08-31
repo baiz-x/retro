@@ -68,11 +68,15 @@ def get_product_by_slug(slug):
 
 @product_bp.route('/products/filter', methods=['GET'])
 def filter_listings():
-    """Public storefront filter endpoint — club/category/version/price
-    ride real columns (edition too, as of the JSONB-to-column fix);
-    all are exact-match except price (range)."""
+    """Public storefront filter endpoint — product_type/club/category/
+    version/price ride real columns (edition too, as of the JSONB-to-
+    column fix); brand/type/material/fabric/gsm are also real indexed
+    columns (v4). All are exact-match except price and gsm (both
+    ranges). product_type is the key scoping filter — pass jersey/
+    boots/others to get results relevant to that type's own field set."""
     try:
         filters = {
+            'product_type': request.args.get('product_type', None),
             'club': request.args.get('club', None),
             'category': request.args.get('category', None),
             'search': request.args.get('search', None),
@@ -80,6 +84,12 @@ def filter_listings():
             'max_price': request.args.get('max_price', None),
             'edition': request.args.get('edition', None),
             'version': request.args.get('version', None),
+            'brand': request.args.get('brand', None),
+            'type': request.args.get('type', None),
+            'material': request.args.get('material', None),
+            'fabric': request.args.get('fabric', None),
+            'min_gsm': request.args.get('min_gsm', None),
+            'max_gsm': request.args.get('max_gsm', None),
         }
 
         # Clean empty filters out
@@ -245,6 +255,7 @@ def adjust_stock_route(product_id):
     except Exception as e:
         current_app.logger.error(f"Error in adjust_stock_route: {str(e)}")
         return jsonify({'status': 'error', 'message': 'Stock adjustment failed'}), 500
+
 
 
 

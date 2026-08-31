@@ -116,45 +116,9 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gold mb-1">Club / Team</label>
-                        <input type="text" name="club" class="input-field" placeholder="e.g. Real Madrid">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gold mb-1">Category</label>
-                        <input type="text" name="category" class="input-field" placeholder="e.g. World Cup, La Liga">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-3 gap-6">
-                    <div>
-                        <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gold mb-1">Edition</label>
-                        <select name="edition" class="input-field">
-                            <option value="">— Select —</option>
-                            <option value="Player">Player</option>
-                            <option value="Fan">Fan</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gold mb-1">Version</label>
-                        <select name="version" class="input-field">
-                            <option value="">— Select —</option>
-                            <option value="BD">BD</option>
-                            <option value="BD Premium">BD Premium</option>
-                            <option value="China">China</option>
-                            <option value="Thai">Thai</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gold mb-1">Kit Type</label>
-                        <select name="kit_type" class="input-field">
-                            <option value="">— Select —</option>
-                            <option value="Home">Home</option>
-                            <option value="Away">Away</option>
-                            <option value="National">National</option>
-                        </select>
-                    </div>
+                <div>
+                    <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gold mb-1">Category</label>
+                    <input type="text" name="category" class="input-field" placeholder="e.g. World Cup, La Liga">
                 </div>
 
                 <div class="pt-4 border-t border-navy/10">
@@ -175,6 +139,16 @@
                     </div>
                     <p class="text-[9px] text-gray-400 font-bold uppercase mt-2">Select exactly one product type</p>
                     <input type="hidden" name="collection_tags" id="collection_tags_input">
+                </div>
+
+                <!-- Identity fields (one value per listing — club, edition,
+                     brand, material, gsm, etc.) render here per selected
+                     Product Type, via renderDynamicFields() in dashboard.js.
+                     Plain named inputs; ride straight through FormData to
+                     real Product columns (see models.py v4). -->
+                <div id="identity-fields-container" class="bg-gray-50 p-5 rounded-xl border border-navy/10 hidden space-y-4 shadow-inner">
+                    <h3 class="text-[10px] uppercase font-bold text-navy tracking-widest border-b border-navy/10 pb-2">Product Details</h3>
+                    <div id="identity-inputs" class="grid grid-cols-2 gap-4"></div>
                 </div>
 
                 <div class="pt-4 border-t border-navy/10">
@@ -220,11 +194,17 @@
                 </div>
 
                 <button type="submit" id="upload-btn" class="w-full bg-navy text-gold py-5 rounded uppercase font-bold tracking-[0.2em] text-[10px] hover:bg-navy-light transition-all mt-6 shadow-md flex justify-center items-center gap-2">
-                    <span id="upload-btn-label">Submit Asset to Ledger</span>
+                    <span id="upload-btn-label">Add Product</span>
                 </button>
                 <button type="button" id="cancel-edit-btn" class="w-full hidden text-navy/50 py-2 text-[9px] uppercase font-bold tracking-widest hover:text-navy transition-colors">
                     Cancel Edit
                 </button>
+
+                <!-- Scroll spacer so the submit button never sits flush
+                     against the viewport edge / bottom nav — lets the
+                     form keep scrolling past the button, per Hasan's
+                     confirmed request. -->
+                <div class="h-24" aria-hidden="true"></div>
             </form>
         </section>
 
@@ -277,6 +257,7 @@
     <script src="/static/dashboard.js"></script>
 </body>
 </html>
+
 
 
 

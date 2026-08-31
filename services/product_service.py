@@ -117,6 +117,12 @@ def create_product(data, image_file, gallery_files=None):
         if isinstance(collection_tags, str):
             collection_tags = json.loads(collection_tags) if collection_tags else []
 
+        # product_type mirrors collection_tags[0] into a real indexed
+        # column (see models.py) — kept in sync here at write time since
+        # collection_tags itself stays JSON/unindexed for the dashboard's
+        # existing read/write shape.
+        product_type = collection_tags[0] if collection_tags else None
+
         # Generate unique slug
         base_slug = create_slug(data.get('name'))
         unique_slug = base_slug
@@ -126,16 +132,32 @@ def create_product(data, image_file, gallery_files=None):
             unique_slug = f"{base_slug}-{uuid.uuid4().hex[:4]}"
 
         # 5. Create Database Entry
+        # gsm arrives as form-data text — cast to int when present,
+        # matching price/stock's own float()/int() casts above.
+        # collection_tags is a list of strings (or json string, already
+        # normalized above); membership check below is enough since it's
+        # confirmed a 1-element list. Fields outside a product's own type
+        # are simply left as None if the client didn't send them.
+        gsm_raw = data.get('gsm')
+        gsm_value = int(gsm_raw) if gsm_raw not in (None, '') else None
+
         new_product = Product(
             slug=unique_slug,
             name=data.get('name'),
             collection_tags=collection_tags,
+            product_type=product_type,
             collection_label=data.get('collection_label'),
             club=data.get('club'),
             category=data.get('category'),
             edition=data.get('edition'),
             version=data.get('version'),
             kit_type=data.get('kit_type'),
+            fabric=data.get('fabric'),
+            brand=data.get('brand'),
+            type=data.get('type'),
+            material=data.get('material'),
+            color=data.get('color'),
+            gsm=gsm_value,
             price=base_price,
             stock=total_stock,
             description=data.get('description'),
@@ -169,6 +191,14 @@ def update_product(product_id, data, image_file=None, gallery_files=None):
         if 'edition' in data: product.edition = data['edition']
         if 'version' in data: product.version = data['version']
         if 'kit_type' in data: product.kit_type = data['kit_type']
+        if 'fabric' in data: product.fabric = data['fabric']
+        if 'brand' in data: product.brand = data['brand']
+        if 'type' in data: product.type = data['type']
+        if 'material' in data: product.material = data['material']
+        if 'color' in data: product.color = data['color']
+        if 'gsm' in data:
+            gsm_raw = data['gsm']
+            product.gsm = int(gsm_raw) if gsm_raw not in (None, '') else None
 
         if 'collection_label' in data: product.collection_label = data['collection_label']
         if 'collection_tags' in data:
@@ -176,6 +206,10 @@ def update_product(product_id, data, image_file=None, gallery_files=None):
             if isinstance(tags, str):
                 tags = json.loads(tags) if tags else []
             product.collection_tags = tags
+            # Keep product_type (real indexed column) in sync with
+            # collection_tags[0] on every update — same mirroring done
+            # in create_product.
+            product.product_type = tags[0] if tags else None
 
         if 'variant_mode' in data: product.variant_mode = data['variant_mode']
         if 'variants' in data:
@@ -244,14 +278,13 @@ def delete_product(product_id):
 
 def filter_products_service(filters):
     """
-    Filters products for the storefront. club/category/price ride the
-    real composite index (idx_products_club_category_price in models.py)
-    since all three are plain typed columns — the fast path. edition
-    stays inside the variants JSON blob (fixed checkbox options, no
-    typo risk, so it never needed column promotion) and is queried via
-    JSONB path lookup instead — this cannot use the composite index and
-    is the slower path; flagged since it's the one filter field that
-    doesn't get the "multi-column index" guarantee the others do.
+    Filters products for the storefront. product_type/club/category/price
+    ride the real composite index (idx_products_type_club_category_price
+    in models.py) since all four are plain typed columns — the fast
+    path. edition/version/brand/type/material/fabric/gsm are each their
+    own real, individually indexed column (v4) — single-column index
+    lookups, not the composite, but still real columns rather than a
+    JSONB path query.
 
     Excludes stock=0 products, per confirmed decision (no is_available
     column exists on this model — stock is the only availability signal).
@@ -261,6 +294,16 @@ def filter_products_service(filters):
         # same pattern as Robin's is_available gate, re-targeted to stock
         # since that's this model's actual availability signal.
         query = Product.query.filter(Product.stock > 0)
+
+        # product_type: exact match on the real, indexed mirror column —
+        # rides idx_products_type_club_category_price as its leading
+        # column (see models.py). This is what actually scopes results
+        # to one of jersey/boots/others; without it, brand/type/material/
+        # fabric/gsm filters below only narrow within whatever mixed set
+        # of types happens to match, which rarely makes sense since
+        # those columns mean different things per type.
+        if filters.get('product_type'):
+            query = query.filter(Product.product_type == filters['product_type'])
 
         # club/category: exact match on real columns — ride the composite index
         if filters.get('club'):
@@ -296,6 +339,25 @@ def filter_products_service(filters):
         # version: exact match on real column, same pattern as edition
         if filters.get('version'):
             query = query.filter(Product.version == filters['version'])
+
+        # brand/type/material/fabric: exact match on real, individually
+        # indexed columns (v4) — same pattern as club/edition/version.
+        if filters.get('brand'):
+            query = query.filter(Product.brand == filters['brand'])
+        if filters.get('type'):
+            query = query.filter(Product.type == filters['type'])
+        if filters.get('material'):
+            query = query.filter(Product.material == filters['material'])
+        if filters.get('fabric'):
+            query = query.filter(Product.fabric == filters['fabric'])
+
+        # gsm: range match (like price), not exact — a real Integer
+        # column, so min_gsm/max_gsm ride its index the same way
+        # min_price/max_price do.
+        if filters.get('min_gsm'):
+            query = query.filter(Product.gsm >= int(filters['min_gsm']))
+        if filters.get('max_gsm'):
+            query = query.filter(Product.gsm <= int(filters['max_gsm']))
 
         products = query.all()
         return [product.to_dict() for product in products]
@@ -427,6 +489,7 @@ def reduce_variant_stock(product, selected_variants, quantity):
         db.session.rollback()
         current_app.logger.error(f"Stock update failed: {str(e)}")
         return False, str(e)
+
 
 
 

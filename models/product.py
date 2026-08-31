@@ -1,90 +1,65 @@
 """
-Athena — models.py (v3, Retro Studio pivot)
+Athena — models.py (v4, per-type identity field split)
 
-Retro Studio field-set update — replaces the v2 gypsum/jar_candle/
-raw_materials collections with jersey/boots/others, per Hasan's
-confirmed pivot from the mixed gypsum-art/candle/raw-material catalog
-to a single-focus jerseys & clothing brand.
-
-  - collection_tags still decides which extra fields a product shows
-    (unchanged mechanism) — but jersey/boots/others are now confirmed
-    MUTUALLY EXCLUSIVE (exactly one per product), not combinable. The
-    dashboard now enforces this with native radio inputs; this file's
-    get_extra_fields_for_collection() still returns the union of
-    whatever tags are actually passed in, as a defensive fallback in
-    case a raw API call ever sends more than one — it does not
-    re-validate exclusivity server-side (matching the same
-    client-side-only enforcement decision already made for the old
-    raw_materials exclusivity, not re-litigated here).
+v4 update per Hasan's confirmed field-separation spec:
+  - Every identity field (fixed per listing, one value — not a variant)
+    is now its own real, typed, indexed column instead of living inside
+    the generic COLLECTION_EXTRA_FIELDS/variants.axes system. This lets
+    /products?brand=... /products?material=... etc. all do plain column
+    comparisons and ride real indexes, matching the same reasoning
+    already applied to club/category/edition/version/kit_type in v3.
+  - jersey / boots / others remain confirmed MUTUALLY EXCLUSIVE (exactly
+    one per product) — dashboard enforces via radio inputs, unchanged.
+  - Per-type identity fields (confirmed):
+      jersey: club, edition, version, kit_type, fabric
+      boots:  brand, type, material, color
+      others: brand, type, fabric, gsm (integer), color
+    category is shared across all 3 types (free text, unchanged).
+  - boots.type and others.type are free-typed strings at the DB level
+    (no CHECK constraint) even though the dashboard renders them as
+    fixed-option dropdowns (Sports/Running/Casual/Old Money for boots;
+    Strip/Old Money/Casual/Solid Color for others) — same pattern
+    already used for edition/version/kit_type: the dropdown is a
+    client-side data-quality measure, not a server-side enum.
+  - gsm is a real Integer column (not text) per Hasan's confirmed
+    decision, since it's meaningfully sortable/rangeable, unlike the
+    other free-text identity fields.
   - variant_mode, variants (axes/combinations/axis_images), CartItem/
-    OrderItem's selected_variants JSON field — all UNCHANGED from v2.
-    None of that logic was collection-specific; it was already generic
-    over axis names, so the jersey/boots/others pivot needed no
-    changes there. Only the field-name constant below changes.
-  - edition/version/kit_type (formerly jersey_edition/jersey_version/
-    jersey_kit_type checkbox-group axes inside variants.axes) are now
-    real top-level columns instead — one value per product listing,
-    not a variant. Promoted for the same reason as club/category:
-    filterable dimensions need to be real columns so /products?edition=
-    Player etc. can do a plain column comparison instead of a JSONB
-    path query. Dashboard now renders these as single-select dropdowns,
-    not checkboxes. jersey_fabric/jersey_size remain genuine variant
-    axes inside variants.axes, unchanged.
+    OrderItem's selected_variants JSON field — all UNCHANGED. Variant
+    axes per type (confirmed): jersey = size only, boots = size×color,
+    others = size only. This is enforced by the dashboard's per-type
+    field list (COLLECTION_FIELDS in dashboard.js), not by this model —
+    variants remains generic over axis names, same as v3.
+  - COLLECTION_EXTRA_FIELDS / get_extra_fields_for_collection() are
+    REMOVED — they described the old "extra JSON-ish fields" system
+    that identity fields have now fully replaced with real columns.
+    allowed_extra_fields() on Product is removed for the same reason;
+    to_dict() now just always includes every column and lets the
+    client show/hide by collection_tags, matching how club/category
+    already worked.
 """
 
 from datetime import datetime
 from . import db
-# ============================================================
-# COLLECTION -> EXTRA FIELD SETS
-# ============================================================
-# jersey / boots / others are confirmed mutually exclusive (exactly
-# one per product) — unlike the old v2 gypsum+jar_candle hybrid
-# case, there is no longer a supported "combine two collections"
-# product. get_extra_fields_for_collection() below still unions
-# whatever tags it's given, purely as a defensive fallback (see
-# docstring above) — the dashboard is what actually enforces
-# exclusivity now, via radio inputs instead of checkboxes.
-#
-# Kept as a plain constant, not a DB table, matching the same
-# not-yet-admin-editable decision already made for product types
-# earlier in this build. Promote to a table later if you want
-# collections/field-sets defined through the UI instead of code.
-COLLECTION_EXTRA_FIELDS = {
-    "jersey": ["jersey_fabric", "jersey_size"],
-    "boots": ["boots_size", "boots_material", "boots_color", "boots_type"],
-    "others": ["fabric_type", "gsm", "size", "color"],
-}
 
-
-def get_extra_fields_for_collection(collection_tags):
-    """
-    collection_tags: list of strings — expected to be a single tag,
-    e.g. ["jersey"], since jersey/boots/others are confirmed mutually
-    exclusive. Still accepts and unions multiple tags defensively (see
-    module docstring) in case a raw API call ever sends more than one;
-    this is not itself an endorsement of combining them.
-    Returns the deduplicated union of every matching field-set, in a
-    stable order. No universal fields are added — every field a
-    product shows comes from its one collection tag.
-    """
-    fields = []
-    for tag in collection_tags or []:
-        for field in COLLECTION_EXTRA_FIELDS.get(tag, []):
-            if field not in fields:
-                fields.append(field)
-    return fields
 
 class Product(db.Model):
     __tablename__ = "products"
 
-    # Composite index backing filter_products_service's club/category/price
-    # query (product_service.py) — the actual "multi-column index" Hasan
-    # asked for. This only works because club/category are real columns,
-    # not variants JSON keys; jersey_edition stays JSON-only (fixed
-    # checkbox options, no typo risk) and is filtered via JSONB path
-    # query instead — it cannot ride this index, flagged in product_service.py.
+    # Composite index backing filter_products_service's product_type/
+    # club/category/price query (product_service.py). product_type
+    # leads the composite since "all boots under ৳X" / "all jerseys for
+    # club Y" is the realistic storefront query shape — Postgres can
+    # still use this index for club/category/price-only queries too
+    # (leftmost-prefix rule), just less efficiently than a query that
+    # also includes product_type.
+    #
+    # brand/type/material/fabric/gsm each get their own single-column
+    # index below (index=True on the column itself, v4) per Hasan's
+    # confirmed decision to index them ahead of the storefront filters
+    # that will use them, rather than waiting until those filters exist.
     __table_args__ = (
-        db.Index('idx_products_club_category_price', 'club', 'category', 'price'),
+        db.Index('idx_products_type_club_category_price', 'product_type', 'club', 'category', 'price'),
     )
 
     id = db.Column(db.Integer, primary_key=True)
@@ -112,7 +87,7 @@ class Product(db.Model):
     # product listing, not a variant. Same reasoning as club/category:
     # filterable dimensions need to be real columns, not JSON axes,
     # and it makes /products?edition=Player actually work instead of
-    # relying on a JSONB path query. Jersey-specific in practice (boots/
+    # relying on a JSONB path query. Jersey-only in practice (boots/
     # others never populate these) but kept ungated at the model level,
     # same as club/category, rather than adding collection-conditional
     # columns.
@@ -120,16 +95,49 @@ class Product(db.Model):
     version = db.Column(db.String(60), nullable=True)
     kit_type = db.Column(db.String(60), nullable=True)
 
+    # ---- PER-TYPE IDENTITY FIELDS (v4) ----
+    # Fixed per listing (not variant axes), real typed+indexed columns,
+    # ungated at the model level (same pattern as club/edition above) —
+    # every column exists regardless of collection_tags; the dashboard
+    # only shows/sends the ones relevant to the selected product type.
+    #
+    # jersey: club (above), edition/version/kit_type (above), fabric
+    fabric = db.Column(db.String(120), nullable=True, index=True)
+
+    # boots + others share brand/type; boots adds material, others adds
+    # gsm — both also use color, but as an identity field (one color per
+    # listing), NOT a variant axis. Only boots varies by color per-SKU
+    # (size×color); others' color is fixed per listing (size-only axis),
+    # confirmed.
+    brand = db.Column(db.String(120), nullable=True, index=True)
+    type = db.Column(db.String(60), nullable=True, index=True)
+    material = db.Column(db.String(120), nullable=True, index=True)
+    color = db.Column(db.String(60), nullable=True)
+
+    # others only
+    gsm = db.Column(db.Integer, nullable=True, index=True)
+
     # ---- PERMANENT FIELDS (every product has these) ----
     name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=True)
     image = db.Column(db.String(500), nullable=True)            # main thumbnail
     gallery = db.Column(db.JSON, nullable=True, default=list)    # list[str], detail-page images
 
-    # collection_tags drives which extra fields apply (see
-    # get_extra_fields_for_collection above). Confirmed mutually
-    # exclusive as of the Retro Studio pivot — a product carries
-    # exactly one tag, e.g. ["jersey"] or ["boots"] or ["others"].
+    # Machine-readable single-value mirror of collection_tags[0] — a
+    # real, indexed String column so /products/filter?product_type=boots
+    # can do a plain WHERE and ride an index, instead of scanning the
+    # unindexed collection_tags JSON column with a per-row containment
+    # check. collection_tags itself is left in place unchanged (still
+    # the field the dashboard reads/writes, still JSON) since existing
+    # code depends on its list shape — product_type is populated
+    # alongside it in product_service.py, kept in sync at write time.
+    product_type = db.Column(db.String(20), nullable=True, index=True)
+
+    # collection_tags drives which identity/variant fields the dashboard
+    # shows for this product (see COLLECTION_FIELDS in dashboard.js).
+    # Confirmed mutually exclusive as of the Retro Studio pivot — a
+    # product carries exactly one tag, e.g. ["jersey"] or ["boots"] or
+    # ["others"].
     collection_tags = db.Column(db.JSON, nullable=False, default=list)
 
     # Kept as a separate human-readable label too (e.g. "Coastal Line")
@@ -148,21 +156,32 @@ class Product(db.Model):
     variant_mode = db.Column(db.String(20), nullable=False, default="unified")  # "unified" | "per_variant"
 
     # ---- VARIANTS — one JSON blob, shape below ----
-    # For jersey products, jersey_size is now the only axis — edition/
-    # version/kit_type moved to the real columns above. axis_images
-    # examples below use jersey_size accordingly; boots/others keep
-    # their own multi-axis examples unchanged.
+    # Per-type variant axes (confirmed, v4) — everything else about a
+    # product (fabric, edition, brand, material, gsm, etc.) is now an
+    # identity column above, NOT an axis:
+    #   jersey: size only
+    #   boots:  size x color  (only type where color varies per-SKU)
+    #   others: size only     (others' color is an identity field, fixed
+    #                          per listing — see `color` column above)
+    #
+    # jersey example:
     # {
-    #   "axes": {
-    #     "jersey_size":       ["S", "M", "L", "XL"]
-    #   },
+    #   "axes": { "size": ["S", "M", "L", "XL"] },
     #   "combinations": [
-    #     {"jersey_size": "M", "price": 1800, "stock": 12},
-    #     {"jersey_size": "L", "price": 1800, "stock": 5}
+    #     {"size": "M", "price": 1800, "stock": 12},
+    #     {"size": "L", "price": 1800, "stock": 5}
     #   ],
-    #   "axis_images": {
-    #     "jersey_size": {"M": "https://.../m.jpg", "L": "https://.../l.jpg"}
-    #   }
+    #   "axis_images": { "size": {"M": "https://.../m.jpg"} }
+    # }
+    #
+    # boots example (two axes):
+    # {
+    #   "axes": { "size": ["42", "43"], "color": ["Black", "White"] },
+    #   "combinations": [
+    #     {"size": "42", "color": "Black", "price": 4500, "stock": 3},
+    #     {"size": "43", "color": "Black", "price": 4500, "stock": 2}
+    #   ],
+    #   "axis_images": { "color": {"Black": "https://.../black.jpg"} }
     # }
     #
     # In "unified" mode, combinations may be empty or hold a single
@@ -177,9 +196,6 @@ class Product(db.Model):
     order_items = db.relationship("OrderItem", back_populates="product")
     cart_items = db.relationship("CartItem", back_populates="product")
 
-    def allowed_extra_fields(self):
-        return get_extra_fields_for_collection(self.collection_tags)
-
     def to_dict(self):
         return {
             "id": self.id,
@@ -189,20 +205,27 @@ class Product(db.Model):
             "image": self.image,
             "gallery": self.gallery or [],
             "collection_tags": self.collection_tags or [],
+            "product_type": self.product_type,
             "collection_label": self.collection_label,
             "club": self.club,
             "category": self.category,
             "edition": self.edition,
             "version": self.version,
             "kit_type": self.kit_type,
+            "fabric": self.fabric,
+            "brand": self.brand,
+            "type": self.type,
+            "material": self.material,
+            "color": self.color,
+            "gsm": self.gsm,
             "price": self.price,
             "stock": self.stock,
             "variant_mode": self.variant_mode,
             "variants": self.variants or {},
-            "allowed_extra_fields": self.allowed_extra_fields(),
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+
 
 
 
