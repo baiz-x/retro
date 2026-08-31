@@ -278,12 +278,24 @@ document.addEventListener('DOMContentLoaded', () => {
   if (clearBtnDesktop) clearBtnDesktop.addEventListener('click', (e) => { e.preventDefault(); clearAll(); });
   if (clearBtnMobile) clearBtnMobile.addEventListener('click', (e) => { e.preventDefault(); clearAll(); closeFilters(); });
 
-  // ================= SEARCH (debounced) =================
+  // ================= SEARCH (debounced-while-typing, Enter submits+closes) =================
   let searchDebounce;
   if (searchInputEl) {
     searchInputEl.addEventListener('input', () => {
       clearTimeout(searchDebounce);
       searchDebounce = setTimeout(fetchProducts, 650);
+    });
+
+    // Enter runs the search immediately (skips the debounce wait) and
+    // closes the overlay so the filtered grid is visible right away,
+    // instead of sitting hidden behind the search panel.
+    searchInputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        clearTimeout(searchDebounce);
+        fetchProducts();
+        closeSearch();
+      }
     });
   }
 

@@ -130,6 +130,23 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { closeSearch(); closeCart(); }
 });
 
+// The homepage has no product grid of its own to filter live — search
+// here hands off to the products page, which already has real backend
+// filtering wired (see products.js). Enter-to-submit, not live-as-you-
+// type, since live search would navigate away mid-keystroke.
+const searchInputEl = document.getElementById('searchInput');
+if (searchInputEl) {
+  searchInputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const term = searchInputEl.value.trim();
+      if (term) {
+        window.location.href = `/products?search=${encodeURIComponent(term)}`;
+      }
+    }
+  });
+}
+
 /* ---------------- Mobile menu ---------------- */
 const mobileMenuBtn = document.getElementById('mobileMenuBtn');
 const mobileMenu = document.getElementById('mobileMenu');

@@ -41,7 +41,7 @@
       </button>
 
       <!-- Logo -->
-      <a href="/" class="flex items-center gap-2 group absolute left-1/2 -translate-x-1/2 lg:static lg:translate-x-0" aria-label="Kit Collective home">
+      <a href="#" class="flex items-center gap-2 group absolute left-1/2 -translate-x-1/2 lg:static lg:translate-x-0" aria-label="Kit Collective home">
         <svg width="28" height="28" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg" class="shrink-0">
           <path d="M17 1L31 8.5V19.5C31 26.4 24.9 31.6 17 33C9.1 31.6 3 26.4 3 19.5V8.5L17 1Z" stroke="#657d69" stroke-width="1.7"/>
           <path d="M17 7L25 11.2V18.2C25 22.4 21.5 25.6 17 26.5C12.5 25.6 9 22.4 9 18.2V11.2L17 7Z" fill="#a7bda2"/>
@@ -52,19 +52,18 @@
 
       <!-- Desktop category pills -->
       <nav class="hidden lg:flex items-center gap-0.5 text-[12px] font-semibold uppercase tracking-wide" aria-label="Primary categories">
-        <a href="/products" class="px-2.5 py-2 rounded-full bg-sage-100 text-sage-950 transition-colors">All Products</a>
-        <a href="/" class="px-2.5 py-2 rounded-full text-sage-700 hover:bg-sage-100 hover:text-sage-950 transition-colors">Home</a>
-        <a href="#" class="px-2.5 py-2 rounded-full text-clay hover:bg-sage-100 transition-colors">Clearance</a>
+        <a href="#new-arrivals" class="px-2.5 py-2 rounded-full text-sage-700 hover:bg-sage-100 hover:text-sage-950 transition-colors">All Products</a>
+        <a href="/products?category=Accessories" class="px-2.5 py-2 rounded-full text-sage-700 hover:bg-sage-100 hover:text-sage-950 transition-colors">Accessories</a>
+        <a href="/products?category=Clearance" class="px-2.5 py-2 rounded-full text-clay hover:bg-sage-100 transition-colors">Clearance</a>
+        <a href="/products?category=Footwear" class="px-2.5 py-2 rounded-full text-sage-700 hover:bg-sage-100 hover:text-sage-950 transition-colors">Footwear</a>
+        <a href="/products?category=26+and+27+Kits" class="px-2.5 py-2 rounded-full text-sage-700 hover:bg-sage-100 hover:text-sage-950 transition-colors">New Season</a>
+        <a href="/products?category=Retro+Jerseys" class="px-2.5 py-2 rounded-full text-sage-700 hover:bg-sage-100 hover:text-sage-950 transition-colors">Retro</a>
       </nav>
 
       <!-- Right icons -->
       <div class="flex items-center gap-0.5 sm:gap-1">
         <button id="searchBtn" aria-label="Search catalog" class="p-2 text-sage-800 hover:text-sage-500 transition-colors">
           <i data-lucide="search" class="w-5 h-5"></i>
-        </button>
-        <button id="filtersBtn" aria-label="Open filters" class="relative p-2 text-sage-800 hover:text-sage-500 transition-colors">
-          <i data-lucide="sliders-horizontal" class="w-5 h-5"></i>
-          <span id="filtersActiveDot" class="hidden absolute top-1 right-1 w-2 h-2 rounded-full bg-clay"></span>
         </button>
         <button id="cartBtn" aria-label="Open bag, 0 items" class="relative p-2 text-sage-800 hover:text-sage-500 transition-colors">
           <i data-lucide="shopping-bag" class="w-5 h-5"></i>
@@ -76,9 +75,14 @@
     <!-- Mobile menu -->
     <div id="mobileMenu" class="mobile-menu lg:hidden mt-2 rounded-3xl bg-sand-50 text-sage-950 shadow-lg shadow-sage-950/20 border border-sage-200/60 overflow-hidden">
       <nav class="flex flex-col py-2 px-2 text-sm font-semibold uppercase tracking-wide" aria-label="Mobile categories">
-        <a href="/products" class="px-3 py-3 rounded-2xl bg-sage-100 text-sage-950">All Products</a>
-        <a href="/" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">Home</a>
-        <a href="#" class="px-3 py-3 rounded-2xl text-clay hover:bg-sage-100">Clearance Sale</a>
+        <a href="#new-arrivals" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">All Products</a>
+        <a href="/products?category=Accessories" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">Accessories</a>
+        <a href="/products?category=Clearance" class="px-3 py-3 rounded-2xl text-clay hover:bg-sage-100">Clearance Sale</a>
+        <a href="/products?category=Footwear" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">Footwear</a>
+        <a href="/products?category=26+and+27+Kits" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">New Season 26/27</a>
+        <a href="/products?edition=Player" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">Player Version</a>
+        <a href="/products?category=Retro+Jerseys" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">Retro Jerseys</a>
+        <a href="/products?category=World+Cup" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">World Cup 2026</a>
       </nav>
     </div>
   </div>
@@ -367,4 +371,5 @@
 
 </body>
 </html>
+
 
