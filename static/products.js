@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const formatCurrency = (value) => {
     const num = Number(value);
     if (Number.isNaN(num)) return '৳—';
-    return '৳' + num.toLocaleString('en-IN');
+    return '৳' + num.toLocaleString('en-BD');
   };
 
   const getPhotos = (product) => {
@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     return `
       <div class="product-card shrink-0" data-product-slug="${product.slug ?? ''}">
-        <a href="/product/${encodeURIComponent(product.slug ?? '')}" class="block" onclick="event.preventDefault();">
+        <a href="/product/${encodeURIComponent(product.slug ?? '')}" class="block">
           <div class="product-media relative rounded-xl overflow-hidden bg-sand-100 aspect-[3/4]">
             <img src="${photos[0]}" alt="${product.name || 'Product'}" class="img-a w-full h-full object-cover" loading="lazy" />
             ${photos[1] ? `<img src="${photos[1]}" alt="" class="img-b w-full h-full object-cover" loading="lazy" />` : ''}
@@ -88,6 +88,13 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // ================= CARD INTERACTIONS =================
+  // Navigation itself needs no JS: the <a href="/product/<slug>"> above
+  // is now a real link (previously had onclick="event.preventDefault()"
+  // on it, which killed the browser's own navigation — middle-click,
+  // ctrl/cmd-click "open in new tab", and right-click "copy link" all
+  // silently did nothing because of that). Only the Add button still
+  // needs a listener, to stop its click from also triggering the link
+  // underneath it.
   const bindCardInteractions = () => {
     document.querySelectorAll('.add-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -97,13 +104,6 @@ document.addEventListener('DOMContentLoaded', () => {
         cartCountEl.textContent = cartCount;
         btn.textContent = 'Added';
         setTimeout(() => { btn.textContent = 'Add'; }, 900);
-      });
-    });
-
-    document.querySelectorAll('.product-card[data-product-slug]').forEach(card => {
-      card.addEventListener('click', () => {
-        const slug = card.getAttribute('data-product-slug');
-        if (slug) window.location.href = `/product/${encodeURIComponent(slug)}`;
       });
     });
   };
@@ -370,5 +370,6 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchProducts();
   });
 });
+
 
 

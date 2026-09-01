@@ -1,5 +1,5 @@
 /* =====================================================================
-   Kit Collective — index.css
+   RetroFit BD — index.css
    Converted from Tailwind CDN utility classes to hand-written CSS.
    Visual output is intended to match the original 1:1.
    ===================================================================== */
@@ -464,6 +464,7 @@ a:focus-visible, button:focus-visible, input:focus-visible {
 .aspect-\[3\/4\] { aspect-ratio: 3 / 4; }
 .aspect-\[16\/10\] { aspect-ratio: 16 / 10; }
 .object-cover { object-fit: cover; }
+.object-contain { object-fit: contain; }
 
 /* ---------- Overflow / scroll ---------- */
 .overflow-hidden { overflow: hidden; }
@@ -565,4 +566,3 @@ a:focus-visible, button:focus-visible, input:focus-visible {
   .lg\:translate-x-0 { transform: translateX(0); }
   .lg\:pb-10 { padding-bottom: 2.5rem; }
 }
-

@@ -1,145 +1,449 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Product Details | Markazus Sunnah</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-<link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='global.css') }}">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Product — Kit Collective</title>
+<meta name="description" content="Kit Collective — premium club and national team football jerseys, boots, and matchday gear." />
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<!-- Icons -->
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+<!-- Styles: index.css is untouched (homepage owns it) — product.css
+     imports it for shared tokens/navbar/footer/overlay rules, then
+     adds only what this page needs on top. -->
+<link rel="stylesheet" href="/static/index.css">
+<link rel="stylesheet" href="/static/product.css">
 </head>
-<body class="bg-white text-gray-900">
-    <div id="message-box" class="hidden fixed top-6 right-6 z-[100] px-8 py-4 rounded-full shadow-2xl font-bold uppercase tracking-widest text-[10px] text-white"></div>
 
-    <nav class="bg-white border-b sticky top-0 z-50 w-full">
-        <div class="max-w-7xl mx-auto px-4">
-            <div class="flex justify-between items-center h-20">
-                <div class="text-2xl heading-font font-extrabold tracking-tight">
-                    <a href="/" class="text-gray-900">Markazus Sunnah</a>
-                </div>
-                <div class="hidden md:flex space-x-8 font-medium">
-                    <a href="/products" class="nav-link text-gray-700 hover:text-gray-900">Shop</a>
-                    <a href="/products" class="nav-link text-gray-700 hover:text-gray-900">New Arrivals</a>
-                    <a href="/products" class="nav-link text-gray-700 hover:text-gray-900">Best Sellers</a>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <a href="/products" class="font-bold text-gray-700 hover:text-black text-sm uppercase tracking-widest">Products</a>
-                    <a href="/cart" class="font-bold text-gray-700 hover:text-black text-sm uppercase tracking-widest">Cart</a>
-                </div>
-            </div>
+<body class="bg-cream-50 text-slate-800 antialiased">
+
+<!-- ============ REVIEWS BANNER (unchanged from homepage) ============ -->
+<a href="#" class="flex items-center justify-center gap-2.5 bg-gradient-to-r from-sage-600 via-sage-500 to-sage-600 text-sand-50 text-center text-[11px] sm:text-xs font-bold uppercase tracking-wide py-2.5 px-4 hover:brightness-110 transition-all">
+  <i data-lucide="instagram" class="w-4 h-4 shrink-0"></i>
+  <span>Check out our customer reviews</span>
+  <i data-lucide="chevron-right" class="w-3.5 h-3.5 shrink-0"></i>
+</a>
+
+<!-- ============ TOP ANNOUNCEMENT BAR (unchanged from homepage) ============ -->
+<div class="bg-sage-300 text-sage-950 text-center text-[11px] sm:text-xs font-semibold tracking-wide py-2 px-4">
+  Free delivery on all prepaid orders
+</div>
+
+<!-- ============ HEADER / NAV — identical markup to index.html ============ -->
+<header class="sticky top-0 z-40 pt-3 pb-2 px-3 sm:px-4">
+  <div class="max-w-6xl mx-auto">
+    <div class="flex items-center justify-between h-[60px] px-3 sm:px-4 rounded-full bg-sand-50 text-sage-950 shadow-lg shadow-sage-950/20 border border-sage-200/60">
+
+      <!-- Mobile menu button -->
+      <button id="mobileMenuBtn" aria-label="Open menu" aria-expanded="false" class="lg:hidden p-2 text-sage-800 hover:text-sage-500 transition-colors">
+        <i data-lucide="menu" class="w-5 h-5"></i>
+      </button>
+
+      <!-- Theme toggle (visual only) -->
+      <button id="themeToggleBtn" aria-label="Toggle theme" class="hidden sm:inline-flex p-2 text-sage-800 hover:text-sage-500 transition-colors">
+        <i data-lucide="moon" class="w-[18px] h-[18px]"></i>
+      </button>
+
+      <!-- Logo -->
+      <a href="/" class="flex items-center gap-2 group absolute left-1/2 -translate-x-1/2 lg:static lg:translate-x-0" aria-label="Kit Collective home">
+        <svg width="28" height="28" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg" class="shrink-0">
+          <path d="M17 1L31 8.5V19.5C31 26.4 24.9 31.6 17 33C9.1 31.6 3 26.4 3 19.5V8.5L17 1Z" stroke="#657d69" stroke-width="1.7"/>
+          <path d="M17 7L25 11.2V18.2C25 22.4 21.5 25.6 17 26.5C12.5 25.6 9 22.4 9 18.2V11.2L17 7Z" fill="#a7bda2"/>
+          <path d="M17 12L14 17H16.3L14.7 22L21 15.5H18.2L20 12H17Z" fill="#2C3531"/>
+        </svg>
+        <span class="font-display text-lg sm:text-xl tracking-wider text-sage-950 whitespace-nowrap">KIT COLLECTIVE</span>
+      </a>
+
+      <!-- Desktop category pills -->
+      <nav class="hidden lg:flex items-center gap-0.5 text-[12px] font-semibold uppercase tracking-wide" aria-label="Primary categories">
+        <a href="/#new-arrivals" class="px-2.5 py-2 rounded-full text-sage-700 hover:bg-sage-100 hover:text-sage-950 transition-colors">All Products</a>
+        <a href="/products?category=Accessories" class="px-2.5 py-2 rounded-full text-sage-700 hover:bg-sage-100 hover:text-sage-950 transition-colors">Accessories</a>
+        <a href="/products?category=Clearance" class="px-2.5 py-2 rounded-full text-clay hover:bg-sage-100 transition-colors">Clearance</a>
+        <a href="/products?category=Footwear" class="px-2.5 py-2 rounded-full text-sage-700 hover:bg-sage-100 hover:text-sage-950 transition-colors">Footwear</a>
+        <a href="/products?category=26+and+27+Kits" class="px-2.5 py-2 rounded-full text-sage-700 hover:bg-sage-100 hover:text-sage-950 transition-colors">New Season</a>
+        <a href="/products?category=Retro+Jerseys" class="px-2.5 py-2 rounded-full text-sage-700 hover:bg-sage-100 hover:text-sage-950 transition-colors">Retro</a>
+      </nav>
+
+      <!-- Right icons -->
+      <div class="flex items-center gap-0.5 sm:gap-1">
+        <button id="searchBtn" aria-label="Search catalog" class="p-2 text-sage-800 hover:text-sage-500 transition-colors">
+          <i data-lucide="search" class="w-5 h-5"></i>
+        </button>
+        <button id="cartBtn" aria-label="Open bag, 0 items" class="relative p-2 text-sage-800 hover:text-sage-500 transition-colors">
+          <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+          <span id="cartCount" class="absolute -top-0.5 -right-0.5 bg-clay text-sand-50 text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">0</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile menu -->
+    <div id="mobileMenu" class="mobile-menu lg:hidden mt-2 rounded-3xl bg-sand-50 text-sage-950 shadow-lg shadow-sage-950/20 border border-sage-200/60 overflow-hidden">
+      <nav class="flex flex-col py-2 px-2 text-sm font-semibold uppercase tracking-wide" aria-label="Mobile categories">
+        <a href="/#new-arrivals" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">All Products</a>
+        <a href="/products?category=Accessories" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">Accessories</a>
+        <a href="/products?category=Clearance" class="px-3 py-3 rounded-2xl text-clay hover:bg-sage-100">Clearance Sale</a>
+        <a href="/products?category=Footwear" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">Footwear</a>
+        <a href="/products?category=26+and+27+Kits" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">New Season 26/27</a>
+        <a href="/products?edition=Player" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">Player Version</a>
+        <a href="/products?category=Retro+Jerseys" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">Retro Jerseys</a>
+        <a href="/products?category=World+Cup" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">World Cup 2026</a>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ============ BREADCRUMB ============ -->
+  <nav class="max-w-6xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6" aria-label="Breadcrumb">
+    <ol id="breadcrumb" class="flex items-center flex-wrap gap-1.5 text-xs text-slate-500/70">
+      <li><a href="/" class="hover:text-sage-600 transition-colors">Home</a></li>
+      <li aria-hidden="true">/</li>
+      <li id="breadcrumbType"><a href="/products" class="hover:text-sage-600 transition-colors">Shop</a></li>
+      <li aria-hidden="true">/</li>
+      <li id="breadcrumbName" class="text-slate-800 font-medium" aria-current="page">&nbsp;</li>
+    </ol>
+  </nav>
+
+  <!-- ============ LOADING STATE ============ -->
+  <div id="pdpLoading" class="max-w-6xl mx-auto px-4 sm:px-6 py-20 flex flex-col items-center justify-center gap-3 text-center">
+    <div class="pdp-spinner"></div>
+    <p class="text-sm text-slate-500/70">Loading product…</p>
+  </div>
+
+  <!-- ============ NOT FOUND STATE ============ -->
+  <div id="pdpNotFound" class="hidden max-w-xl mx-auto px-4 sm:px-6 py-24 text-center">
+    <div class="w-16 h-16 rounded-full bg-sand-100 flex items-center justify-center mx-auto mb-5">
+      <i data-lucide="search-x" class="w-7 h-7 text-sage-500"></i>
+    </div>
+    <h1 class="font-display text-2xl text-slate-800 uppercase tracking-wide mb-2">Product not found</h1>
+    <p class="text-sm text-slate-500/70 mb-6">This listing may have been removed, or the link is out of date.</p>
+    <a href="/products" class="inline-flex items-center gap-2 bg-sage-400 text-cream-50 font-bold uppercase tracking-wide text-sm px-6 py-3 rounded-full hover:bg-sage-500 transition-colors">
+      Browse all products <i data-lucide="arrow-right" class="w-4 h-4"></i>
+    </a>
+  </div>
+
+  <!-- ============ PRODUCT DETAIL (populated by product.js) ============ -->
+  <div id="pdpContent" class="hidden">
+
+    <section class="max-w-6xl mx-auto px-4 sm:px-6 py-5 sm:py-8">
+      <div class="grid lg:grid-cols-2 gap-8 lg:gap-14 items-start">
+
+        <!-- ---------- GALLERY (top of page, per brief) ---------- -->
+        <div class="pdp-gallery">
+          <div class="pdp-gallery-main relative rounded-2xl overflow-hidden bg-sand-100 aspect-square">
+            <img id="galleryMainImg" src="" alt="" class="w-full h-full object-cover" />
+            <span id="galleryOosBadge" class="hidden absolute top-3 left-3 bg-slate-800/85 text-cream-50 text-[11px] font-bold px-3 py-1 rounded-full">Out of Stock</span>
+            <button id="galleryPrevBtn" aria-label="Previous image" class="pdp-gallery-nav pdp-gallery-nav-prev">
+              <i data-lucide="chevron-left" class="w-5 h-5"></i>
+            </button>
+            <button id="galleryNextBtn" aria-label="Next image" class="pdp-gallery-nav pdp-gallery-nav-next">
+              <i data-lucide="chevron-right" class="w-5 h-5"></i>
+            </button>
+          </div>
+          <div id="galleryThumbs" class="pdp-gallery-thumbs no-scrollbar" role="tablist" aria-label="Product images">
+            <!-- Thumbnails injected by JS -->
+          </div>
         </div>
-    </nav>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-24">
-        <div id="product-view" class="grid lg:grid-cols-2 gap-16 items-start">
-            <div class="lg:sticky lg:top-32 space-y-6">
-                <div id="image-container" class="rounded-3xl bg-gray-50 aspect-[4/5] flex items-center justify-center overflow-hidden relative group border border-gray-100">
-                    <img id="product-image" src="" alt="Product" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
-                </div>
-                <div id="image-gallery" class="grid grid-cols-4 sm:grid-cols-5 gap-4"></div>
+        <!-- ---------- INFO COLUMN ---------- -->
+        <div class="pdp-info">
+
+          <p id="infoClub" class="text-sage-600 text-xs font-bold uppercase tracking-[0.15em] mb-2"></p>
+          <h1 id="infoName" class="font-display text-3xl sm:text-4xl text-slate-800 uppercase tracking-wide leading-[1.05] mb-3"></h1>
+
+          <!-- Locked identity pills: display the fixed edition/version/
+               kit_type/type/color the listing already is — not
+               clickable selectors. aria-disabled communicates "shown,
+               not chosen" to assistive tech. -->
+          <div id="infoIdentityPills" class="flex flex-wrap gap-2 mb-5"></div>
+
+          <!-- ---------- PRE-ORDER BANNER ---------- -->
+          <div class="pdp-preorder-banner">
+            <i data-lucide="package-check" class="w-4 h-4 shrink-0 mt-0.5"></i>
+            <p>All items on this website are sold on a Pre-Order / Sourced-on-Demand basis. Orders placed are request reservations and will be sourced upon confirmation <span class="whitespace-nowrap">(Estimated delivery: 2–3 business days).</span></p>
+          </div>
+
+          <!-- ---------- PRICE + STOCK ---------- -->
+          <div class="flex items-end justify-between gap-4 mt-5 mb-1">
+            <div>
+              <p id="infoPrice" class="font-display text-3xl text-slate-800"></p>
             </div>
+            <p id="infoStockNote" class="pdp-stock-note"></p>
+          </div>
 
-            <div class="flex flex-col space-y-8">
-                <div class="space-y-4">
-                    <h1 id="product-name" class="heading-font text-4xl lg:text-5xl font-black text-gray-900 leading-tight">Loading...</h1>
-                    <div class="flex items-center gap-4">
-                        <span id="product-price" class="heading-font text-3xl font-bold text-gray-900">BDT --</span>
-                        <div id="stock-pill" class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border"></div>
-                    </div>
-                </div>
-
-                <p id="product-description" class="text-gray-600 leading-relaxed text-lg font-medium"></p>
-
-                <div class="space-y-4">
-                    <label class="block heading-font text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400">Select Volume</label>
-                    <div id="size-container" class="flex flex-wrap gap-3"></div>
-                </div>
-
-                <div class="space-y-4">
-                    <label class="block heading-font text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400">Quantity</label>
-                    <div class="flex items-center border-2 border-gray-100 rounded-full w-fit bg-gray-50 p-1">
-                        <button id="decrease" class="w-12 h-12 flex items-center justify-center text-gray-900 font-bold hover:bg-white rounded-full transition-colors">−</button>
-                        <input id="quantity" type="number" value="1" min="1" class="w-16 text-center bg-transparent text-gray-900 font-bold focus:outline-none pointer-events-none" readonly>
-                        <button id="increase" class="w-12 h-12 flex items-center justify-center text-gray-900 font-bold hover:bg-white rounded-full transition-colors">+</button>
-                    </div>
-                </div>
-
-                <div class="flex flex-col sm:flex-row gap-4 pt-4">
-                    <button id="addToCart" class="flex-1 bg-black text-white font-bold py-5 rounded-full tracking-widest text-xs uppercase hover:bg-gray-800 transition-all active:scale-95 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed">
-                        Add to Cart
-                    </button>
-                    <button id="buyNow" class="flex-1 bg-khaki text-gray-900 font-bold py-5 rounded-full tracking-widest text-xs uppercase hover:opacity-90 transition-all active:scale-95 disabled:opacity-50">
-                        Buy Now
-                    </button>
-                </div>
-
-                <div class="pt-8 grid grid-cols-2 gap-6 border-t border-gray-100">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-khaki flex items-center justify-center text-sm">📦</div>
-                        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-tight">Free Delivery<br>over 1500 BDT</p>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-khaki flex items-center justify-center text-sm">✓</div>
-                        <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-tight">100% Authentic<br>Sunnah Products</p>
-                    </div>
-                </div>
-
-                <div id="accordion-group" class="mt-4 border-t border-gray-100">
-                    <div class="accordion-item active">
-                        <div class="accordion-header">
-                            <span>Product Details</span>
-                            <span class="accordion-icon">▼</span>
-                        </div>
-                        <div class="accordion-content">
-                            <div class="accordion-body">
-                                Our perfume oils are highly concentrated, alcohol-free, and meticulously crafted. Designed for longevity, providing an evocative scent profile that lasts 8-12 hours on skin.
-                            </div>
-                        </div>
-                    </div>
-                    <div class="accordion-item">
-                        <div class="accordion-header">
-                            <span>Shipping & Returns</span>
-                            <span class="accordion-icon">▼</span>
-                        </div>
-                        <div class="accordion-content">
-                            <div class="accordion-body">
-                                We ship nationwide across Bangladesh. Due to the hygiene nature of our products, we only accept returns for damaged items reported within 24 hours of delivery.
-                            </div>
-                        </div>
-                    </div>
-                </div>
+          <!-- ---------- SIZE PILLS ---------- -->
+          <div id="sizeSection" class="mt-6 hidden">
+            <div class="flex items-center justify-between mb-2.5">
+              <p class="text-xs font-bold uppercase tracking-widest text-slate-800">Size</p>
+              <p id="sizeSelectedLabel" class="text-xs text-slate-500/70"></p>
             </div>
+            <div id="sizePills" class="pdp-pill-row" role="radiogroup" aria-label="Size"></div>
+          </div>
+
+          <!-- ---------- COLOR PILLS (boots axis) ---------- -->
+          <div id="colorSection" class="mt-6 hidden">
+            <div class="flex items-center justify-between mb-2.5">
+              <p class="text-xs font-bold uppercase tracking-widest text-slate-800">Color</p>
+              <p id="colorSelectedLabel" class="text-xs text-slate-500/70"></p>
+            </div>
+            <div id="colorPills" class="pdp-pill-row" role="radiogroup" aria-label="Color"></div>
+          </div>
+
+          <!-- ---------- JERSEY PERSONALIZATION ---------- -->
+          <div id="personalizeSection" class="mt-6 hidden">
+            <button id="personalizeToggle" type="button" class="pdp-personalize-toggle" aria-expanded="false">
+              <span class="flex items-center gap-2.5">
+                <i data-lucide="shirt" class="w-4 h-4 text-sage-600"></i>
+                <span class="text-sm font-semibold text-slate-800">Add name &amp; number</span>
+              </span>
+              <i data-lucide="chevron-down" class="pdp-personalize-chevron w-4 h-4 text-sage-500"></i>
+            </button>
+            <div id="personalizeFields" class="pdp-personalize-fields">
+              <div class="grid grid-cols-2 gap-3 pt-4">
+                <label class="block">
+                  <span class="text-[11px] font-bold uppercase tracking-wide text-slate-500/70">Name <span class="font-normal normal-case">(max 10 characters)</span></span>
+                  <input id="personalizeName" type="text" maxlength="10" placeholder="e.g. RONALDO" class="pdp-input mt-1.5 uppercase" autocomplete="off" />
+                </label>
+                <label class="block">
+                  <span class="text-[11px] font-bold uppercase tracking-wide text-slate-500/70">Number <span class="font-normal normal-case">(max 2 digits)</span></span>
+                  <input id="personalizeNumber" type="text" inputmode="numeric" maxlength="2" placeholder="e.g. 07" class="pdp-input mt-1.5" autocomplete="off" />
+                </label>
+              </div>
+              <p class="text-[11px] text-slate-500/60 mt-2">Personalization is prepared with your order request and confirmed with you before sourcing.</p>
+            </div>
+          </div>
+
+          <!-- ---------- QUANTITY STEPPER ---------- -->
+          <div class="mt-6">
+            <p class="text-xs font-bold uppercase tracking-widest text-slate-800 mb-2.5">Quantity</p>
+            <div class="pdp-qty-stepper">
+              <button id="qtyMinusBtn" type="button" aria-label="Decrease quantity" class="pdp-qty-btn">
+                <i data-lucide="minus" class="w-4 h-4"></i>
+              </button>
+              <span id="qtyValue" class="pdp-qty-value">1</span>
+              <button id="qtyPlusBtn" type="button" aria-label="Increase quantity" class="pdp-qty-btn">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- ---------- CTA (desktop inline; hidden on mobile in favor of sticky bar) ---------- -->
+          <button id="addToCartBtn" class="pdp-add-btn mt-7 hidden lg:flex">
+            <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+            <span id="addToCartLabel">Reserve this item</span>
+          </button>
+          <p id="selectionHint" class="text-xs text-clay mt-2 hidden">Please select a size to continue.</p>
+
+          <!-- ---------- ACCORDION ---------- -->
+          <div class="mt-9 pt-2">
+            <div id="pdpAccordion" class="pdp-accordion">
+
+              <div class="pdp-accordion-item">
+                <button class="pdp-accordion-toggle" data-index="0" aria-expanded="true">
+                  <span>Description</span>
+                  <i data-lucide="chevron-down" class="pdp-accordion-chevron open w-5 h-5"></i>
+                </button>
+                <div class="pdp-accordion-panel open" id="accordion-panel-0">
+                  <div id="accordionDescription" class="text-sm text-slate-500/80 leading-relaxed pb-5"></div>
+                </div>
+              </div>
+
+              <div class="pdp-accordion-item">
+                <button class="pdp-accordion-toggle" data-index="1" aria-expanded="false">
+                  <span>Shipping Details</span>
+                  <i data-lucide="chevron-down" class="pdp-accordion-chevron w-5 h-5"></i>
+                </button>
+                <div class="pdp-accordion-panel" id="accordion-panel-1">
+                  <div class="text-sm text-slate-500/80 leading-relaxed pb-5 space-y-2.5">
+                    <p class="flex items-start gap-2"><i data-lucide="truck" class="w-4 h-4 shrink-0 mt-0.5 text-sage-500"></i><span>Inside Dhaka: <strong class="text-slate-800 font-semibold">৳60–80</strong></span></p>
+                    <p class="flex items-start gap-2"><i data-lucide="map-pin" class="w-4 h-4 shrink-0 mt-0.5 text-sage-500"></i><span>Outside Dhaka: <strong class="text-slate-800 font-semibold">৳120–160</strong> (extra charges may apply depending on weight)</span></p>
+                    <p class="flex items-start gap-2"><i data-lucide="gift" class="w-4 h-4 shrink-0 mt-0.5 text-sage-500"></i><span>Free delivery on orders over <strong class="text-slate-800 font-semibold">৳1,500</strong>, or during a special offer</span></p>
+                    <p class="text-xs text-slate-500/60 pt-1">*Offers are only applicable for a certain time.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pdp-accordion-item">
+                <button class="pdp-accordion-toggle" data-index="2" aria-expanded="false">
+                  <span>FAQ</span>
+                  <i data-lucide="chevron-down" class="pdp-accordion-chevron w-5 h-5"></i>
+                </button>
+                <div class="pdp-accordion-panel" id="accordion-panel-2">
+                  <div id="accordionFaq" class="pdp-faq-inner"></div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
         </div>
-    </main>
+      </div>
+    </section>
 
-    <footer class="bg-black text-white py-16 w-full mt-20">
-        <div class="max-w-7xl mx-auto px-4 text-center md:text-left">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
-                <div>
-                    <h3 class="heading-font font-bold text-xl mb-6">Markazus Sunnah</h3>
-                    <p class="text-gray-400 text-sm leading-relaxed">Dedicated to providing the finest Sunnah-inspired luxury products for your lifestyle.</p>
-                </div>
-                <div>
-                    <h3 class="heading-font font-bold text-xl mb-6">Quick Links</h3>
-                    <ul class="space-y-3 text-sm text-gray-400 font-medium">
-                        <li><a href="/products" class="hover:text-white transition">All Fragrances</a></li>
-                        <li><a href="#" class="hover:text-white transition">About Us</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h3 class="heading-font font-bold text-xl mb-6">Contact</h3>
-                    <div class="flex justify-center md:justify-start">
-                        <a href="#" class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition">f</a>
-                    </div>
-                </div>
-            </div>
-            <div class="border-t border-white/10 pt-8 text-sm text-gray-500">
-                <p>© 2026 Markazus Sunnah. All rights reserved.</p>
-            </div>
+    <!-- ============ MARQUEE (unchanged pattern from homepage) ============ -->
+    <div class="marquee-wrap bg-sage-400 text-cream-50 overflow-hidden border-y border-sage-500/40 py-2.5">
+      <div class="marquee-track whitespace-nowrap font-bold uppercase tracking-wide text-xs sm:text-sm">
+        <span class="mx-4">Join our community for latest drops and member-only discounts • FAST SHIPPING NATIONWIDE • Join our community for latest drops and member-only discounts • FAST SHIPPING NATIONWIDE •</span>
+        <span class="mx-4" aria-hidden="true">Join our community for latest drops and member-only discounts • FAST SHIPPING NATIONWIDE • Join our community for latest drops and member-only discounts • FAST SHIPPING NATIONWIDE •</span>
+      </div>
+    </div>
+
+    <!-- ============ DISCOVERY RAIL — horizontally scrollable ============ -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
+      <div class="flex items-end justify-between mb-6 sm:mb-8">
+        <div>
+          <h2 id="discoveryTitle" class="font-display text-3xl sm:text-4xl text-slate-800 uppercase tracking-wide">You May Also Like</h2>
+          <p class="text-sage-600/80 text-sm mt-1.5">More from the same collection</p>
         </div>
-    </footer>
+        <span class="hidden sm:flex items-center gap-1.5 text-xs text-slate-500/70 font-medium shrink-0">
+          <i data-lucide="move-horizontal" class="w-3.5 h-3.5"></i> Swipe to discover
+        </span>
+      </div>
 
-    <script src="/static/product.js"></script>
+      <div id="pdpDiscoveryRail" class="flex gap-4 sm:gap-5 overflow-x-auto no-scrollbar snap-rail pb-2">
+        <!-- Cards injected by JS -->
+      </div>
+    </section>
+
+  </div>
+
+</main>
+
+<!-- ============ FOOTER — identical markup to index.html ============ -->
+<footer class="bg-slate-800 border-t border-slate-700 pt-14 pb-28 lg:pb-10">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6">
+    <div class="grid sm:grid-cols-3 gap-10 pb-10 border-b border-slate-700">
+      <div>
+        <a href="/" class="flex items-center gap-2 mb-3">
+          <svg width="28" height="28" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17 1L31 8.5V19.5C31 26.4 24.9 31.6 17 33C9.1 31.6 3 26.4 3 19.5V8.5L17 1Z" stroke="#a7bda2" stroke-width="1.7"/>
+            <path d="M17 7L25 11.2V18.2C25 22.4 21.5 25.6 17 26.5C12.5 25.6 9 22.4 9 18.2V11.2L17 7Z" fill="#7C9082"/>
+          </svg>
+          <span class="font-display text-lg tracking-wider text-cream-50">KIT COLLECTIVE</span>
+        </a>
+        <p class="text-sm text-cream-50/60 max-w-xs leading-relaxed">Premium club and national team jerseys, retro drops, and matchday gear — crafted for comfort and timeless style.</p>
+      </div>
+
+      <div>
+        <h4 class="text-xs font-bold uppercase tracking-widest text-sage-300 mb-4">Shop</h4>
+        <ul class="space-y-2.5 text-sm text-cream-50/70">
+          <li><a href="/products" class="hover:text-cream-50 transition-colors">All Products</a></li>
+          <li><a href="/products?category=26+and+27+Kits" class="hover:text-cream-50 transition-colors">New Season 26/27</a></li>
+          <li><a href="/products?category=Retro+Jerseys" class="hover:text-cream-50 transition-colors">Retro Jerseys</a></li>
+          <li><a href="/products?category=Accessories" class="hover:text-cream-50 transition-colors">Accessories</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <h4 class="text-xs font-bold uppercase tracking-widest text-sage-300 mb-4">Support</h4>
+        <ul class="space-y-2.5 text-sm text-cream-50/70">
+          <li><a href="#" class="hover:text-cream-50 transition-colors">Track Your Order</a></li>
+          <li><a href="#" class="hover:text-cream-50 transition-colors">Shipping Policy</a></li>
+          <li><a href="#" class="hover:text-cream-50 transition-colors">Contact Us</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 text-xs text-cream-50/50">
+      <p>© 2026 Kit Collective. All rights reserved.</p>
+      <div class="flex items-center gap-5">
+        <a href="#" class="hover:text-cream-50 transition-colors">Privacy Policy</a>
+        <a href="#" class="hover:text-cream-50 transition-colors">Terms of Service</a>
+        <a href="#" class="hover:text-cream-50 transition-colors">Refund Policy</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ============ MOBILE STICKY BAR — replaced on this page with a
+     product-aware sticky bar showing price + Reserve action, so the
+     bottom nav's job (thumb-reach navigation) is preserved but the
+     add-to-cart action from the info column isn't lost off-screen on
+     mobile. Both live in this one fixed-bottom element on small
+     screens; ============ -->
+<div class="lg:hidden fixed bottom-0 left-0 right-0 z-30">
+  <!-- Product CTA strip — only shown once a product has loaded -->
+  <div id="mobileCtaStrip" class="hidden pdp-mobile-cta">
+    <div>
+      <p id="mobileCtaPrice" class="font-display text-lg text-slate-800"></p>
+      <p id="mobileCtaStockNote" class="pdp-stock-note text-[11px]"></p>
+    </div>
+    <button id="mobileAddToCartBtn" class="pdp-add-btn pdp-add-btn-compact">
+      <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+      <span id="mobileAddToCartLabel">Reserve</span>
+    </button>
+  </div>
+
+  <!-- Standard bottom nav, unchanged from homepage -->
+  <div class="bg-cream-50/95 backdrop-blur border-t border-sand-200 px-4 py-2.5 flex items-center justify-around">
+    <a href="/" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1">
+      <i data-lucide="home" class="w-5 h-5"></i>
+      <span class="text-[10px] font-medium">Home</span>
+    </a>
+    <a href="/products" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1">
+      <i data-lucide="shirt" class="w-5 h-5"></i>
+      <span class="text-[10px] font-medium">Shop</span>
+    </a>
+    <button id="mobileSearchBtn" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1">
+      <i data-lucide="search" class="w-5 h-5"></i>
+      <span class="text-[10px] font-medium">Search</span>
+    </button>
+    <button id="mobileCartBtn" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1 relative">
+      <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+      <span class="text-[10px] font-medium">Bag</span>
+    </button>
+  </div>
+</div>
+
+<!-- ============ CART DRAWER — identical markup to index.html ============ -->
+<div id="cartOverlay" class="cart-overlay fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50"></div>
+<aside id="cartDrawer" class="cart-drawer fixed top-0 right-0 h-full w-full sm:w-[400px] bg-cream-50 z-50 flex flex-col" role="dialog" aria-modal="true" aria-label="Shopping bag">
+  <div class="flex items-center justify-between px-5 py-4 border-b border-sand-200">
+    <h2 class="font-display text-xl text-slate-800 uppercase tracking-wide">Your Bag</h2>
+    <button id="cartCloseBtn" aria-label="Close bag" class="p-2 text-slate-500/80 hover:text-slate-800">
+      <i data-lucide="x" class="w-5 h-5"></i>
+    </button>
+  </div>
+  <div class="flex-1 flex flex-col items-center justify-center px-8 text-center gap-4">
+    <div class="w-16 h-16 rounded-full bg-sand-100 flex items-center justify-center">
+      <i data-lucide="shopping-bag" class="w-7 h-7 text-sage-500"></i>
+    </div>
+    <div>
+      <p class="font-semibold text-slate-800 mb-1">Your bag is empty</p>
+      <p class="text-sm text-slate-500/70">Looks like you haven't added any jerseys yet.</p>
+    </div>
+    <button id="cartStartShoppingBtn" class="mt-2 bg-sage-400 text-cream-50 font-bold uppercase text-sm tracking-wide px-6 py-3 rounded-full hover:bg-sage-500 transition-colors">
+      Start Shopping
+    </button>
+  </div>
+</aside>
+
+<!-- ============ SEARCH OVERLAY — identical markup to index.html ============ -->
+<div id="searchOverlay" class="search-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-start justify-center px-4 pt-20 sm:pt-28">
+  <div class="search-panel w-full max-w-xl bg-cream-50 border border-sand-200 rounded-2xl p-5 sm:p-6" role="dialog" aria-modal="true" aria-label="Search the catalog">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="font-display text-xl text-slate-800 uppercase tracking-wide">Find your next jersey</h2>
+      <button id="searchCloseBtn" aria-label="Close search" class="p-1.5 text-slate-500/80 hover:text-slate-800">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <label for="searchInput" class="sr-only">Search the catalog</label>
+    <div class="relative">
+      <i data-lucide="search" class="w-4 h-4 text-slate-500/50 absolute left-4 top-1/2 -translate-y-1/2"></i>
+      <input id="searchInput" type="text" placeholder="Search the catalog" class="w-full bg-sand-100 border border-sand-200 rounded-full pl-11 pr-4 py-3 text-sm text-slate-800 placeholder:text-slate-500/50 focus:border-sage-400 outline-none" />
+    </div>
+    <p class="text-xs text-slate-500/50 mt-3">Try searches like Messi, Barcelona, Argentina, or Real Madrid.</p>
+  </div>
+</div>
+
+<script src="/static/product.js"></script>
 </body>
 </html>
+

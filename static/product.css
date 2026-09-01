@@ -1,0 +1,400 @@
+/* =====================================================================
+   product.css — Product Detail Page
+   index.css is NOT modified (it's homepage-owned and other pages may
+   depend on it staying exactly as-is). This file assumes index.css is
+   linked first in product.html for the shared design tokens (--sage-*,
+   --slate-*, --cream-*, --sand-*, --clay, --font-display, --font-body)
+   and every reused utility class (layout/spacing/color/typography/
+   nav/cart/search overlay rules). Everything below is additive: new
+   utility classes this page needs that index.css doesn't define yet,
+   plus PDP-specific components (gallery, pills, accordion, stepper,
+   personalization, sticky mobile CTA).
+   ===================================================================== */
+
+/* ---------- Grid utilities index.css doesn't define ----------
+   index.css already defines a bare, always-on .grid-cols-2 (always 2
+   columns, no breakpoint) — reused as-is on this page for the jersey
+   personalization name/number fields, which need to stay side-by-side
+   at every screen size (this page's own explicit spec). What's
+   missing is an *lg:-scoped* 2-column variant for the gallery/info
+   layout (stack on mobile, 2 columns only from lg: up) — index.css
+   has no lg\: grid rule of any kind, so this is added as a new,
+   separate class (.lg\:grid-cols-2) rather than changing what
+   .grid-cols-2 itself means, which would silently break the
+   personalization fields (see the grid-cols-2 usage there, with no
+   lg: prefix, relying on the always-on definition in index.css). */
+@media (min-width: 1024px) {
+  .lg\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.gap-8 { gap: 2rem; }
+@media (min-width: 1024px) {
+  .lg\:gap-14 { gap: 3.5rem; }
+}
+.items-start { align-items: start; }
+.aspect-square { aspect-ratio: 1 / 1; }
+.pt-2 { padding-top: 0.5rem; }
+.pt-1 { padding-top: 0.25rem; }
+.pt-4 { padding-top: 1rem; }
+.py-20 { padding-top: 5rem; padding-bottom: 5rem; }
+.py-24 { padding-top: 6rem; padding-bottom: 6rem; }
+.mt-1\.5 { margin-top: 0.375rem; }
+.mt-0\.5 { margin-top: 0.125rem; }
+.mt-9 { margin-top: 2.25rem; }
+.mb-2\.5 { margin-bottom: 0.625rem; }
+.mb-5 { margin-bottom: 1.25rem; }
+.top-3 { top: 0.75rem; }
+.left-3 { left: 0.75rem; }
+.gap-2\.5 { gap: 0.625rem; }
+.font-normal { font-weight: 400; }
+.normal-case { text-transform: none; }
+.text-\[11px\] { font-size: 11px; }
+.shrink-0 { flex-shrink: 0; }
+.flex-wrap { flex-wrap: wrap; }
+.leading-\[1\.05\] { line-height: 1.05; }
+.tracking-\[0\.15em\] { letter-spacing: 0.15em; }
+.hover\:text-sage-600:hover { color: var(--sage-600); }
+.items-start.gap-2 > i { margin-top: 0.125rem; }
+
+/* antialiased: index.css's body{} rule already sets
+   -webkit-font-smoothing: antialiased unconditionally, so index.html's
+   own antialiased class is a pre-existing no-op there too (verified:
+   the class is never defined as a selector anywhere in that file).
+   Copied onto this page's <body> for parity with index.html's markup;
+   defined properly here instead of repeating that no-op. */
+.antialiased {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (min-width: 640px) {
+  .sm\:pt-6 { padding-top: 1.5rem; }
+  .sm\:py-8 { padding-top: 2rem; padding-bottom: 2rem; }
+}
+
+/* =====================================================================
+   Breadcrumb
+   ===================================================================== */
+#breadcrumb li { display: flex; align-items: center; }
+
+/* =====================================================================
+   Loading / not-found states
+   ===================================================================== */
+.pdp-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--sand-200);
+  border-top-color: var(--sage-400);
+  border-radius: 9999px;
+  animation: pdp-spin 0.7s linear infinite;
+}
+@keyframes pdp-spin { to { transform: rotate(360deg); } }
+
+/* =====================================================================
+   Gallery
+   ===================================================================== */
+.pdp-gallery-main { position: relative; }
+
+.pdp-gallery-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+  background: rgba(251, 249, 245, 0.9);
+  color: var(--slate-800);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(23, 29, 25, 0.15);
+  transition: background-color 0.2s ease;
+}
+.pdp-gallery-nav:hover { background: var(--cream-50); }
+.pdp-gallery-nav-prev { left: 12px; }
+.pdp-gallery-nav-next { right: 12px; }
+
+.pdp-gallery-thumbs {
+  display: flex;
+  gap: 0.625rem;
+  margin-top: 0.75rem;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+}
+.pdp-gallery-thumb {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: var(--sand-100);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.2s ease, opacity 0.2s ease;
+  opacity: 0.7;
+}
+.pdp-gallery-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.pdp-gallery-thumb:hover { opacity: 1; }
+.pdp-gallery-thumb.active { border-color: var(--sage-400); opacity: 1; }
+
+/* =====================================================================
+   Pre-order banner
+   ===================================================================== */
+.pdp-preorder-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  background: var(--sage-100);
+  border: 1px solid var(--sage-200);
+  color: var(--sage-800);
+  border-radius: 0.875rem;
+  padding: 0.75rem 0.9375rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  margin-top: 1.125rem;
+}
+.pdp-preorder-banner i { color: var(--sage-600); }
+
+/* =====================================================================
+   Stock note (next to price)
+   ===================================================================== */
+.pdp-stock-note {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: right;
+}
+.pdp-stock-note.pdp-stock-low { color: var(--clay); }
+.pdp-stock-note.pdp-stock-preorder { color: var(--sage-600); }
+
+/* =====================================================================
+   Identity pills (locked — display only, edition/version/kit_type/
+   type/color for boots). Not focusable as controls; aria-disabled
+   communicates this is informational, not a choice. Visually distinct
+   from the interactive size/color pills below (no hover lift, no
+   pointer cursor, subtle diagonal texture) so it doesn't invite a tap.
+   ===================================================================== */
+.pdp-identity-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
+  background: var(--sand-100);
+  border: 1px solid var(--sand-200);
+  color: var(--slate-800);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  cursor: default;
+}
+.pdp-identity-pill .pdp-identity-pill-label {
+  color: var(--slate-500);
+  font-weight: 600;
+}
+
+/* =====================================================================
+   Interactive pills (size, color) — real radiogroup controls
+   ===================================================================== */
+.pdp-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.pdp-pill {
+  min-width: 2.75rem;
+  height: 2.75rem;
+  padding: 0 0.9375rem;
+  border-radius: 9999px;
+  background: var(--cream-50);
+  border: 1.5px solid var(--sand-200);
+  color: var(--slate-800);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+.pdp-pill:hover:not(.pdp-pill-disabled):not(.pdp-pill-active) {
+  border-color: var(--sage-400);
+}
+.pdp-pill-active {
+  background: var(--sage-400);
+  border-color: var(--sage-400);
+  color: var(--cream-50);
+}
+.pdp-pill-disabled {
+  color: var(--slate-500);
+  opacity: 0.4;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+/* Color pills get a small swatch dot when a recognizable CSS color
+   name/hex is available; falls back to text-only silently otherwise
+   (see product.js resolveSwatch()). */
+.pdp-pill-swatch {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(23, 29, 25, 0.15);
+  margin-right: 0.5rem;
+  flex-shrink: 0;
+}
+
+/* =====================================================================
+   Jersey personalization (collapsible sub-panel)
+   ===================================================================== */
+.pdp-personalize-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1rem;
+  background: var(--sand-100);
+  border: 1px solid var(--sand-200);
+  border-radius: 1rem;
+  transition: background-color 0.2s ease;
+}
+.pdp-personalize-toggle:hover { background: var(--sand-200); }
+.pdp-personalize-chevron { transition: transform 0.25s ease; }
+.pdp-personalize-chevron.open { transform: rotate(180deg); }
+
+.pdp-personalize-fields {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+.pdp-personalize-fields.open { max-height: 220px; }
+
+.pdp-input {
+  width: 100%;
+  background: var(--cream-50);
+  border: 1.5px solid var(--sand-200);
+  border-radius: 0.625rem;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--slate-800);
+  transition: border-color 0.15s ease;
+}
+.pdp-input:focus {
+  outline: none;
+  border-color: var(--sage-400);
+}
+.pdp-input::placeholder { color: rgba(91, 101, 94, 0.45); }
+
+/* =====================================================================
+   Quantity stepper
+   ===================================================================== */
+.pdp-qty-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  border: 1.5px solid var(--sand-200);
+  border-radius: 9999px;
+  overflow: hidden;
+  width: fit-content;
+}
+.pdp-qty-btn {
+  width: 2.75rem;
+  height: 2.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sage-700);
+  transition: background-color 0.15s ease;
+}
+.pdp-qty-btn:hover:not(:disabled) { background: var(--sage-100); }
+.pdp-qty-btn:disabled { color: var(--slate-500); opacity: 0.35; cursor: not-allowed; }
+.pdp-qty-value {
+  min-width: 2.75rem;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  color: var(--slate-800);
+}
+
+/* =====================================================================
+   Add to cart / reserve button
+   ===================================================================== */
+.pdp-add-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: var(--sage-400);
+  color: var(--cream-50);
+  font-weight: 700;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.9375rem 1.5rem;
+  border-radius: 9999px;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+.pdp-add-btn:hover:not(:disabled) { background: var(--sage-500); }
+.pdp-add-btn:disabled {
+  background: var(--sand-200);
+  color: var(--slate-500);
+  cursor: not-allowed;
+}
+.pdp-add-btn-compact {
+  width: auto;
+  padding: 0.75rem 1.375rem;
+  font-size: 0.75rem;
+}
+
+/* =====================================================================
+   Accordion (Description / Shipping / FAQ)
+   ===================================================================== */
+.pdp-accordion { border-top: 1px solid var(--sand-200); }
+.pdp-accordion-item { border-bottom: 1px solid var(--sand-200); }
+.pdp-accordion-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.125rem 0;
+  text-align: left;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  color: var(--slate-800);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.pdp-accordion-chevron { transition: transform 0.3s ease; color: var(--sage-500); }
+.pdp-accordion-chevron.open { transform: rotate(180deg); }
+.pdp-accordion-panel {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease;
+}
+.pdp-accordion-panel.open { max-height: 640px; }
+
+.pdp-faq-inner .faq-item { border-top: 1px solid var(--sand-200); }
+.pdp-faq-inner .faq-item:first-child { border-top: 0; }
+
+/* =====================================================================
+   Mobile sticky product CTA strip (sits above the standard bottom nav)
+   ===================================================================== */
+.pdp-mobile-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: var(--cream-50);
+  border-top: 1px solid var(--sand-200);
+  padding: 0.75rem 1rem;
+  box-shadow: 0 -4px 14px rgba(23, 29, 25, 0.06);
+}
+
+/* =====================================================================
+   Reduced motion
+   ===================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .pdp-spinner { animation-duration: 1.4s; }
+}
+

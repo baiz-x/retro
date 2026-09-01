@@ -1,9 +1,24 @@
-lucide.createIcons();
+/* ---------------- Icon hydration (local inline sprite, no external library) ---------------- */
+// Replaces any leftover data-lucide markup with <use> refs into the inline
+// <symbol> sprite defined in index.html. Safe to call repeatedly/idempotent.
+function hydrateIcons(root = document) {
+  root.querySelectorAll('i[data-lucide]').forEach(el => {
+    const name = el.getAttribute('data-lucide');
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    if (el.className) svg.setAttribute('class', el.className);
+    svg.setAttribute('aria-hidden', 'true');
+    const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+    use.setAttribute('href', `#icon-${name}`);
+    svg.appendChild(use);
+    el.replaceWith(svg);
+  });
+}
+hydrateIcons();
 
 /* ---------------- Product rendering (card markup unchanged) ---------------- */
 const API_BASE = '/api';
 
-const currency = n => '₹' + Number(n).toLocaleString('en-IN');
+const currency = n => '৳' + Number(n).toLocaleString('en-BD');
 
 function productCard(p) {
   return `
@@ -52,7 +67,7 @@ async function loadArrivals() {
     const payload = await res.json();
     if (payload.status === 'success' && Array.isArray(payload.data)) {
       arrivalsRailEl.innerHTML = payload.data.map(mapProductToCard).map(productCard).join('');
-      lucide.createIcons();
+      hydrateIcons();
     }
   } catch (err) {
     console.error('Failed to load new arrivals:', err);
@@ -67,7 +82,7 @@ async function loadDiscovery() {
       // insertAdjacentHTML('beforeend') — same as before, so the hardcoded
       // promo tile stays first in the rail and cards are appended after it.
       discoveryRailEl.insertAdjacentHTML('beforeend', payload.data.map(mapProductToCard).map(productCard).join(''));
-      lucide.createIcons();
+      hydrateIcons();
     }
   } catch (err) {
     console.error('Failed to load random discovery:', err);
@@ -154,7 +169,7 @@ mobileMenuBtn.addEventListener('click', () => {
   const isOpen = mobileMenu.classList.toggle('open');
   mobileMenuBtn.setAttribute('aria-expanded', isOpen);
   mobileMenuBtn.innerHTML = isOpen ? '<i data-lucide="x" class="w-6 h-6"></i>' : '<i data-lucide="menu" class="w-6 h-6"></i>';
-  lucide.createIcons();
+  hydrateIcons();
 });
 
 /* ---------------- Theme toggle (visual, capsule navbar) ---------------- */
@@ -165,7 +180,7 @@ themeToggleBtn.addEventListener('click', () => {
   themeToggleBtn.innerHTML = isDarkIcon
     ? '<i data-lucide="moon" class="w-[18px] h-[18px]"></i>'
     : '<i data-lucide="sun" class="w-[18px] h-[18px]"></i>';
-  lucide.createIcons();
+  hydrateIcons();
 });
 
 /* ---------------- Our Categories — scroll-filling timeline ---------------- */
@@ -239,7 +254,7 @@ faqList.innerHTML = faqData.map((item, i) => `
     </div>
   </div>
 `).join('');
-lucide.createIcons();
+hydrateIcons();
 
 faqList.addEventListener('click', e => {
   const toggle = e.target.closest('.faq-toggle');
@@ -258,5 +273,3 @@ faqList.addEventListener('click', e => {
     toggle.setAttribute('aria-expanded', 'true');
   }
 });
-
-
