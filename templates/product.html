@@ -3,8 +3,31 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Product — Kit Collective</title>
-<meta name="description" content="Kit Collective — premium club and national team football jerseys, boots, and matchday gear." />
+
+<title>{{ product.name }} — Kit Collective</title>
+<meta name="description" content="{{ product.description[:155] if product.description else (product.name ~ ' — available now at Kit Collective. Premium club and national team jerseys, boots, and matchday gear.') }}" />
+<link rel="canonical" href="{{ canonical_url }}" />
+
+<!-- Open Graph / link previews (WhatsApp, Facebook, etc.) -->
+<meta property="og:type" content="product" />
+<meta property="og:title" content="{{ product.name }}" />
+<meta property="og:description" content="{{ product.description[:200] if product.description else 'Available now at Kit Collective.' }}" />
+{% if product.image %}<meta property="og:image" content="{{ product.image }}" />{% endif %}
+<meta property="og:url" content="{{ canonical_url }}" />
+<meta property="og:site_name" content="Kit Collective" />
+<meta property="product:price:amount" content="{{ '%.2f'|format(product.price or 0) }}" />
+<meta property="product:price:currency" content="BDT" />
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="{{ product.name }}" />
+{% if product.image %}<meta name="twitter:image" content="{{ product.image }}" />{% endif %}
+
+<!-- Product structured data (JSON-LD) — built server-side in app.py's
+     build_product_json_ld(), per Google's current Merchant listing
+     requirements. |tojson handles all escaping (quotes, unicode in
+     the product name/description) safely; never string-format this
+     block by hand. -->
+<script type="application/ld+json">{{ json_ld | tojson }}</script>
 
 <!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -102,35 +125,42 @@
 
   <!-- ============ BREADCRUMB ============ -->
   <nav class="max-w-6xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6" aria-label="Breadcrumb">
-    <ol id="breadcrumb" class="flex items-center flex-wrap gap-1.5 text-xs text-slate-500/70">
+    <ol class="flex items-center flex-wrap gap-1.5 text-xs text-slate-500/70">
       <li><a href="/" class="hover:text-sage-600 transition-colors">Home</a></li>
       <li aria-hidden="true">/</li>
-      <li id="breadcrumbType"><a href="/products" class="hover:text-sage-600 transition-colors">Shop</a></li>
+      <li><a href="/products?product_type={{ product.product_type or '' }}" class="hover:text-sage-600 transition-colors">{{ {'jersey': 'Jerseys', 'boots': 'Boots', 'others': 'Others'}.get(product.product_type, 'Shop') }}</a></li>
       <li aria-hidden="true">/</li>
-      <li id="breadcrumbName" class="text-slate-800 font-medium" aria-current="page">&nbsp;</li>
+      <li class="text-slate-800 font-medium" aria-current="page">{{ product.name }}</li>
     </ol>
   </nav>
 
-  <!-- ============ LOADING STATE ============ -->
-  <div id="pdpLoading" class="max-w-6xl mx-auto px-4 sm:px-6 py-20 flex flex-col items-center justify-center gap-3 text-center">
-    <div class="pdp-spinner"></div>
-    <p class="text-sm text-slate-500/70">Loading product…</p>
-  </div>
+  <!-- ============ PRODUCT DETAIL — server-rendered from `product`
+       (see app.py's /product/<slug> route). product.js no longer
+       fetches or builds this from JSON; it only wires up interactivity
+       (pill selection, accordion, personalization, quantity, add to
+       cart) against what's already in this HTML. ============ -->
 
-  <!-- ============ NOT FOUND STATE ============ -->
-  <div id="pdpNotFound" class="hidden max-w-xl mx-auto px-4 sm:px-6 py-24 text-center">
-    <div class="w-16 h-16 rounded-full bg-sand-100 flex items-center justify-center mx-auto mb-5">
-      <i data-lucide="search-x" class="w-7 h-7 text-sage-500"></i>
-    </div>
-    <h1 class="font-display text-2xl text-slate-800 uppercase tracking-wide mb-2">Product not found</h1>
-    <p class="text-sm text-slate-500/70 mb-6">This listing may have been removed, or the link is out of date.</p>
-    <a href="/products" class="inline-flex items-center gap-2 bg-sage-400 text-cream-50 font-bold uppercase tracking-wide text-sm px-6 py-3 rounded-full hover:bg-sage-500 transition-colors">
-      Browse all products <i data-lucide="arrow-right" class="w-4 h-4"></i>
-    </a>
-  </div>
+  <!-- The minimum data product.js still needs client-side: live stock
+       math when a size/color pill is clicked (e.g. capping the
+       quantity stepper, disabling color options once a size is
+       picked) can't be done from the rendered HTML alone. Rather than
+       re-fetch /api/products/slug/<slug> (which would defeat the point
+       of SSR — the page already has this data), the same fields
+       build_product_view_context() used are embedded here once, at
+       render time. |tojson escapes safely for embedding in a
+       <script type="application/json"> tag — never string-format this
+       by hand. -->
+  <script type="application/json" id="pdpProductData">{{ {
+    "id": product.id,
+    "slug": product.slug,
+    "product_type": product.product_type,
+    "price": product.price,
+    "stock": product.stock,
+    "variant_mode": product.variant_mode,
+    "variants": product.variants,
+  } | tojson }}</script>
 
-  <!-- ============ PRODUCT DETAIL (populated by product.js) ============ -->
-  <div id="pdpContent" class="hidden">
+  <div id="pdpContent">
 
     <section class="max-w-6xl mx-auto px-4 sm:px-6 py-5 sm:py-8">
       <div class="grid lg:grid-cols-2 gap-8 lg:gap-14 items-start">
@@ -138,31 +168,49 @@
         <!-- ---------- GALLERY (top of page, per brief) ---------- -->
         <div class="pdp-gallery">
           <div class="pdp-gallery-main relative rounded-2xl overflow-hidden bg-sand-100 aspect-square">
-            <img id="galleryMainImg" src="" alt="" class="w-full h-full object-cover" />
-            <span id="galleryOosBadge" class="hidden absolute top-3 left-3 bg-slate-800/85 text-cream-50 text-[11px] font-bold px-3 py-1 rounded-full">Out of Stock</span>
-            <button id="galleryPrevBtn" aria-label="Previous image" class="pdp-gallery-nav pdp-gallery-nav-prev">
+            <img id="galleryMainImg" src="{{ gallery_images[0] }}" alt="{{ product.name }}" class="w-full h-full object-cover" />
+            <span id="galleryOosBadge" class="{{ '' if out_of_stock else 'hidden' }} absolute top-3 left-3 bg-slate-800/85 text-cream-50 text-[11px] font-bold px-3 py-1 rounded-full">Out of Stock</span>
+            <button id="galleryPrevBtn" aria-label="Previous image" class="pdp-gallery-nav pdp-gallery-nav-prev" style="{{ 'display:none' if gallery_images|length <= 1 else '' }}">
               <i data-lucide="chevron-left" class="w-5 h-5"></i>
             </button>
-            <button id="galleryNextBtn" aria-label="Next image" class="pdp-gallery-nav pdp-gallery-nav-next">
+            <button id="galleryNextBtn" aria-label="Next image" class="pdp-gallery-nav pdp-gallery-nav-next" style="{{ 'display:none' if gallery_images|length <= 1 else '' }}">
               <i data-lucide="chevron-right" class="w-5 h-5"></i>
             </button>
           </div>
+          {% if gallery_images|length > 1 %}
           <div id="galleryThumbs" class="pdp-gallery-thumbs no-scrollbar" role="tablist" aria-label="Product images">
-            <!-- Thumbnails injected by JS -->
+            {% for img in gallery_images %}
+            <button class="pdp-gallery-thumb{{ ' active' if loop.first else '' }}" data-index="{{ loop.index0 }}" role="tab" aria-selected="{{ 'true' if loop.first else 'false' }}" aria-label="View image {{ loop.index }}">
+              <img src="{{ img }}" alt="" loading="lazy" />
+            </button>
+            {% endfor %}
           </div>
+          {% else %}
+          <div id="galleryThumbs" class="pdp-gallery-thumbs no-scrollbar" role="tablist" aria-label="Product images"></div>
+          {% endif %}
         </div>
 
         <!-- ---------- INFO COLUMN ---------- -->
         <div class="pdp-info">
 
-          <p id="infoClub" class="text-sage-600 text-xs font-bold uppercase tracking-[0.15em] mb-2"></p>
-          <h1 id="infoName" class="font-display text-3xl sm:text-4xl text-slate-800 uppercase tracking-wide leading-[1.05] mb-3"></h1>
+          {% if product.club %}
+          <p id="infoClub" class="text-sage-600 text-xs font-bold uppercase tracking-[0.15em] mb-2">{{ product.club }}</p>
+          {% else %}
+          <p id="infoClub" class="text-sage-600 text-xs font-bold uppercase tracking-[0.15em] mb-2 hidden"></p>
+          {% endif %}
+          <h1 id="infoName" class="font-display text-3xl sm:text-4xl text-slate-800 uppercase tracking-wide leading-[1.05] mb-3">{{ product.name }}</h1>
 
           <!-- Locked identity pills: display the fixed edition/version/
                kit_type/type/color the listing already is — not
                clickable selectors. aria-disabled communicates "shown,
                not chosen" to assistive tech. -->
-          <div id="infoIdentityPills" class="flex flex-wrap gap-2 mb-5"></div>
+          <div id="infoIdentityPills" class="flex flex-wrap gap-2 mb-5">
+            {% for label, value in identity_pills %}
+            <span class="pdp-identity-pill" aria-disabled="true">
+              <span class="pdp-identity-pill-label">{{ label }}:</span> {{ value }}
+            </span>
+            {% endfor %}
+          </div>
 
           <!-- ---------- PRE-ORDER BANNER ---------- -->
           <div class="pdp-preorder-banner">
@@ -173,31 +221,41 @@
           <!-- ---------- PRICE + STOCK ---------- -->
           <div class="flex items-end justify-between gap-4 mt-5 mb-1">
             <div>
-              <p id="infoPrice" class="font-display text-3xl text-slate-800"></p>
+              <p id="infoPrice" class="font-display text-3xl text-slate-800">৳{{ '{:,.0f}'.format(product.price or 0) }}</p>
             </div>
-            <p id="infoStockNote" class="pdp-stock-note"></p>
+            <p id="infoStockNote" class="pdp-stock-note {{ stock_note_class }}">{{ stock_note_text }}</p>
           </div>
 
           <!-- ---------- SIZE PILLS ---------- -->
-          <div id="sizeSection" class="mt-6 hidden">
+          <div id="sizeSection" class="mt-6 {{ '' if size_pills else 'hidden' }}">
             <div class="flex items-center justify-between mb-2.5">
               <p class="text-xs font-bold uppercase tracking-widest text-slate-800">Size</p>
               <p id="sizeSelectedLabel" class="text-xs text-slate-500/70"></p>
             </div>
-            <div id="sizePills" class="pdp-pill-row" role="radiogroup" aria-label="Size"></div>
+            <div id="sizePills" class="pdp-pill-row" role="radiogroup" aria-label="Size">
+              {% for pill in size_pills %}
+              <button type="button" class="pdp-pill{{ '' if pill.available else ' pdp-pill-disabled' }}" data-size="{{ pill.value }}" role="radio" aria-checked="false" {{ '' if pill.available else ('disabled aria-label="' ~ pill.value ~ ', out of stock"') }}>{{ pill.value }}</button>
+              {% endfor %}
+            </div>
           </div>
 
           <!-- ---------- COLOR PILLS (boots axis) ---------- -->
-          <div id="colorSection" class="mt-6 hidden">
+          <div id="colorSection" class="mt-6 {{ '' if color_pills else 'hidden' }}">
             <div class="flex items-center justify-between mb-2.5">
               <p class="text-xs font-bold uppercase tracking-widest text-slate-800">Color</p>
               <p id="colorSelectedLabel" class="text-xs text-slate-500/70"></p>
             </div>
-            <div id="colorPills" class="pdp-pill-row" role="radiogroup" aria-label="Color"></div>
+            <div id="colorPills" class="pdp-pill-row" role="radiogroup" aria-label="Color">
+              {% for pill in color_pills %}
+              <button type="button" class="pdp-pill{{ '' if pill.available else ' pdp-pill-disabled' }}" data-color="{{ pill.value }}" role="radio" aria-checked="false" {{ '' if pill.available else 'disabled' }}>
+                <span class="pdp-pill-swatch" data-color-name="{{ pill.value }}"></span>{{ pill.value }}
+              </button>
+              {% endfor %}
+            </div>
           </div>
 
           <!-- ---------- JERSEY PERSONALIZATION ---------- -->
-          <div id="personalizeSection" class="mt-6 hidden">
+          <div id="personalizeSection" class="mt-6 {{ '' if show_personalization else 'hidden' }}">
             <button id="personalizeToggle" type="button" class="pdp-personalize-toggle" aria-expanded="false">
               <span class="flex items-center gap-2.5">
                 <i data-lucide="shirt" class="w-4 h-4 text-sage-600"></i>
@@ -235,9 +293,9 @@
           </div>
 
           <!-- ---------- CTA (desktop inline; hidden on mobile in favor of sticky bar) ---------- -->
-          <button id="addToCartBtn" class="pdp-add-btn mt-7 hidden lg:flex">
+          <button id="addToCartBtn" class="pdp-add-btn mt-7 hidden lg:flex" {{ 'disabled' if out_of_stock else '' }}>
             <i data-lucide="shopping-bag" class="w-4 h-4"></i>
-            <span id="addToCartLabel">Reserve this item</span>
+            <span id="addToCartLabel">{{ 'Out of Stock' if out_of_stock else 'Reserve this item' }}</span>
           </button>
           <p id="selectionHint" class="text-xs text-clay mt-2 hidden">Please select a size to continue.</p>
 
@@ -251,7 +309,7 @@
                   <i data-lucide="chevron-down" class="pdp-accordion-chevron open w-5 h-5"></i>
                 </button>
                 <div class="pdp-accordion-panel open" id="accordion-panel-0">
-                  <div id="accordionDescription" class="text-sm text-slate-500/80 leading-relaxed pb-5"></div>
+                  <div id="accordionDescription" class="text-sm text-slate-500/80 leading-relaxed pb-5">{{ product.description if product.description else 'No description provided for this product yet.' }}</div>
                 </div>
               </div>
 
@@ -369,15 +427,16 @@
      mobile. Both live in this one fixed-bottom element on small
      screens; ============ -->
 <div class="lg:hidden fixed bottom-0 left-0 right-0 z-30">
-  <!-- Product CTA strip — only shown once a product has loaded -->
-  <div id="mobileCtaStrip" class="hidden pdp-mobile-cta">
+  <!-- Product CTA strip — data is already server-rendered, so this is
+       visible immediately rather than waiting for JS to reveal it. -->
+  <div id="mobileCtaStrip" class="pdp-mobile-cta">
     <div>
-      <p id="mobileCtaPrice" class="font-display text-lg text-slate-800"></p>
-      <p id="mobileCtaStockNote" class="pdp-stock-note text-[11px]"></p>
+      <p id="mobileCtaPrice" class="font-display text-lg text-slate-800">৳{{ '{:,.0f}'.format(product.price or 0) }}</p>
+      <p id="mobileCtaStockNote" class="pdp-stock-note text-[11px] {{ stock_note_class }}">{{ stock_note_text }}</p>
     </div>
-    <button id="mobileAddToCartBtn" class="pdp-add-btn pdp-add-btn-compact">
+    <button id="mobileAddToCartBtn" class="pdp-add-btn pdp-add-btn-compact" {{ 'disabled' if out_of_stock else '' }}>
       <i data-lucide="shopping-bag" class="w-4 h-4"></i>
-      <span id="mobileAddToCartLabel">Reserve</span>
+      <span id="mobileAddToCartLabel">{{ 'Out of Stock' if out_of_stock else 'Reserve' }}</span>
     </button>
   </div>
 

@@ -1,12 +1,19 @@
 # app.py
-from flask import Flask, render_template, Response
+from flask import Flask, render_template, Response, abort, request
 from dotenv import load_dotenv
+from datetime import datetime
 import os
 
 # use db from your models package
 from models import db, Product
 from wall import setup_security
 from sqlalchemy import text
+
+# Slug lookup reused from the existing products API service, per
+# Hasan's instruction to pull needed functions from product_service.py
+# rather than duplicate the query here.
+from services.product_service import get_product_by_slug_service, build_product_json_ld, build_product_view_context, build_gallery_images, build_stock_note, build_color_pills, build_size_pills, build_identity_pills, is_out_of_stock, resolve_product_availability, request_base_url
+
 # Load env
 load_dotenv()
 
@@ -48,9 +55,20 @@ def test3():
 def products():
     return render_template("products.html")
 
-@app.route("/product")
-def product():
-    return render_template("product.html")
+@app.route("/product/<string:slug>", methods=['GET'])
+def product_detail(slug):
+    product_obj = get_product_by_slug_service(slug)
+    if product_obj is None:
+        abort(404)
+    base_url = request_base_url()
+    context = build_product_view_context(product_obj)
+    return render_template(
+        "product.html",
+        product=product_obj,
+        json_ld=build_product_json_ld(product_obj, base_url),
+        canonical_url=f"{base_url}/product/{product_obj.slug}",
+        **context,
+    )
 
 
 @app.route("/cart")
@@ -93,26 +111,32 @@ def robots():
 def sitemap():
     """
     The curated tour guide for Google.
-    Matches your exact 'product?id=' structure.
+    Matches the real /product/<slug> URL structure.
     """
     base_url = "http://127.0.0.1:5000"
+    today = datetime.now().strftime('%Y-%m-%d')
     pages = []
 
     # 1. High-Value Static Pages
     # We give the Homepage 1.0 priority. We skip Cart/Checkout entirely.
-    pages.append({"loc": f"{base_url}/", "priority": "1.0", "changefreq": "daily"})
-    pages.append({"loc": f"{base_url}/products", "priority": "0.8", "changefreq": "daily"})
+    # lastmod added on these too — previously missing, which made the
+    # XML-building loop below throw a KeyError on these exact two
+    # entries every time (page["lastmod"] on a dict that never set it).
+    pages.append({"loc": f"{base_url}/", "priority": "1.0", "changefreq": "daily", "lastmod": today})
+    pages.append({"loc": f"{base_url}/products", "priority": "0.8", "changefreq": "daily", "lastmod": today})
 
     # 2. Dynamic Product Pages
     try:
         # Assuming 'Product' is your SQLAlchemy model
-        products = Product.query.all() 
+        products = Product.query.all()
         for p in products:
+            if not p.slug:
+                continue  # slug is nullable (pre-migration rows) — skip rather than link a broken URL
             pages.append({
-                "loc": f"{base_url}/product?id={p.id}", 
+                "loc": f"{base_url}/product/{p.slug}",
                 "priority": "0.7",
                 "changefreq": "weekly",
-                "lastmod": datetime.now().strftime('%Y-%m-%d')
+                "lastmod": p.updated_at.strftime('%Y-%m-%d') if p.updated_at else today
             })
     except Exception as e:
         app.logger.error(f"Sitemap generation error: {e}")
@@ -147,3 +171,4 @@ with app.app_context():
 # ---------- Main ----------
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
+

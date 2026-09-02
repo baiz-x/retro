@@ -489,7 +489,280 @@ def reduce_variant_stock(product, selected_variants, quantity):
         db.session.rollback()
         current_app.logger.error(f"Stock update failed: {str(e)}")
         return False, str(e)
+# ---------- SEO / structured data helpers (Product SSR) ----------
+# Inline in app.py per Hasan's instruction — no server-rendering code
+# added to routes/product_route.py, which stays API-only. Only the
+# slug lookup itself is imported from services/product_service.py.
 
+def request_base_url():
+    """
+    Scheme+host of the current request (e.g. "https://kitcollective.com"),
+    no trailing slash. Used for the product page's canonical URL and
+    JSON-LD, derived from the live request rather than hardcoded — unlike
+    /sitemap.xml below, which pins a fixed base_url; that's left as-is
+    since changing it wasn't asked for and may be intentional (e.g. a
+    fixed production domain regardless of which host actually served
+    the request).
+    """
+    return request.host_url.rstrip('/')
+
+
+def resolve_product_availability(product):
+    """
+    Maps this product's stock onto a schema.org/ItemAvailability value.
+    Mirrors the exact stock semantics already used elsewhere (see
+    reduce_variant_stock in product_service.py and the equivalent
+    isOutOfStock()/getResolvedStock() logic in product.js):
+      - "unified" mode: product.stock is the one authoritative number.
+      - "per_variant" mode: product.stock is kept as a rolling total
+        across all combinations (reduce_variant_stock recomputes it on
+        every stock change), so it's still safe to read directly here
+        without walking variants.combinations again.
+    Kit Collective sells on a pre-order / sourced-on-demand basis (see
+    the on-page banner), so genuine on-hand stock maps to InStock (or
+    LimitedAvailability, matching the page's own "order fast, low
+    quantity" note), and everything else — including zero recorded
+    stock, since nothing here is ever truly unavailable to order — maps
+    to PreOrder rather than OutOfStock.
+    """
+    stock = product.stock or 0
+    if stock <= 0:
+        return "https://schema.org/PreOrder"
+    if stock <= 5:  # matches LOW_STOCK_THRESHOLD in product.js
+        return "https://schema.org/LimitedAvailability"
+    return "https://schema.org/InStock"
+
+
+LOW_STOCK_THRESHOLD = 5  # same constant/value as product.js — kept in
+                          # sync manually since the two run in different
+                          # languages; change both if this ever moves.
+
+
+def is_out_of_stock(product):
+    """
+    Same semantics as isOutOfStock() in product.js: unified mode reads
+    product.stock directly; per_variant mode is out of stock only if
+    EVERY combination has zero stock (a product can still be orderable
+    in one size while others are gone).
+    """
+    variants = product.variants or {}
+    if (product.variant_mode or "unified") == "per_variant":
+        combos = variants.get("combinations") or []
+        if not combos:
+            return (product.stock or 0) <= 0
+        return all((c.get("stock") or 0) <= 0 for c in combos)
+    return (product.stock or 0) <= 0
+
+
+def build_identity_pills(product):
+    """
+    Locked, non-interactive identity pills — same per-type mapping as
+    renderIdentityPills() in product.js: jersey shows edition/version/
+    kit_type; boots shows type/brand; others shows type/color. These
+    are fixed-per-listing columns (see product.py's identity-field
+    comments), never variant axes, so they're never clickable here
+    either.
+    """
+    pills = []
+    ptype = product.product_type
+    if ptype == "jersey":
+        if product.edition:
+            pills.append(("Edition", product.edition))
+        if product.version:
+            pills.append(("Version", product.version))
+        if product.kit_type:
+            pills.append(("Kit", product.kit_type))
+    elif ptype == "boots":
+        if product.type:
+            pills.append(("Type", product.type))
+        if product.brand:
+            pills.append(("Brand", product.brand))
+    elif ptype == "others":
+        if product.type:
+            pills.append(("Type", product.type))
+        if product.color:
+            pills.append(("Color", product.color))
+    return pills
+
+
+def build_size_pills(product):
+    """
+    Same per-size availability logic as isSizeAvailable() in product.js:
+    unified mode has no per-size stock concept (every size available
+    together, or none if product.stock is 0); per_variant mode marks a
+    size available if ANY color at that size (or just that size, for
+    jersey/others' size-only axis) has stock > 0.
+    Returns a list of {"value": size, "available": bool} dicts, or []
+    if this product has no size axis at all.
+    """
+    variants = product.variants or {}
+    axes = variants.get("axes") or {}
+    sizes = axes.get("size") or []
+    if not sizes:
+        return []
+
+    mode = product.variant_mode or "unified"
+    combos = variants.get("combinations") or []
+
+    result = []
+    for size in sizes:
+        if mode != "per_variant" or not combos:
+            available = (product.stock or 0) > 0
+        else:
+            available = any(
+                c.get("size") == size and (c.get("stock") or 0) > 0
+                for c in combos
+            )
+        result.append({"value": size, "available": available})
+    return result
+
+
+def build_color_pills(product):
+    """
+    Boots-only axis (size×color) — same as renderColorSection() in
+    product.js. Availability here can't depend on a selected size
+    (that only happens client-side after a pill click), so at render
+    time a color is shown available if it has stock in ANY size —
+    the JS layer refines this further once the person picks a size.
+    """
+    if product.product_type != "boots":
+        return []
+    variants = product.variants or {}
+    axes = variants.get("axes") or {}
+    colors = axes.get("color") or []
+    if not colors:
+        return []
+
+    mode = product.variant_mode or "unified"
+    combos = variants.get("combinations") or []
+
+    result = []
+    for color in colors:
+        if mode != "per_variant" or not combos:
+            available = (product.stock or 0) > 0
+        else:
+            available = any(
+                c.get("color") == color and (c.get("stock") or 0) > 0
+                for c in combos
+            )
+        result.append({"value": color, "available": available})
+    return result
+
+
+def build_stock_note(product):
+    """
+    Same three-state note as updateStockNote() in product.js: out of
+    stock, low quantity (with the live count), or the pre-order framing
+    for everything else. Returns (text, css_class).
+    """
+    stock = product.stock or 0
+    if is_out_of_stock(product):
+        return "Out of stock", "pdp-stock-low"
+    if stock <= LOW_STOCK_THRESHOLD:
+        return f"Order fast, low quantity — {stock} left", "pdp-stock-low"
+    return "Pre-Order — all products will be sourced after order", "pdp-stock-preorder"
+
+
+def build_gallery_images(product):
+    """
+    Same source order as collectGalleryImages() in product.js: main
+    image first, then gallery[], de-duplicated, falling back to a
+    stock photo if the product has no images at all yet. axis_images
+    (per-variant photos) is intentionally NOT read here — the
+    dashboard always sends it empty today (see dashboard.js), so
+    there's nothing real to add server-side yet either; product.js
+    keeps its own client-side axis_images handling for when that
+    changes.
+    """
+    images = []
+    if product.image:
+        images.append(product.image)
+    for url in (product.gallery or []):
+        if url and url not in images:
+            images.append(url)
+    if not images:
+        images.append("https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=1200&auto=format&fit=crop")
+    return images
+
+
+def build_product_view_context(product):
+    """
+    Single place that computes every derived value product.html needs
+    beyond the raw `product` object itself — keeps the template mostly
+    declarative instead of embedding this logic inline in Jinja.
+    """
+    stock_note_text, stock_note_class = build_stock_note(product)
+    return {
+        "gallery_images": build_gallery_images(product),
+        "out_of_stock": is_out_of_stock(product),
+        "identity_pills": build_identity_pills(product),
+        "size_pills": build_size_pills(product),
+        "color_pills": build_color_pills(product),
+        "stock_note_text": stock_note_text,
+        "stock_note_class": stock_note_class,
+        "show_personalization": product.product_type == "jersey",
+    }
+
+
+def build_product_json_ld(product, base_url):
+    """
+    Builds the Product + Offer JSON-LD dict for this product, per
+    Google's current Merchant listing requirements (Product: name,
+    image, offers required; Offer: price + priceCurrency required,
+    price must be a plain number > 0). priceCurrency is the ISO 4217
+    code "BDT" — distinct from the ৳ symbol shown elsewhere on the
+    page, which JSON-LD doesn't use.
+
+    Only includes optional properties (brand, color, material, size,
+    sku) when the underlying column is actually populated, rather than
+    emitting empty/null values Google would just ignore or flag.
+    """
+    images = []
+    if product.image:
+        images.append(product.image)
+    if isinstance(product.gallery, list):
+        images.extend(g for g in product.gallery if g)
+
+    offer = {
+        "@type": "Offer",
+        "url": f"{base_url}/product/{product.slug}",
+        "priceCurrency": "BDT",
+        "price": float(product.price or 0),
+        "availability": resolve_product_availability(product),
+    }
+
+    data = {
+        "@context": "https://schema.org/",
+        "@type": "Product",
+        "name": product.name,
+        "image": images or None,
+        "description": product.description or None,
+        "sku": product.slug,
+        "offers": offer,
+    }
+
+    # brand: real column on boots/others, absent on jerseys (see
+    # product.py's per-type identity field comments) — include only
+    # when populated rather than sending an empty Brand object.
+    if product.brand:
+        data["brand"] = {"@type": "Brand", "name": product.brand}
+
+    if product.color:
+        data["color"] = product.color
+    if product.material:
+        data["material"] = product.material
+
+    # size: schema.org allows at most one value here, but this product
+    # can have several (variants.axes.size) — omitted rather than
+    # picking one arbitrarily, since a single size on a multi-size
+    # listing would misrepresent the product; the actual sizes are
+    # already visible as pills in the rendered HTML itself, which
+    # Google can read regardless of this field.
+
+    # Drop any top-level key left as None (image/description can be
+    # missing on a real product) — Google's parser is stricter about
+    # explicit nulls than about an absent key.
+    return {k: v for k, v in data.items() if v is not None}
 
 
 
