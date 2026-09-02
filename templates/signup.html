@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Create Account — Kit Collective</title>
+<meta name="robots" content="noindex, nofollow" />
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<!-- Icons -->
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+<meta name="csrf-token" content="{{ csrf_token() }}" />
+
+<!-- Styles: shares index.css tokens, adds only the auth-page layout -->
+<link rel="stylesheet" href="/static/index.css">
+<link rel="stylesheet" href="/static/auth.css">
+</head>
+
+<body class="bg-cream-50 text-slate-800 antialiased">
+
+<div class="auth-page">
+  <div class="auth-card">
+
+    <a href="/" class="flex items-center gap-2 justify-center mb-6" aria-label="Kit Collective home">
+      <svg width="30" height="30" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M17 1L31 8.5V19.5C31 26.4 24.9 31.6 17 33C9.1 31.6 3 26.4 3 19.5V8.5L17 1Z" stroke="#657d69" stroke-width="1.7"/>
+        <path d="M17 7L25 11.2V18.2C25 22.4 21.5 25.6 17 26.5C12.5 25.6 9 22.4 9 18.2V11.2L17 7Z" fill="#a7bda2"/>
+        <path d="M17 12L14 17H16.3L14.7 22L21 15.5H18.2L20 12H17Z" fill="#2C3531"/>
+      </svg>
+      <span class="font-display text-xl tracking-wider text-sage-950">KIT COLLECTIVE</span>
+    </a>
+
+    <h1 class="font-display text-3xl text-slate-800 uppercase tracking-wide text-center mb-1.5">Create account</h1>
+    <p class="text-sm text-slate-500/70 text-center mb-7">Save your cart, track orders, checkout faster.</p>
+
+    <div id="formError" class="auth-error hidden" role="alert"></div>
+
+    <form id="signupForm" class="space-y-4" novalidate>
+      <label class="block">
+        <span class="auth-label">Username <span class="auth-label-hint">(3–80 characters, letters/numbers/_/. only)</span></span>
+        <input id="username" name="username" type="text" class="auth-input" autocomplete="username" required />
+      </label>
+
+      <label class="block">
+        <span class="auth-label">Phone Number</span>
+        <input id="phone_number" name="phone_number" type="tel" class="auth-input" placeholder="01XXXXXXXXX" autocomplete="tel" required />
+      </label>
+
+      <label class="block">
+        <span class="auth-label">Password <span class="auth-label-hint">(min. 8 characters)</span></span>
+        <div class="relative">
+          <input id="password" name="password" type="password" class="auth-input pr-11" autocomplete="new-password" required minlength="8" />
+          <button type="button" id="togglePassword" aria-label="Show password" class="auth-input-icon-btn">
+            <i data-lucide="eye" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </label>
+
+      <!-- Optional social contact, per plan.md's social_platform/social_handle
+           fields on User — collapsed behind a toggle so it doesn't crowd the
+           form for people who'd rather skip it. -->
+      <button type="button" id="socialToggle" class="auth-optional-toggle" aria-expanded="false">
+        <span>Add a social contact (optional)</span>
+        <i data-lucide="chevron-down" class="w-4 h-4"></i>
+      </button>
+      <div id="socialFields" class="auth-optional-fields">
+        <div class="grid grid-cols-2 gap-3 pt-3">
+          <label class="block">
+            <span class="auth-label">Platform</span>
+            <select id="social_platform" name="social_platform" class="auth-input">
+              <option value="">None</option>
+              <option value="WhatsApp">WhatsApp</option>
+              <option value="Instagram">Instagram</option>
+              <option value="Facebook">Facebook</option>
+              <option value="TikTok">TikTok</option>
+            </select>
+          </label>
+          <label class="block">
+            <span class="auth-label">Handle</span>
+            <input id="social_handle" name="social_handle" type="text" class="auth-input" placeholder="@yourhandle" autocomplete="off" />
+          </label>
+        </div>
+      </div>
+
+      <button type="submit" id="submitBtn" class="pdp-add-btn w-full mt-2">
+        <span id="submitLabel">Create Account</span>
+      </button>
+    </form>
+
+    <p class="text-center text-sm text-slate-500/70 mt-6">
+      Already have an account? <a href="/login" class="text-sage-600 font-semibold hover:text-sage-700">Log in</a>
+    </p>
+  </div>
+</div>
+
+<script src="/static/auth.js"></script>
+<script src="/static/signup.js"></script>
+</body>
+</html>

@@ -1,199 +1,197 @@
-/**
- * Markazus Sunnah | Shopping Bag & Logic
- * Fixed: Language toggle integration and persistent state
- */
+const API_BASE = '/api';
 
-const API_BASE = '/api/cart';
-const DOM = {
-    container: document.getElementById('cart-container'),
-    summary: document.getElementById('cart-summary'),
-    emptyState: document.getElementById('empty-state'),
-    subtotalEl: document.getElementById('subtotal-price'),
-    shippingEl: document.getElementById('shipping-cost'),
-    discountRow: document.getElementById('discount-row'),
-    discountEl: document.getElementById('discount-amount'),
-    grandTotalEl: document.getElementById('grand-total'),
-    countHeader: document.getElementById('cart-count-header'),
-    freeBadge: document.getElementById('free-delivery-badge'),
-    options: document.getElementById('cart-options'),
-    clearBtn: document.getElementById('clear-btn'),
-    checkoutBtn: document.getElementById('checkout-btn'),
-    langToggle: document.getElementById('lang-toggle')
-};
+/* Same CSRF pattern established in product.js/auth.js — reads the
+   <meta name="csrf-token"> tag rendered by cart.html and attaches it
+   to every mutating request. */
+function csrfFetch(url, options = {}) {
+  const token = document.querySelector('meta[name="csrf-token"]').content;
+  options.headers = { ...(options.headers || {}), 'X-CSRFToken': token };
+  return fetch(url, options);
+}
 
-let currentCartData = null;
+const cartLoading = document.getElementById('cartLoading');
+const emptyState = document.getElementById('emptyState');
+const cartContents = document.getElementById('cartContents');
+const cartLines = document.getElementById('cartLines');
+const cartCountHeader = document.getElementById('cartCountHeader');
+const summarySubtotal = document.getElementById('summarySubtotal');
+const cartGrandTotal = document.getElementById('cartGrandTotal');
+const clearBtn = document.getElementById('clearBtn');
 
-document.addEventListener('DOMContentLoaded', () => {
-    initApp();
+function formatTaka(amount) {
+  return `৳${Number(amount).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+}
+
+/* Builds the small pill row under a line item: variant selections
+   (e.g. Size: M) as neutral tags, and jersey customization (name/
+   number) as a distinct sage-tinted tag so it visually reads as
+   "this line is personalized" at a glance. */
+function renderLineMeta(item) {
+  const variantTags = Object.entries(item.selected_variants || {})
+    .map(([axis, value]) => `<span class="cart-line-tag">${escapeHtml(axis)}: ${escapeHtml(value)}</span>`)
+    .join('');
+
+  const customization = item.customization || {};
+  let customTag = '';
+  if (customization.name || customization.number) {
+    const parts = [];
+    if (customization.name) parts.push(`NAME: ${escapeHtml(customization.name)}`);
+    if (customization.number) parts.push(`NO: ${escapeHtml(customization.number)}`);
+    customTag = `<span class="cart-line-custom">${parts.join(' · ')}</span>`;
+  }
+
+  return `<div class="cart-line-meta">${variantTags}${customTag}</div>`;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function renderLine(item) {
+  return `
+    <div class="cart-line" data-cart-item-id="${item.id}">
+      <div class="cart-line-media">
+        ${item.image ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.product_name || '')}" />` : ''}
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <h3 class="font-bold text-sm text-slate-800 truncate">${escapeHtml(item.product_name || 'Product')}</h3>
+            ${renderLineMeta(item)}
+          </div>
+          <button class="cart-line-remove shrink-0" data-action="remove" data-cart-item-id="${item.id}" aria-label="Remove item">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+        <div class="flex items-end justify-between mt-3">
+          <div class="cart-line-qty-stepper">
+            <button class="cart-line-qty-btn" data-action="decrement" data-cart-item-id="${item.id}" aria-label="Decrease quantity">
+              <i data-lucide="minus" class="w-3.5 h-3.5"></i>
+            </button>
+            <span class="cart-line-qty-value">${item.quantity}</span>
+            <button class="cart-line-qty-btn" data-action="increment" data-cart-item-id="${item.id}" aria-label="Increase quantity">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+          <span class="font-bold text-sm text-slate-800">${formatTaka(item.subtotal)}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderCart(data) {
+  const items = data.items || [];
+  cartLoading.classList.add('hidden');
+
+  cartCountHeader.textContent = `${data.total_items || 0} Item${data.total_items === 1 ? '' : 's'}`;
+
+  if (items.length === 0) {
+    emptyState.classList.remove('hidden');
+    cartContents.classList.add('hidden');
+    lucide.createIcons();
+    return;
+  }
+
+  emptyState.classList.add('hidden');
+  cartContents.classList.remove('hidden');
+
+  cartLines.innerHTML = items.map(renderLine).join('');
+  summarySubtotal.textContent = formatTaka(data.total_price || 0);
+  cartGrandTotal.textContent = formatTaka(data.total_price || 0);
+
+  lucide.createIcons();
+}
+
+async function loadCart() {
+  try {
+    const res = await fetch(`${API_BASE}/cart`);
+    const payload = await res.json();
+    if (payload.status === 'success') {
+      renderCart(payload.data);
+    } else {
+      renderCart({ items: [], total_items: 0, total_price: 0 });
+    }
+  } catch (err) {
+    console.error('Failed to load cart:', err);
+    renderCart({ items: [], total_items: 0, total_price: 0 });
+  }
+}
+
+/* Every quantity/remove action re-renders from the response the
+   server sends back (each cart mutation route returns the full
+   updated cart — see services/cart_service.py) rather than
+   optimistically guessing the new state client-side, so stock limits
+   enforced server-side are always reflected accurately. */
+async function changeQuantity(cartItemId, delta) {
+  const line = cartLines.querySelector(`[data-cart-item-id="${cartItemId}"]`);
+  const currentQty = parseInt(line.querySelector('.cart-line-qty-value').textContent, 10);
+  const newQty = currentQty + delta;
+
+  try {
+    const res = await csrfFetch(`${API_BASE}/cart/update`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cart_item_id: cartItemId, quantity: newQty }),
+    });
+    const payload = await res.json();
+    if (payload.status === 'success') {
+      renderCart(payload.data);
+    } else {
+      // e.g. stock limit hit — reload to show the server's actual state
+      // rather than leaving the stepper showing a quantity that wasn't
+      // actually applied.
+      await loadCart();
+    }
+  } catch (err) {
+    console.error('Failed to update quantity:', err);
+    await loadCart();
+  }
+}
+
+async function removeItem(cartItemId) {
+  try {
+    const res = await csrfFetch(`${API_BASE}/cart/remove`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cart_item_id: cartItemId }),
+    });
+    const payload = await res.json();
+    if (payload.status === 'success') {
+      renderCart(payload.data);
+    } else {
+      await loadCart();
+    }
+  } catch (err) {
+    console.error('Failed to remove item:', err);
+  }
+}
+
+async function clearCart() {
+  try {
+    await csrfFetch(`${API_BASE}/cart/clear`, { method: 'POST' });
+    await loadCart();
+  } catch (err) {
+    console.error('Failed to clear cart:', err);
+  }
+}
+
+cartLines.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  const cartItemId = btn.dataset.cartItemId;
+  const action = btn.dataset.action;
+
+  if (action === 'remove') removeItem(cartItemId);
+  if (action === 'increment') changeQuantity(cartItemId, 1);
+  if (action === 'decrement') changeQuantity(cartItemId, -1);
 });
 
-async function initApp() {
-    // Initialize Language
-    const savedLang = localStorage.getItem('site_lang') || 'en';
-    applyLanguage(savedLang);
+clearBtn.addEventListener('click', () => {
+  if (confirm('Remove everything from your bag?')) clearCart();
+});
 
-    if (DOM.langToggle) {
-        DOM.langToggle.addEventListener('click', () => {
-            const newLang = document.body.classList.contains('lang-bn') ? 'en' : 'bn';
-            applyLanguage(newLang);
-        });
-    }
-
-    await fetchCart();
-
-    document.addEventListener('click', (e) => {
-        const toggleBtn = e.target.closest('.drawer-toggle-btn');
-        if (toggleBtn) {
-            const item = toggleBtn.closest('.drawer-item');
-            item.classList.toggle('active');
-        }
-    });
-
-    if (DOM.container) {
-        DOM.container.addEventListener('click', (e) => {
-            const removeBtn = e.target.closest('.remove-item-btn');
-            if (removeBtn) {
-                const id = removeBtn.getAttribute('data-id');
-                const size = removeBtn.getAttribute('data-size');
-                removeItem(id, size);
-            }
-        });
-    }
-
-    document.querySelectorAll('.shipping-radio').forEach(radio => {
-        radio.addEventListener('change', () => {
-            if (currentCartData) calculateTotals(currentCartData);
-        });
-    });
-
-    if (DOM.clearBtn) DOM.clearBtn.addEventListener('click', handleClearCart);
-    if (DOM.checkoutBtn) DOM.checkoutBtn.addEventListener('click', navigateToCheckout);
-}
-
-async function fetchCart() {
-    try {
-        const response = await fetch(API_BASE);
-        const result = await response.json();
-        if (result.status === 'success') {
-            currentCartData = result.data;
-            renderCart(result.data);
-            // Re-apply language after rendering dynamic items
-            const currentLang = localStorage.getItem('site_lang') || 'en';
-            applyLanguage(currentLang);
-        }
-    } catch (err) { console.error("Cart fetch failed:", err); }
-}
-
-function renderCart(cartData) {
-    if (!cartData.items || cartData.items.length === 0) {
-        DOM.container.innerHTML = '';
-        DOM.emptyState.classList.remove('hidden');
-        DOM.summary.classList.add('hidden');
-        DOM.options.classList.add('hidden');
-        DOM.countHeader.innerText = "0 Items";
-        return;
-    }
-
-    DOM.emptyState.classList.add('hidden');
-    DOM.summary.classList.remove('hidden');
-    DOM.options.classList.remove('hidden');
-    DOM.countHeader.innerText = `${cartData.total_items} Items`;
-
-    DOM.container.innerHTML = cartData.items.map(item => `
-        <div class="cart-card bg-white p-6 rounded-3xl border border-gray-100 flex items-center gap-6 shadow-sm">
-            <div class="w-24 h-24 flex-shrink-0 rounded-2xl overflow-hidden bg-gray-50 border border-gray-50">
-                <img src="${item.image || 'https://placehold.co/150'}" class="w-full h-full object-cover">
-            </div>
-            <div class="flex-1">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <h3 class="heading-font font-bold text-sm uppercase tracking-tight text-gray-900">${item.product_name}</h3>
-                        <div class="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full bg-khaki/40 text-gray-700 text-[9px] font-bold uppercase tracking-wider border border-khaki/50">
-                            <span data-bn="সাইজ:">Size:</span> ${item.size}
-                        </div>
-                    </div>
-                    <button class="remove-item-btn text-gray-300 hover:text-red-500 transition-colors p-1"
-                            data-id="${item.product_id}" data-size="${item.size}">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    </button>
-                </div>
-                <div class="flex justify-between items-end mt-4">
-                    <div class="flex flex-col">
-                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1" data-bn="পরিমাণ">Quantity</span>
-                        <span class="text-sm font-bold text-gray-900">${item.quantity}</span>
-                    </div>
-                    <div class="text-right">
-                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1" data-bn="উপমোট">Subtotal</span>
-                        <span class="font-black heading-font text-black text-lg">৳${item.subtotal.toLocaleString()}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `).join('');
-
-    calculateTotals(cartData);
-}
-
-function calculateTotals(cartData) {
-    const subtotal = parseFloat(cartData.total_price);
-    const shipping = getSelectedShippingValue();
-    let finalTotal = subtotal + shipping;
-
-    if (subtotal > 1500) {
-        finalTotal = subtotal;
-        DOM.freeBadge.classList.remove('hidden');
-        DOM.discountRow.classList.remove('hidden');
-        DOM.discountEl.innerText = `-৳${shipping.toFixed(2)}`;
-        DOM.shippingEl.classList.add('text-gray-400', 'line-through');
-    } else {
-        DOM.freeBadge.classList.add('hidden');
-        DOM.discountRow.classList.add('hidden');
-        DOM.shippingEl.classList.remove('text-gray-400', 'line-through');
-    }
-
-    DOM.subtotalEl.innerText = `৳${subtotal.toLocaleString()}`;
-    DOM.shippingEl.innerText = `৳${shipping.toFixed(2)}`;
-    DOM.grandTotalEl.innerText = `৳${finalTotal.toLocaleString()}`;
-}
-
-function getSelectedShippingValue() {
-    const selected = document.querySelector('input[name="shipping"]:checked');
-    return selected ? parseFloat(selected.value) : 60;
-}
-
-async function removeItem(id, size) {
-    const response = await fetch(`${API_BASE}/remove`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product_id: id, size: size })
-    });
-    const result = await response.json();
-    if (result.status === 'success') {
-        currentCartData = result.data;
-        renderCart(result.data);
-        const currentLang = localStorage.getItem('site_lang') || 'en';
-        applyLanguage(currentLang);
-    }
-}
-
-async function handleClearCart() {
-    const msg = document.body.classList.contains('lang-bn') ? "ব্যাগ খালি করবেন?" : "Clear bag?";
-    if (!confirm(msg)) return;
-    const response = await fetch(`${API_BASE}/clear`, { method: 'POST' });
-    if (response.ok) fetchCart();
-}
-
-function navigateToCheckout() {
-    if (!currentCartData || currentCartData.items.length === 0) return;
-    window.location.href = '/checkout';
-}
-
-function applyLanguage(lang) {
-    document.body.classList.toggle('lang-bn', lang === 'bn');
-    document.querySelectorAll('[data-bn]').forEach(el => {
-        if (!el.dataset.en) el.dataset.en = el.innerHTML;
-        el.innerHTML = lang === 'bn' ? el.dataset.bn : el.dataset.en;
-    });
-    if (DOM.langToggle) DOM.langToggle.textContent = lang === 'bn' ? 'EN' : 'BN';
-    localStorage.setItem('site_lang', lang);
-}
+loadCart();
+lucide.createIcons();

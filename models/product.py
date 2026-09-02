@@ -1,44 +1,3 @@
-"""
-Athena — models.py (v4, per-type identity field split)
-
-v4 update per Hasan's confirmed field-separation spec:
-  - Every identity field (fixed per listing, one value — not a variant)
-    is now its own real, typed, indexed column instead of living inside
-    the generic COLLECTION_EXTRA_FIELDS/variants.axes system. This lets
-    /products?brand=... /products?material=... etc. all do plain column
-    comparisons and ride real indexes, matching the same reasoning
-    already applied to club/category/edition/version/kit_type in v3.
-  - jersey / boots / others remain confirmed MUTUALLY EXCLUSIVE (exactly
-    one per product) — dashboard enforces via radio inputs, unchanged.
-  - Per-type identity fields (confirmed):
-      jersey: club, edition, version, kit_type, fabric
-      boots:  brand, type, material, color
-      others: brand, type, fabric, gsm (integer), color
-    category is shared across all 3 types (free text, unchanged).
-  - boots.type and others.type are free-typed strings at the DB level
-    (no CHECK constraint) even though the dashboard renders them as
-    fixed-option dropdowns (Sports/Running/Casual/Old Money for boots;
-    Strip/Old Money/Casual/Solid Color for others) — same pattern
-    already used for edition/version/kit_type: the dropdown is a
-    client-side data-quality measure, not a server-side enum.
-  - gsm is a real Integer column (not text) per Hasan's confirmed
-    decision, since it's meaningfully sortable/rangeable, unlike the
-    other free-text identity fields.
-  - variant_mode, variants (axes/combinations/axis_images), CartItem/
-    OrderItem's selected_variants JSON field — all UNCHANGED. Variant
-    axes per type (confirmed): jersey = size only, boots = size×color,
-    others = size only. This is enforced by the dashboard's per-type
-    field list (COLLECTION_FIELDS in dashboard.js), not by this model —
-    variants remains generic over axis names, same as v3.
-  - COLLECTION_EXTRA_FIELDS / get_extra_fields_for_collection() are
-    REMOVED — they described the old "extra JSON-ish fields" system
-    that identity fields have now fully replaced with real columns.
-    allowed_extra_fields() on Product is removed for the same reason;
-    to_dict() now just always includes every column and lets the
-    client show/hide by collection_tags, matching how club/category
-    already worked.
-"""
-
 from datetime import datetime
 from . import db
 
@@ -147,13 +106,42 @@ class Product(db.Model):
 
     # ---- BASE PRICE / STOCK ----
     # Meaning depends on variant_mode:
-    #   "unified"     -> these ARE the price/stock for every combination
-    #   "per_variant" -> these are fallback/display-only; the real
-    #                    numbers live per-combination in variants.combinations
+    #   "unified"     -> these ARE the price/stock for every combination,
+    #                    exactly as typed in the dashboard — untouched.
+    #   "per_variant" -> these are SERVER-COMPUTED, not admin-typed, as
+    #                    of Hasan's confirmed fix: price = lowest variant
+    #                    price ("From ৳X" display value), stock = sum of
+    #                    every combination's stock. Recomputed on every
+    #                    create AND update (see product_service.py's
+    #                    recompute_base_price_and_stock()) — the admin
+    #                    dashboard still POSTs whatever base price/stock
+    #                    the form had, but for per_variant products that
+    #                    value is discarded and overwritten server-side,
+    #                    never trusted as-is. This is what every read
+    #                    path (filter query's stock>0 gate, stock note,
+    #                    JSON-LD availability, card price) actually
+    #                    reads — so keeping it correct here means none
+    #                    of those downstream paths need per_variant-aware
+    #                    branching of their own.
     price = db.Column(db.Float, nullable=False, default=0.0)
     stock = db.Column(db.Integer, nullable=False, default=0)
 
     variant_mode = db.Column(db.String(20), nullable=False, default="unified")  # "unified" | "per_variant"
+
+    # Store-owned vs pre-order/sourced-on-demand, per Hasan's confirmed
+    # design. Defaults True (pre-order) so anything created before this
+    # column existed — or any product where the admin hasn't touched
+    # the toggle — keeps today's actual behavior (the disclaimer always
+    # showed) rather than silently flipping to "in stock now" messaging.
+    #
+    # True  (pre-order): build_stock_note() always shows the pre-order
+    #   disclaimer; stock is NEVER inspected for messaging, since Hasan
+    #   keeps pre-order variant stock artificially high (e.g. 1000) so
+    #   it never reads as low/out — real stock semantics don't apply.
+    # False (store-owned): real 3-state stock note applies (out of
+    #   stock / low quantity / neutral-empty), since the stock number
+    #   means actual on-hand inventory here.
+    is_preorder = db.Column(db.Boolean, nullable=False, default=True)
 
     # ---- VARIANTS — one JSON blob, shape below ----
     # Per-type variant axes (confirmed, v4) — everything else about a
@@ -221,6 +209,7 @@ class Product(db.Model):
             "price": self.price,
             "stock": self.stock,
             "variant_mode": self.variant_mode,
+            "is_preorder": self.is_preorder,
             "variants": self.variants or {},
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,

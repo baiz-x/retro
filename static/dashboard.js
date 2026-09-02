@@ -89,6 +89,24 @@ function initEventListeners() {
         });
     });
 
+    // Source Type toggle — off = store-owned, on = pre-order. Writes
+    // "true"/"false" text into the hidden is_preorder input (read by
+    // name in FormData, same pattern as every other identity field)
+    // and updates the label so the admin sees which state is active
+    // without having to infer it from the switch position alone.
+    const preorderToggle = document.getElementById('is_preorder_toggle');
+    const preorderInput = document.getElementById('is_preorder_input');
+    const preorderLabel = document.getElementById('source-type-label');
+    if (preorderToggle && preorderInput && preorderLabel) {
+        preorderToggle.addEventListener('change', () => {
+            const isPreorder = preorderToggle.checked;
+            preorderInput.value = isPreorder ? 'true' : 'false';
+            preorderLabel.textContent = isPreorder
+                ? 'Pre-Order (sourced after order)'
+                : 'Store Owned (in stock now)';
+        });
+    }
+
     // Cancel edit button
     const cancelEditBtn = document.getElementById('cancel-edit-btn');
     if (cancelEditBtn) {
@@ -452,6 +470,12 @@ function handleProductUpload(e) {
 
     // Fire-and-forget: reset UI and redirect immediately, do not wait on the network.
     form.reset();
+    // form.reset() correctly restores is_preorder_toggle/is_preorder_input
+    // to their HTML defaults (checked / "true"), but the visible label
+    // text is plain textContent, not a form value — reset() won't touch
+    // it, so it's synced manually here.
+    const preorderLabelReset = document.getElementById('source-type-label');
+    if (preorderLabelReset) preorderLabelReset.textContent = 'Pre-Order (sourced after order)';
     exitEditMode();
     renderDynamicFields();
     switchTab('edit', document.querySelector('[data-tab="edit"]'));
@@ -503,6 +527,21 @@ function enterEditMode(productId) {
     form.querySelector('[name="price"]').value = prod.price ?? '';
     form.querySelector('[name="stock"]').value = prod.stock ?? '';
     form.querySelector('[name="category"]').value = prod.category || '';
+
+    // Source Type toggle — populate from the product's own value.
+    // Falls back to true (pre-order) if the field is somehow missing,
+    // matching Product.is_preorder's DB default.
+    const preorderToggle = document.getElementById('is_preorder_toggle');
+    const preorderInput = document.getElementById('is_preorder_input');
+    const preorderLabel = document.getElementById('source-type-label');
+    if (preorderToggle && preorderInput && preorderLabel) {
+        const isPreorder = prod.is_preorder !== false;
+        preorderToggle.checked = isPreorder;
+        preorderInput.value = isPreorder ? 'true' : 'false';
+        preorderLabel.textContent = isPreorder
+            ? 'Pre-Order (sourced after order)'
+            : 'Store Owned (in stock now)';
+    }
 
     const tags = prod.collection_tags || [];
     document.querySelectorAll('.collection-cb').forEach(cb => {
@@ -571,6 +610,17 @@ function exitEditMode() {
 
 /* ================= TAB 3: ORDERS CRM ================= */
 
+/* Used only for the new customization badge below — name/number are
+   free-text customer input reaching an innerHTML template, unlike the
+   rest of this file's fields (order/product data, which are either
+   server-controlled or constrained dropdown values). Not applied
+   elsewhere in this file to keep this change narrowly scoped. */
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
 function renderOrders() {
     const container = document.getElementById('orders-container');
     if (!container) return;
@@ -590,10 +640,23 @@ function renderOrders() {
             const varStr = item.selected_variants && Object.keys(item.selected_variants).length > 0
                 ? ` - ${Object.values(item.selected_variants).join(', ')}`
                 : '';
+
+            const custom = item.customization || {};
+            const customBadge = (custom.name || custom.number) ? `
+                <div class="customization-badge mt-1.5 inline-flex gap-2 bg-gold/10 border border-gold/30 rounded px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-navy">
+                    ${custom.name ? `<span>NAME: ${escapeHtml(custom.name)}</span>` : ''}
+                    ${custom.name && custom.number ? '<span class="text-gold">|</span>' : ''}
+                    ${custom.number ? `<span>NUMBER: ${escapeHtml(custom.number)}</span>` : ''}
+                </div>
+            ` : '';
+
             return `
-                <div class="flex justify-between text-xs font-semibold text-navy/70 mt-2">
-                    <span>${item.quantity}x ${item.product_name} <span class="text-gold">${varStr}</span></span>
-                    <span>৳${(item.price * item.quantity).toFixed(2)}</span>
+                <div class="text-xs font-semibold text-navy/70 mt-2">
+                    <div class="flex justify-between">
+                        <span>${item.quantity}x ${item.product_name} <span class="text-gold">${varStr}</span></span>
+                        <span>৳${(item.price * item.quantity).toFixed(2)}</span>
+                    </div>
+                    ${customBadge}
                 </div>
             `;
         }).join('');
@@ -615,7 +678,7 @@ function renderOrders() {
                 <span class="font-black text-sm text-navy">TOTAL: ৳${(order.total || 0).toFixed(2)}</span>
                 <select data-order-id="${order.order_id}" class="status-select text-[10px] uppercase font-bold tracking-widest border border-navy/20 p-2 rounded bg-gray-50 text-navy cursor-pointer outline-none focus:border-gold">
                     <option value="" disabled selected>Update State</option>
-                    ${['Pending', 'Packaged', 'Delivering', 'Delivered'].map(s =>
+                    ${['Pending', 'Packaged', 'Transit', 'Complete'].map(s =>
                         `<option value="${s}" ${order.status === s ? 'selected' : ''}>${s}</option>`
                     ).join('')}
                 </select>
@@ -720,6 +783,7 @@ async function adjustStock(productId, delta) {
         alert(`Error: ${err.message}`);
     }
 }
+
 
 
 

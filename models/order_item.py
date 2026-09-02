@@ -6,7 +6,7 @@ class OrderItem(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     order_id = db.Column(db.Integer, db.ForeignKey("orders.id"), nullable=False)
-    
+
     # Enforced foreign key reference to products.id
     product_id = db.Column(db.Integer, db.ForeignKey("products.id"), nullable=False)
 
@@ -19,6 +19,11 @@ class OrderItem(db.Model):
     # JSON shape for multi-axis configurations e.g. {"size": "200ml", "color": "Red", "scent": "Lavender"}
     selected_variants = db.Column(db.JSON, nullable=True, default=dict)
 
+    # Copied verbatim from CartItem.customization at checkout time (see
+    # order_service.py create_order_from_cart) — e.g.
+    # {"name": "ARJUN", "number": "10"} for a jersey print.
+    customization = db.Column(db.JSON, nullable=True, default=dict)
+
     order = db.relationship("Order", back_populates="items")
     product = db.relationship("Product", back_populates="order_items")
 
@@ -28,5 +33,7 @@ class OrderItem(db.Model):
             "product_name": self.product_name,
             "quantity": self.quantity,
             "price": self.price,
+            "subtotal": round(self.price * self.quantity, 2),
             "selected_variants": self.selected_variants or {},
+            "customization": self.customization or {},
         }

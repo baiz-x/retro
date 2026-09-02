@@ -1,235 +1,109 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your Bag | Markazus Sunnah</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='global.css') }}">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Your Bag — Kit Collective</title>
+<meta name="robots" content="noindex, nofollow" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+<meta name="csrf-token" content="{{ csrf_token() }}" />
+
+<link rel="stylesheet" href="/static/index.css">
+<link rel="stylesheet" href="/static/cart.css">
 </head>
-<body class="text-gray-900 min-h-screen flex flex-col">
 
-    <nav class="bg-white border-b sticky top-0 z-50 w-full">
-        <div class="max-w-7xl mx-auto px-4">
-            <div class="flex justify-between items-center h-20">
-                <div class="text-2xl heading-font font-extrabold tracking-tight">
-                    <a href="/" class="text-gray-900">Markazus Sunnah</a>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <span id="cart-count-header" class="text-[10px] uppercase tracking-[0.2em] font-bold text-gray-400">0 Items</span>
-                </div>
-            </div>
+<body class="bg-cream-50 text-slate-800 antialiased">
+
+<!-- ============ TOP ANNOUNCEMENT BAR ============ -->
+<div class="bg-sage-300 text-sage-950 text-center text-[11px] sm:text-xs font-semibold tracking-wide py-2 px-4">
+  Free delivery on all prepaid orders
+</div>
+
+<!-- ============ HEADER / NAV — same markup as product.html, minus search/menu (not needed on this page) ============ -->
+<header class="sticky top-0 z-40 pt-3 pb-2 px-3 sm:px-4">
+  <div class="max-w-4xl mx-auto">
+    <div class="flex items-center justify-between h-[60px] px-4 sm:px-5 rounded-full bg-sand-50 text-sage-950 shadow-lg shadow-sage-950/20 border border-sage-200/60">
+      <a href="/" class="flex items-center gap-2" aria-label="Kit Collective home">
+        <svg width="26" height="26" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17 1L31 8.5V19.5C31 26.4 24.9 31.6 17 33C9.1 31.6 3 26.4 3 19.5V8.5L17 1Z" stroke="#657d69" stroke-width="1.7"/>
+          <path d="M17 7L25 11.2V18.2C25 22.4 21.5 25.6 17 26.5C12.5 25.6 9 22.4 9 18.2V11.2L17 7Z" fill="#a7bda2"/>
+          <path d="M17 12L14 17H16.3L14.7 22L21 15.5H18.2L20 12H17Z" fill="#2C3531"/>
+        </svg>
+        <span class="font-display text-lg tracking-wider text-sage-950 whitespace-nowrap">KIT COLLECTIVE</span>
+      </a>
+      <div class="flex items-center gap-3">
+        <span id="cartCountHeader" class="text-[11px] font-bold uppercase tracking-widest text-slate-500/70">0 Items</span>
+        <i data-lucide="shopping-bag" class="w-5 h-5 text-sage-700"></i>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+  <h1 class="font-display text-3xl sm:text-4xl text-slate-800 uppercase tracking-wide mb-8">Your Bag</h1>
+
+  <!-- ============ LOADING SKELETON ============ -->
+  <div id="cartLoading" class="space-y-4">
+    <div class="h-28 bg-sand-100 rounded-3xl w-full animate-pulse"></div>
+    <div class="h-28 bg-sand-100 rounded-3xl w-full animate-pulse"></div>
+  </div>
+
+  <!-- ============ EMPTY STATE ============ -->
+  <div id="emptyState" class="cart-empty hidden">
+    <div class="w-16 h-16 rounded-full bg-sand-200/60 flex items-center justify-center mx-auto mb-5">
+      <i data-lucide="shopping-bag" class="w-7 h-7 text-sage-500"></i>
+    </div>
+    <h2 class="font-display text-2xl text-slate-800 uppercase tracking-wide mb-2">Your bag is empty</h2>
+    <p class="text-slate-500/70 mb-7 text-sm">Looks like you haven't reserved any jerseys yet.</p>
+    <a href="/products" class="inline-block bg-sage-400 text-cream-50 font-bold uppercase text-xs tracking-widest px-8 py-3.5 rounded-full hover:bg-sage-500 transition-colors">Start Shopping</a>
+  </div>
+
+  <!-- ============ CART CONTENTS ============ -->
+  <div id="cartContents" class="hidden">
+    <div id="cartLines" class="space-y-4"></div>
+
+    <div class="summary-card mt-8">
+      <div class="summary-row">
+        <span>Subtotal</span>
+        <strong id="summarySubtotal">৳0</strong>
+      </div>
+      <p class="text-xs text-slate-500/60 -mt-1">Shipping is calculated at checkout based on your delivery zone.</p>
+      <div class="summary-total-row">
+        <div>
+          <span class="text-[10px] uppercase tracking-widest font-bold text-slate-500/70 block mb-1">Items Total</span>
+          <span id="cartGrandTotal" class="font-display text-3xl text-slate-800 leading-none">৳0</span>
         </div>
-    </nav>
-
-<main class="flex-grow max-w-3xl mx-auto w-full px-4 py-12 lg:py-20">
-    <button id="lang-toggle" class="fixed top-24 right-4 z-[100] bg-black text-white px-4 py-2 rounded-full font-bold shadow-lg border border-gray-700 hover:bg-gray-800 transition">BN</button>
-    <h1 class="heading-font text-4xl lg:text-5xl font-black mb-10 tracking-tight" data-bn="আপনার ব্যাগ">Your Bag</h1>
-
-    <div id="cart-container" class="space-y-4">
-        <div class="animate-pulse space-y-4">
-            <div class="h-32 bg-gray-100 rounded-3xl w-full"></div>
-            <div class="h-32 bg-gray-100 rounded-3xl w-full"></div>
-         </div>
+        <a href="/checkout" id="checkoutBtn" class="bg-sage-400 text-cream-50 font-bold uppercase text-xs tracking-widest px-8 py-3.5 rounded-full hover:bg-sage-500 transition-colors">
+          Checkout
+        </a>
+      </div>
     </div>
 
-    <div id="empty-state" class="hidden text-center py-24 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-100">
-        <div class="text-6xl mb-6">🧴</div>
-        <h2 class="heading-font text-2xl font-bold mb-4" data-bn="আপনার ব্যাগটি খালি">Your bag is empty</h2>
-        <p class="text-gray-500 mb-8 font-medium" data-bn="মনে হচ্ছে আপনি এখনও কোনো সুগন্ধি যোগ করেননি।">Looks like you haven't added any luxury scents yet.</p>
-        <a href="/products" class="inline-block px-10 py-4 bg-black text-white rounded-full font-bold uppercase text-[10px] tracking-[0.2em] hover:bg-gray-800 transition" data-bn="কেনাকাটা শুরু করুন">Start Shopping</a>
-    </div>
-
-    <div id="cart-options" class="mt-12 space-y-4 hidden">
-        <div class="drawer-item bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm">
-            <button class="drawer-toggle-btn w-full px-8 py-6 flex justify-between items-center hover:bg-gray-50 transition">
-                <span class="text-xs font-bold uppercase tracking-[0.2em] heading-font" data-bn="১. ডেলিভারি অপশন">1. Delivery Option</span>
-                <span class="drawer-icon transition-transform text-xs">▼</span>
-            </button>
-
-            <div class="drawer-content">
-                <div class="px-8 pb-8">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                        <label class="relative flex items-center p-5 border-2 rounded-2xl cursor-pointer hover:border-black transition group">
-                            <input type="radio" name="shipping" value="60" checked class="shipping-radio w-4 h-4 text-black focus:ring-black border-gray-300">
-                            <div class="ml-4">
-                                <span class="block text-sm font-bold heading-font uppercase tracking-wider" data-bn="ঢাকার ভেতরে">Inside Dhaka</span>
-                                <span class="text-[11px] text-gray-500 font-medium" data-bn="৳৬০ • ২-৩ কার্যদিবস">৳60 • 2-3 Business Days</span>
-                            </div>
-                        </label>
-                        <label class="relative flex items-center p-5 border-2 rounded-2xl cursor-pointer hover:border-black transition group">
-                            <input type="radio" name="shipping" value="120" class="shipping-radio w-4 h-4 text-black focus:ring-black border-gray-300">
-                            <div class="ml-4">
-                                <span class="block text-sm font-bold heading-font uppercase tracking-wider" data-bn="ঢাকার বাইরে">Outside Dhaka</span>
-                                <span class="text-[11px] text-gray-500 font-medium" data-bn="৳১২০ • ৩-৫ কার্যদিবস">৳120 • 3-5 Business Days</span>
-                            </div>
-                        </label>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="drawer-item bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm">
-            <button class="drawer-toggle-btn w-full px-8 py-6 flex justify-between items-center hover:bg-gray-50 transition">
-                <span class="text-xs font-bold uppercase tracking-[0.2em] heading-font" data-bn="২. পেমেন্ট মেথড">2. Payment Method</span>
-                <span class="drawer-icon transition-transform text-xs">▼</span>
-            </button>
-
-            <div class="drawer-content">
-                <div class="px-8 pb-8">
-                    <div class="pt-2">
-                        <div class="p-6 bg-khaki/30 rounded-2xl border border-khaki flex flex-col gap-6">
-                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-khaki/50 pb-4 mb-4">
-                                <div>
-                                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1" data-bn="বিকাশ মার্চেন্ট পেমেন্ট">bKash Merchant Payment</p>
-                                    <p class="text-2xl font-bold heading-font tracking-tight text-gray-900">01819040383</p>
-                                </div>
-                            </div>
-
-                            <div class="text-sm text-gray-700 space-y-2">
-                                <p data-bn="<strong>০১.</strong> আপনার বিকাশ অ্যাপে যান অথবা *২৪৭# ডায়াল করুন"><strong>01.</strong> Go to your bKash app or Dial *247#</p>
-                                <p data-bn="<strong>০২.</strong> পেমেন্ট <strong>'Payment'</strong> নির্বাচন করুন"><strong>02.</strong> Choose <strong>"Payment"</strong></p>
-                                <p data-bn="<strong>০৩.</strong> মার্চেন্ট নম্বর দিন: <strong>01819040383</strong>"><strong>03.</strong> Enter Merchant Account Number: <strong>01819040383</strong></p>
-                                <p data-bn="<strong>০৪.</strong> মোট টাকার পরিমাণ দিন"><strong>04.</strong> Enter total amount</p>
-                                <p data-bn="<strong>০৫.</strong> লেনদেন নিশ্চিত করতে আপনার পিন (PIN) দিন"><strong>05.</strong> Enter your bKash PIN to confirm transaction</p>
-                                <p data-bn="<strong>০৬.</strong> মেসেজ থেকে ট্রানজেকশন আইডি <strong>(TrxID)</strong> কপি করুন"><strong>06.</strong> Copy the <strong>Transaction ID</strong> from the confirmation message</p>
-                                <p data-bn="<strong>০৭.</strong> পরবর্তী ধাপে ট্রানজেকশন আইডিটি ব্যবহার করুন"><strong>07.</strong> Paste the <strong>Transaction ID</strong> from the confirmation message to the checkout page</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="drawer-item bg-white border border-gray-100 rounded-3xl overflow-hidden shadow-sm mt-4">
-            <button class="drawer-toggle-btn w-full px-8 py-6 flex justify-between items-center hover:bg-gray-50 transition">
-                <span class="text-xs font-bold uppercase tracking-[0.2em] heading-font" data-bn="৩. ক্যাশ অন ডেলিভারি">3. Cash on Delivery</span>
-                <span class="drawer-icon transition-transform text-xs">▼</span>
-            </button>
-
-            <div class="drawer-content">
-                <div class="px-8 pb-8">
-                    <div class="pt-2">
-                        <div class="p-6 bg-khaki/30 rounded-2xl border border-khaki flex flex-col gap-6">
-                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-khaki/50 pb-4 mb-4">
-                                <div>
-                                    <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1" data-bn="হাতে পেয়ে মূল্য পরিশোধ">Pay after receiving product</p>
-                                    <p class="text-2xl font-bold heading-font tracking-tight text-gray-900" data-bn="ক্যাশ অন ডেলিভারি">Cash on Delivery</p>
-                                </div>
-                            </div>
-
-                            <div class="text-sm text-gray-700 space-y-2">
-                                <p data-bn="<strong>০১.</strong> আপনি যদি ক্যাশ অন ডেলিভারি নিতে চান, তবে নিচের শর্তগুলো অনুসরণ করুন"><strong>01.</strong> If you want to choose Cash on Delivery, please follow the steps below:</p>
-                                <p data-bn="<strong>০২.</strong> চেকআউট ফর্মের ট্রানজেকশন আইডি <strong>(Transaction ID)</strong> ঘরটি খালি রাখুন"><strong>02.</strong> Leave the <strong>Transaction ID</strong> field empty on the checkout form</p>
-                                <p data-bn="<strong>০৩.</strong> বিকাশ নম্বর <strong>(bKash Number)</strong> ঘরটিও খালি রাখুন"><strong>03.</strong> Leave the <strong>bKash Number</strong> field empty as well</p>
-                                <p data-bn="<strong>০৪.</strong> সবশেষে অর্ডার সম্পন্ন করতে <strong>'Place Order'</strong> বাটনে ক্লিক করুন"><strong>04.</strong> Finally, click the <strong>"Place Order"</strong> button to complete your purchase</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="cart-summary" class="mt-12 pt-10 border-t border-gray-100 hidden">
-        <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-4">
-            <div class="flex justify-between items-center text-sm">
-                <span class="text-gray-500 font-medium" data-bn="সাবটোটাল">Subtotal</span>
-                <span id="subtotal-price" class="font-bold">৳0.00</span>
-            </div>
-            <div class="flex justify-between items-center text-sm">
-                <span class="text-gray-500 font-medium" data-bn="ডেলিভারি চার্জ">Shipping Charge</span>
-                <span id="shipping-cost" class="font-bold text-gray-900">৳0.00</span>
-            </div>
-
-            <div id="discount-row" class="hidden flex justify-between items-center text-sm">
-                <span class="text-red-500 font-bold uppercase tracking-widest text-[10px]" data-bn="ফ্রি ডেলিভারি ডিসকাউন্ট">Free Delivery Discount</span>
-                <span id="discount-amount" class="font-bold text-red-500">-৳0.00</span>
-            </div>
-
-            <div id="free-delivery-badge" class="hidden py-3 px-4 bg-green-50 text-green-700 text-[10px] font-bold uppercase tracking-[0.15em] rounded-xl text-center border border-green-100" data-bn="✨ ফ্রি ডেলিভারি প্রযোজ্য (৳১৫০০ এর উপরে অর্ডারে)">
-                ✨ Free Delivery Applied (Orders over ৳1500)
-            </div>
-
-            <div class="pt-6 mt-2 border-t border-gray-50 flex justify-between items-end">
-                <div>
-                    <span class="text-[10px] uppercase tracking-[0.2em] font-bold text-gray-400 block mb-1" data-bn="সর্বমোট পরিমাণ">Total Amount</span>
-                    <span id="grand-total" class="text-4xl font-black heading-font text-black leading-none">৳0.00</span>
-                </div>
-                <button id="checkout-btn" class="bg-black text-white px-10 py-5 rounded-full hover:bg-gray-800 transition duration-300 uppercase text-[10px] tracking-[0.2em] font-bold shadow-xl active:scale-95" data-bn="অর্ডার করুন">
-                    Place Order
-                </button>
-            </div>
-        </div>
-
-        <button id="clear-btn" class="w-full mt-8 text-gray-400 hover:text-red-500 text-[10px] uppercase tracking-[0.2em] font-bold transition flex items-center justify-center gap-2" data-bn="ব্যাগ খালি করুন">
-            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-            Clear Shopping Bag
-        </button>
-    </div>
+    <button id="clearBtn" class="w-full mt-6 text-slate-500/70 hover:text-clay text-xs uppercase tracking-widest font-bold transition-colors flex items-center justify-center gap-2 py-2">
+      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+      Clear Bag
+    </button>
+  </div>
 </main>
 
-
-<footer class="bg-[#080808] text-[#999] py-8 px-6 border-t border-[#1a1a1a] font-sans text-[12px]">
-  <div class="max-w-7xl mx-auto">
-    <div class="flex flex-wrap gap-x-6 gap-y-2 border-b border-[#111] pb-6 mb-6 uppercase tracking-wider font-semibold text-[#c5a059]">
-      <div class="flex items-center gap-2">
-        <span class="text-[10px]">🚚</span>
-        <span data-bn="সারা বাংলাদেশে ডেলিভারি">Full BD Delivery</span>
+<!-- ============ FOOTER — same markup as index.html/product.html ============ -->
+<footer class="bg-slate-800 border-t border-slate-700 pt-14 pb-10">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6">
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-cream-50/50">
+      <p>© 2026 Kit Collective. All rights reserved.</p>
+      <div class="flex items-center gap-5">
+        <a href="/" class="hover:text-cream-50 transition-colors">Continue Shopping</a>
       </div>
-      <div class="flex items-center gap-2 border-l border-[#222] pl-6">
-        <span class="text-[10px]">✨</span>
-        <span data-bn="আসল/আমদানিকৃত পারফিউম অয়েল">Authentic Imported Oils (Dubai, France, India)</span>
-      </div>
-      <div class="flex items-center gap-2 border-l border-[#222] pl-6">
-        <span class="text-[10px]">🔄</span>
-        <span data-bn="রিটার্ন পলিসি">Return Policy</span>
-      </div>
-      <div class="flex items-center gap-2 border-l border-[#222] pl-6">
-        <span class="text-[10px]">💵</span>
-        <span data-bn="ক্যাশ অন ডেলিভারি">COD Available</span>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-      <div class="space-y-4">
-        <h2 class="text-white text-lg font-bold tracking-tighter">MARKAZUS SUNNAH</h2>
-        <div class="flex gap-4 text-[14px]">
-          <a href="#" class="hover:text-white">FB</a>
-          <a href="#" class="hover:text-white">Tiktok</a>
-          <a href="#" class="hover:text-white">Insta</a>
-        </div>
-      </div>
-
-      <div class="flex gap-12">
-        <ul class="space-y-1">
-          <li><a href="/products" class="hover:text-white" data-bn="সব প্রোডাক্ট">Shop</a></li>
-          <li><a href="#" class="hover:text-white" data-bn="অর্ডার ট্র্যাক করুন">Track</a></li>
-        </ul>
-        <ul class="space-y-1">
-          <li><a href="#" class="hover:text-white" data-bn="রিটার্ন পলিসি">Returns</a></li>
-          <li><a href="#" class="hover:text-white" data-bn="শর্তাবলী">Terms</a></li>
-        </ul>
-      </div>
-
-      <div class="text-right md:border-l border-[#1a1a1a] md:pl-8">
-        <p class="text-white font-bold mb-1" data-bn="অফিস লোকেশন:">OFFICE LOCATION</p>
-        <p class="leading-relaxed opacity-80 uppercase" data-bn="রাস্তা নং ৮, প্রথম ভবন, মেরিট মাইন আইডিয়াল স্কুলের পাশে, আরশাদুল্লাহ রোড, শনির আখড়া, যাত্রাবাড়ী, ঢাকা।">
-          STREET NO. 8, FIRST BUILDING, BESIDE MERIT MINE IDEAL SCHOOL, ARSHADULLAH ROAD, SHANIR AKHRA, JATRABARI, DHAKA
-        </p>
-        <p class="mt-2 text-[#c5a059] font-bold">01819040383</p>
-      </div>
-    </div>
-
-    <div class="mt-8 pt-4 border-t border-[#111] flex justify-between items-center text-[10px] opacity-50">
-      <p data-bn="© ২০২৬ মারকাজুস সুন্নাহ।">© 2026 Markazus Sunnah</p>
-      <p data-bn="পেমেন্ট: বিকাশ / ক্যাশ অন ডেলিভারি">Accepted: BKASH / COD</p>
     </div>
   </div>
 </footer>
 
-    <script src="/static/cart.js"></script>
+<script src="/static/cart.js"></script>
 </body>
 </html>

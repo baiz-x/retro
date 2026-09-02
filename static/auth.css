@@ -1,0 +1,107 @@
+/* =====================================================================
+   auth.css — shared layout for login.html / signup.html
+   Imports index.css for design tokens (--sage-*, --sand-*, --cream-*,
+   --clay, fonts) — this file only adds the auth-page-specific layout
+   and form elements on top, same pattern as product.css.
+   ===================================================================== */
+
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 26rem;
+  background: var(--cream-50);
+  border: 1px solid var(--sand-200);
+  border-radius: 1.75rem;
+  padding: 2.25rem 2rem;
+  box-shadow: 0 20px 40px -20px rgba(23, 29, 25, 0.15);
+}
+
+.auth-label {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--slate-500);
+  margin-bottom: 0.4rem;
+}
+
+.auth-label-hint {
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+  color: rgba(91, 101, 94, 0.6);
+}
+
+.auth-input {
+  width: 100%;
+  background: var(--cream-50);
+  border: 1.5px solid var(--sand-200);
+  border-radius: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.9rem;
+  font-family: var(--font-body);
+  color: var(--slate-800);
+  transition: border-color 0.15s ease;
+}
+.auth-input:focus {
+  outline: none;
+  border-color: var(--sage-400);
+}
+.auth-input::placeholder { color: rgba(91, 101, 94, 0.45); }
+
+.auth-input-icon-btn {
+  position: absolute;
+  right: 0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  color: var(--slate-500);
+  cursor: pointer;
+}
+.auth-input-icon-btn:hover { color: var(--sage-600); }
+
+.auth-error {
+  background: rgba(181, 87, 58, 0.1);
+  border: 1px solid rgba(181, 87, 58, 0.25);
+  color: var(--clay);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.7rem 0.95rem;
+  border-radius: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.auth-optional-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--sand-100);
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.65rem 0.95rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--slate-800);
+  cursor: pointer;
+}
+.auth-optional-toggle:hover { background: var(--sand-200); }
+.auth-optional-toggle i { transition: transform 0.25s ease; }
+.auth-optional-toggle[aria-expanded="true"] i { transform: rotate(180deg); }
+
+.auth-optional-fields {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+.auth-optional-fields.open { max-height: 160px; }

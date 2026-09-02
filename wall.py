@@ -4,6 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_compress import Compress
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_wtf import CSRFProtect
 from whitenoise import WhiteNoise
 from flask_talisman import Talisman
 import logging
@@ -31,6 +32,7 @@ logger.addHandler(console_handler)
 # -------------------
 compress = Compress()
 limiter = Limiter(key_func=get_remote_address)
+csrf = CSRFProtect()
 
 # -------------------
 # Config
@@ -72,6 +74,16 @@ def setup_security():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_pre_ping': True}
 
+    # WTF_CSRF_TIME_LIMIT unset (None) intentionally — a token tied to
+    # the PERMANENT_SESSION_LIFETIME above (30 days) rather than
+    # flask-wtf's default 1-hour expiry, since someone can legitimately
+    # sit on a cart/checkout page (or stay logged in) far longer than
+    # an hour before submitting. Every mutating route validates the
+    # token via CSRFProtect below; the JS side re-fetches a fresh page
+    # (and therefore a fresh token) on session expiry via the existing
+    # /auth/me flow.
+    app.config['WTF_CSRF_TIME_LIMIT'] = None
+
     if not app.config['SQLALCHEMY_DATABASE_URI'] or not app.config['SECRET_KEY']:
         raise ValueError("DATABASE_URI or SECRET_KEY not set in environment")
 
@@ -81,6 +93,7 @@ def setup_security():
     db.init_app(app)
     compress.init_app(app)
     limiter.init_app(app)
+    csrf.init_app(app)
     app.wsgi_app = WhiteNoise(app.wsgi_app, root='static/', max_age=31536000)
 
     # -------------------

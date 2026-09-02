@@ -159,6 +159,28 @@
                     </select>
                 </div>
 
+                <!-- Source Type toggle — off = store-owned (real stock,
+                     no disclaimer shown on the storefront), on =
+                     pre-order (disclaimer always shown, stock note
+                     never reflects the real number). Default checked
+                     (pre-order) to match Product.is_preorder's DB
+                     default. is_preorder is sent as "true"/"false" text
+                     via the hidden input below — read directly by name
+                     in handleProductUpload/enterEditMode, same pattern
+                     as every other identity field. -->
+                <div class="pt-4 border-t border-navy/10 flex items-center justify-between">
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gold mb-1">Source Type</label>
+                        <p id="source-type-label" class="text-xs font-semibold text-navy/80">Pre-Order (sourced after order)</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="is_preorder_toggle" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-gray-300 peer-checked:bg-navy rounded-full transition-colors"></div>
+                        <div class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
+                    </label>
+                    <input type="hidden" name="is_preorder" id="is_preorder_input" value="true">
+                </div>
+
                 <div id="dynamic-fields-container" class="bg-gray-50 p-5 rounded-xl border border-navy/10 hidden space-y-4 shadow-inner">
                     <h3 class="text-[10px] uppercase font-bold text-navy tracking-widest border-b border-navy/10 pb-2">Variant Axes Configuration</h3>
                     <p class="text-[10px] text-gray-500 font-bold uppercase">Enter comma-separated values (e.g. Red, Blue)</p>
@@ -216,8 +238,8 @@
                 <button class="status-filter px-5 py-2 rounded-full bg-navy text-gold text-[10px] tracking-widest uppercase font-bold whitespace-nowrap shadow-sm" data-status="all">All</button>
                 <button class="status-filter px-5 py-2 rounded-full bg-white border border-navy/20 text-navy/60 text-[10px] tracking-widest uppercase font-bold whitespace-nowrap shadow-sm" data-status="Pending">Pending</button>
                 <button class="status-filter px-5 py-2 rounded-full bg-white border border-navy/20 text-navy/60 text-[10px] tracking-widest uppercase font-bold whitespace-nowrap shadow-sm" data-status="Packaged">Packaged</button>
-                <button class="status-filter px-5 py-2 rounded-full bg-white border border-navy/20 text-navy/60 text-[10px] tracking-widest uppercase font-bold whitespace-nowrap shadow-sm" data-status="Delivering">Transit</button>
-                <button class="status-filter px-5 py-2 rounded-full bg-white border border-navy/20 text-navy/60 text-[10px] tracking-widest uppercase font-bold whitespace-nowrap shadow-sm" data-status="Delivered">Complete</button>
+                <button class="status-filter px-5 py-2 rounded-full bg-white border border-navy/20 text-navy/60 text-[10px] tracking-widest uppercase font-bold whitespace-nowrap shadow-sm" data-status="Transit">Transit</button>
+                <button class="status-filter px-5 py-2 rounded-full bg-white border border-navy/20 text-navy/60 text-[10px] tracking-widest uppercase font-bold whitespace-nowrap shadow-sm" data-status="Complete">Complete</button>
             </div>
             
             <div id="orders-container" class="space-y-4"></div>
@@ -257,6 +279,7 @@
     <script src="/static/dashboard.js"></script>
 </body>
 </html>
+
 
 
 

@@ -7,6 +7,7 @@
 <title>{{ product.name }} — Kit Collective</title>
 <meta name="description" content="{{ product.description[:155] if product.description else (product.name ~ ' — available now at Kit Collective. Premium club and national team jerseys, boots, and matchday gear.') }}" />
 <link rel="canonical" href="{{ canonical_url }}" />
+<meta name="csrf-token" content="{{ csrf_token() }}" />
 
 <!-- Open Graph / link previews (WhatsApp, Facebook, etc.) -->
 <meta property="og:type" content="product" />
@@ -213,10 +214,12 @@
           </div>
 
           <!-- ---------- PRE-ORDER BANNER ---------- -->
+          {% if product.is_preorder %}
           <div class="pdp-preorder-banner">
             <i data-lucide="package-check" class="w-4 h-4 shrink-0 mt-0.5"></i>
             <p>All items on this website are sold on a Pre-Order / Sourced-on-Demand basis. Orders placed are request reservations and will be sourced upon confirmation <span class="whitespace-nowrap">(Estimated delivery: 2–3 business days).</span></p>
           </div>
+          {% endif %}
 
           <!-- ---------- PRICE + STOCK ---------- -->
           <div class="flex items-end justify-between gap-4 mt-5 mb-1">
@@ -295,7 +298,7 @@
           <!-- ---------- CTA (desktop inline; hidden on mobile in favor of sticky bar) ---------- -->
           <button id="addToCartBtn" class="pdp-add-btn mt-7 hidden lg:flex" {{ 'disabled' if out_of_stock else '' }}>
             <i data-lucide="shopping-bag" class="w-4 h-4"></i>
-            <span id="addToCartLabel">{{ 'Out of Stock' if out_of_stock else 'Reserve this item' }}</span>
+            <span id="addToCartLabel">{{ add_to_cart_label }}</span>
           </button>
           <p id="selectionHint" class="text-xs text-clay mt-2 hidden">Please select a size to continue.</p>
 
@@ -436,7 +439,7 @@
     </div>
     <button id="mobileAddToCartBtn" class="pdp-add-btn pdp-add-btn-compact" {{ 'disabled' if out_of_stock else '' }}>
       <i data-lucide="shopping-bag" class="w-4 h-4"></i>
-      <span id="mobileAddToCartLabel">{{ 'Out of Stock' if out_of_stock else 'Reserve' }}</span>
+      <span id="mobileAddToCartLabel">{{ add_to_cart_label_mobile }}</span>
     </button>
   </div>
 
@@ -505,4 +508,3 @@
 <script src="/static/product.js"></script>
 </body>
 </html>
-

@@ -1,5 +1,5 @@
 # app.py
-from flask import Flask, render_template, Response, abort, request
+from flask import Flask, render_template, Response, abort, request, session, redirect, url_for
 from dotenv import load_dotenv
 from datetime import datetime
 import os
@@ -28,11 +28,13 @@ from routes.admin_route import admin_bp
 from routes.product_route import product_bp
 from routes.cart_route import cart_bp
 from routes.order_route import order_bp
+from routes.auth_routes import auth_bp
 
 app.register_blueprint(admin_bp)
 app.register_blueprint(product_bp)
 app.register_blueprint(cart_bp)
 app.register_blueprint(order_bp)
+app.register_blueprint(auth_bp)
 
 # ---------- Routes ----------
 @app.route("/")
@@ -78,6 +80,18 @@ def cart():
 @app.route("/checkout")
 def checkout():
     return render_template("checkout.html")
+
+@app.route("/login")
+def login_page():
+    if session.get("user_id"):
+        return redirect(url_for("home"))
+    return render_template("login.html")
+
+@app.route("/signup")
+def signup_page():
+    if session.get("user_id"):
+        return redirect(url_for("home"))
+    return render_template("signup.html")
 
 @app.route("/admin-form")
 def admin_form():

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Log In — Kit Collective</title>
+<meta name="robots" content="noindex, nofollow" />
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<!-- Icons -->
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+<meta name="csrf-token" content="{{ csrf_token() }}" />
+
+<!-- Styles: shares index.css tokens, adds only the auth-page layout -->
+<link rel="stylesheet" href="/static/index.css">
+<link rel="stylesheet" href="/static/auth.css">
+</head>
+
+<body class="bg-cream-50 text-slate-800 antialiased">
+
+<div class="auth-page">
+  <div class="auth-card">
+
+    <a href="/" class="flex items-center gap-2 justify-center mb-6" aria-label="Kit Collective home">
+      <svg width="30" height="30" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M17 1L31 8.5V19.5C31 26.4 24.9 31.6 17 33C9.1 31.6 3 26.4 3 19.5V8.5L17 1Z" stroke="#657d69" stroke-width="1.7"/>
+        <path d="M17 7L25 11.2V18.2C25 22.4 21.5 25.6 17 26.5C12.5 25.6 9 22.4 9 18.2V11.2L17 7Z" fill="#a7bda2"/>
+        <path d="M17 12L14 17H16.3L14.7 22L21 15.5H18.2L20 12H17Z" fill="#2C3531"/>
+      </svg>
+      <span class="font-display text-xl tracking-wider text-sage-950">KIT COLLECTIVE</span>
+    </a>
+
+    <h1 class="font-display text-3xl text-slate-800 uppercase tracking-wide text-center mb-1.5">Welcome back</h1>
+    <p class="text-sm text-slate-500/70 text-center mb-7">Log in to track orders and check out faster.</p>
+
+    <div id="formError" class="auth-error hidden" role="alert"></div>
+
+    <form id="loginForm" class="space-y-4" novalidate>
+      <label class="block">
+        <span class="auth-label">Username</span>
+        <input id="username" name="username" type="text" class="auth-input" autocomplete="username" required />
+      </label>
+
+      <label class="block">
+        <span class="auth-label">Password</span>
+        <div class="relative">
+          <input id="password" name="password" type="password" class="auth-input pr-11" autocomplete="current-password" required />
+          <button type="button" id="togglePassword" aria-label="Show password" class="auth-input-icon-btn">
+            <i data-lucide="eye" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </label>
+
+      <button type="submit" id="submitBtn" class="pdp-add-btn w-full mt-2">
+        <span id="submitLabel">Log In</span>
+      </button>
+    </form>
+
+    <p class="text-center text-sm text-slate-500/70 mt-6">
+      New here? <a href="/signup" class="text-sage-600 font-semibold hover:text-sage-700">Create an account</a>
+    </p>
+  </div>
+</div>
+
+<script src="/static/auth.js"></script>
+<script src="/static/login.js"></script>
+</body>
+</html>

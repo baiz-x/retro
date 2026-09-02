@@ -47,13 +47,32 @@ function productCard(p) {
 // price field exists on the Product model, so no strike-through or badge
 // renders for real products. That's a real gap versus the old mock data,
 // not a silent fabrication of pricing that isn't there.
+//
+// oos: matches app.py's is_out_of_stock()/product.js's isOutOfStock() —
+// is_preorder products are never "out of stock" for card badging (their
+// stock number is artificially high by design, not real inventory); a
+// store-owned per_variant product is out of stock only if EVERY
+// combination is at 0. product.price/stock are already server-computed
+// correctly for per_variant products (see recompute_base_price_and_stock
+// in product_service.py), so reading them directly here is safe — no
+// need to re-walk variants.combinations for the price/stock shown.
+function isOos(product) {
+  if (product.is_preorder) return false;
+  if ((product.variant_mode || 'unified') === 'per_variant') {
+    const combos = (product.variants && product.variants.combinations) || [];
+    if (combos.length === 0) return (product.stock || 0) <= 0;
+    return combos.every(c => (Number(c.stock) || 0) <= 0);
+  }
+  return !product.stock || product.stock <= 0;
+}
+
 function mapProductToCard(product) {
   return {
     name: product.name || 'Untitled product',
     price: product.price,
     img: product.image || 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=600&auto=format&fit=crop',
     img2: (Array.isArray(product.gallery) && product.gallery[0]) ? product.gallery[0] : null,
-    oos: !product.stock || product.stock <= 0,
+    oos: isOos(product),
     slug: product.slug,
   };
 }
@@ -273,3 +292,4 @@ faqList.addEventListener('click', e => {
     toggle.setAttribute('aria-expanded', 'true');
   }
 });
+

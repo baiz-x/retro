@@ -2,6 +2,18 @@ lucide.createIcons();
 
 const API_BASE = '/api';
 
+/* CSRF: every mutating request (POST/PATCH/DELETE) must carry the
+   X-CSRFToken header for flask-wtf's CSRFProtect to accept it — see
+   the <meta name="csrf-token"> tag in product.html's <head>. GET
+   requests don't need this (CSRFProtect only checks state-changing
+   methods), so plain fetch() is still used for those elsewhere in
+   this file (loadDiscovery, cart count refresh). */
+function csrfFetch(url, options = {}) {
+  const token = document.querySelector('meta[name="csrf-token"]').content;
+  options.headers = { ...(options.headers || {}), 'X-CSRFToken': token };
+  return fetch(url, options);
+}
+
 /* Currency: ৳ (BDT), standard grouping (en-BD, not en-IN — avoids
    India's lakh/crore digit grouping). Same helper as index.js and
    products.js, kept identical across all three for consistency. Only
@@ -43,6 +55,11 @@ let galleryIndex = 0;
    without a re-fetch or re-render of the whole page.
    --------------------------------------------------------------------- */
 function isOutOfStock(p) {
+  // is_preorder products are never out of stock for messaging purposes
+  // — the stock number is artificially kept high by design and doesn't
+  // represent real inventory. Matches app.py's is_out_of_stock() (see
+  // product_service.py).
+  if (p.is_preorder) return false;
   if ((p.variant_mode || 'unified') === 'per_variant') {
     const combos = (p.variants && p.variants.combinations) || [];
     if (combos.length === 0) return (p.stock || 0) <= 0;
@@ -121,16 +138,29 @@ document.getElementById('galleryThumbs').addEventListener('click', e => {
 /* ---------------------------------------------------------------------
    Stock note — text/class are already server-rendered for the initial
    (no selection) state. This only re-renders it after a pill click,
-   using the exact same three-state logic as app.py's build_stock_note().
+   using the exact same logic as app.py's build_stock_note(): a
+   pre-order product ALWAYS shows the disclaimer (stock is never
+   inspected — see isOutOfStock's comment above); a store-owned
+   product gets the real 3-state note, including a neutral-empty state
+   once stock is comfortably above the low-stock threshold.
    --------------------------------------------------------------------- */
 function updateStockNote() {
-  const { stock, resolved } = getResolvedStock(product);
   const noteEl = document.getElementById('infoStockNote');
   const mobileNoteEl = document.getElementById('mobileCtaStockNote');
 
   noteEl.className = 'pdp-stock-note';
   mobileNoteEl.className = 'pdp-stock-note text-[11px]';
 
+  if (product.is_preorder) {
+    const text = 'Pre-Order — all products will be sourced after order';
+    noteEl.classList.add('pdp-stock-preorder');
+    mobileNoteEl.classList.add('pdp-stock-preorder');
+    noteEl.textContent = text;
+    mobileNoteEl.textContent = text;
+    return;
+  }
+
+  const { stock, resolved } = getResolvedStock(product);
   let text = '';
   if (resolved && stock <= 0) {
     text = 'Out of stock';
@@ -141,9 +171,9 @@ function updateStockNote() {
     noteEl.classList.add('pdp-stock-low');
     mobileNoteEl.classList.add('pdp-stock-low');
   } else {
-    text = 'Pre-Order — all products will be sourced after order';
-    noteEl.classList.add('pdp-stock-preorder');
-    mobileNoteEl.classList.add('pdp-stock-preorder');
+    // Neutral-empty: store-owned, healthy stock — no disclaimer, no
+    // extra text, per Hasan's confirmed design.
+    text = '';
   }
   noteEl.textContent = text;
   mobileNoteEl.textContent = text;
@@ -262,13 +292,24 @@ document.getElementById('qtyPlusBtn').addEventListener('click', () => {
 });
 
 /* ---------------------------------------------------------------------
+   Add-to-cart label wording — mirrors app.py's build_add_to_cart_label().
+   is_preorder products say "Reserve" (a request/reservation, sourced
+   afterward); store-owned products say "Order" (the item is actually
+   in hand, nothing is being reserved for later). Out of stock always
+   overrides both, regardless of is_preorder.
+   --------------------------------------------------------------------- */
+function addToCartLabel(mobile) {
+  if (isOutOfStock(product)) return 'Out of Stock';
+  if (product.is_preorder) return mobile ? 'Reserve' : 'Reserve this item';
+  return mobile ? 'Order' : 'Order this item';
+}
+
+/* ---------------------------------------------------------------------
    Add to cart — disabled/enabled state already server-rendered for
    the initial (no selection) view; this keeps it correct as
-   selections change. No real cart/order-creation endpoint exists yet
-   (only /admin/products/<id>/stock for manual admin adjustment), so
-   this still opens the bag drawer with a locally-tracked count, same
-   as index.js/products.js. Swap the TODO below for a real POST once
-   that endpoint exists.
+   selections change. Posts to POST /api/cart/add (see
+   services/cart_service.py + routes/cart_route.py) with the selected
+   variant axes and, for jerseys, the name/number customization.
    --------------------------------------------------------------------- */
 function updateAddToCartState() {
   const btn = document.getElementById('addToCartBtn');
@@ -282,15 +323,56 @@ function updateAddToCartState() {
 
   [btn, mobileBtn].forEach(b => { b.disabled = oos; });
 
-  const label = oos ? 'Out of Stock' : 'Reserve this item';
-  document.getElementById('addToCartLabel').textContent = label;
-  document.getElementById('mobileAddToCartLabel').textContent = oos ? 'Out of Stock' : 'Reserve';
+  document.getElementById('addToCartLabel').textContent = addToCartLabel(false);
+  document.getElementById('mobileAddToCartLabel').textContent = addToCartLabel(true);
 
   hint.classList.toggle('hidden', !missingSelection || oos);
   updateQtyDisplay();
 }
 
-function addToCart() {
+/* Builds the selected_variants payload from current pill selections.
+   Keys match the axis names in product.variants.axes (see
+   models/product.py) — "size" always, "color" only for boots. */
+function buildSelectedVariants() {
+  const variants = {};
+  if (sizeAxisExists(product) && selectedSize) variants.size = selectedSize;
+  if (product.product_type === 'boots' && colorAxisExists(product) && selectedColor) {
+    variants.color = selectedColor;
+  }
+  return variants;
+}
+
+/* Only meaningful for jerseys (personalizeSection is hidden otherwise —
+   see show_personalization in product_service.py's
+   build_product_view_context). Returns {} if the person left both
+   fields blank, so an untouched customization panel doesn't create a
+   pointless {"name": "", "number": ""} on the cart line. */
+function buildCustomization() {
+  if (product.product_type !== 'jersey') return {};
+  const name = personalizeNameInput.value.trim();
+  const number = personalizeNumberInput.value.trim();
+  if (!name && !number) return {};
+  const customization = {};
+  if (name) customization.name = name;
+  if (number) customization.number = number;
+  return customization;
+}
+
+function setAddToCartLabel(text) {
+  document.getElementById('addToCartLabel').textContent = text;
+  document.getElementById('mobileAddToCartLabel').textContent = text;
+}
+
+// Restores each button to its own correctly-sized resting label
+// (desktop: "Reserve this item"/"Order this item", mobile: "Reserve"/
+// "Order") — setAddToCartLabel() alone would put the longer desktop
+// text on the mobile button too, which doesn't fit the compact CTA.
+function restoreAddToCartLabels() {
+  document.getElementById('addToCartLabel').textContent = addToCartLabel(false);
+  document.getElementById('mobileAddToCartLabel').textContent = addToCartLabel(true);
+}
+
+async function addToCart() {
   const needsSize = sizeAxisExists(product);
   const needsColor = product.product_type === 'boots' && colorAxisExists(product);
   if ((needsSize && !selectedSize) || (needsColor && !selectedColor)) {
@@ -299,23 +381,44 @@ function addToCart() {
     return;
   }
 
-  // TODO(Hasan): once CartItem/selected_variants + jersey personalization
-  // columns exist and a real POST /api/cart (or similar) route is added,
-  // replace this local counter with a real request carrying:
-  //   { product_id: product.id, quantity, selected_variants: {size, color?},
-  //     personalization: {name, number} }
-  cartCount++;
-  cartCountEl.textContent = cartCount;
-
   const btn = document.getElementById('addToCartBtn');
   const mobileBtn = document.getElementById('mobileAddToCartBtn');
-  const originalLabel = document.getElementById('addToCartLabel').textContent;
-  document.getElementById('addToCartLabel').textContent = 'Added';
-  document.getElementById('mobileAddToCartLabel').textContent = 'Added';
-  setTimeout(() => {
-    document.getElementById('addToCartLabel').textContent = originalLabel;
-    document.getElementById('mobileAddToCartLabel').textContent = 'Reserve';
-  }, 900);
+
+  [btn, mobileBtn].forEach(b => { b.disabled = true; });
+  setAddToCartLabel('Adding...');
+
+  try {
+    const res = await csrfFetch(`${API_BASE}/cart/add`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        product_id: product.id,
+        quantity,
+        selected_variants: buildSelectedVariants(),
+        customization: buildCustomization(),
+      }),
+    });
+    const payload = await res.json();
+
+    if (payload.status !== 'success') {
+      setAddToCartLabel(payload.message || 'Could not add to bag');
+      setTimeout(restoreAddToCartLabels, 1800);
+      [btn, mobileBtn].forEach(b => { b.disabled = isOutOfStock(product); });
+      return;
+    }
+
+    cartCountEl.textContent = payload.data.total_items || 0;
+    setAddToCartLabel('Added');
+    setTimeout(() => {
+      restoreAddToCartLabels();
+      [btn, mobileBtn].forEach(b => { b.disabled = isOutOfStock(product); });
+    }, 900);
+  } catch (err) {
+    console.error('Add to cart failed:', err);
+    setAddToCartLabel('Connection error');
+    setTimeout(restoreAddToCartLabels, 1800);
+    [btn, mobileBtn].forEach(b => { b.disabled = isOutOfStock(product); });
+  }
 }
 
 document.getElementById('addToCartBtn').addEventListener('click', addToCart);
@@ -419,7 +522,7 @@ function mapProductToCard(p) {
     price: p.price,
     img: p.image || 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=600&auto=format&fit=crop',
     img2: (Array.isArray(p.gallery) && p.gallery[0]) ? p.gallery[0] : null,
-    oos: !p.stock || p.stock <= 0,
+    oos: isOutOfStock(p),
     slug: p.slug,
   };
 }
@@ -459,8 +562,22 @@ async function loadDiscovery() {
    ======================================================================= */
 
 /* ---------------- Cart ---------------- */
-let cartCount = 0;
 const cartCountEl = document.getElementById('cartCount');
+
+/* Reflects the caller's real cart (guest or logged-in — resolved
+   server-side, see cart_service.get_cart_owner) rather than a
+   per-page-load local counter that reset to 0 on every navigation. */
+async function refreshCartCount() {
+  try {
+    const res = await fetch(`${API_BASE}/cart`);
+    const payload = await res.json();
+    if (payload.status === 'success') {
+      cartCountEl.textContent = payload.data.total_items || 0;
+    }
+  } catch (err) {
+    console.error('Failed to load cart count:', err);
+  }
+}
 
 const cartOverlay = document.getElementById('cartOverlay');
 const cartDrawer = document.getElementById('cartDrawer');
@@ -547,5 +664,5 @@ refreshColorAvailability();
 updateAddToCartState();
 renderAccordionFaq();
 loadDiscovery();
+refreshCartCount();
 lucide.createIcons();
-

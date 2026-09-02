@@ -1,15 +1,30 @@
 import uuid
 from datetime import datetime
-from flask import session, current_app
+from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 from models import db, CartItem, Product, Order, OrderItem
 
-def fetch_cart_items(client_token):
+# Authoritative shipping fee per zone. Stored on the Order row at
+# creation time (Order.shipping_fee) rather than recomputed later, so
+# a future change here never alters the amount already charged on a
+# past order.
+SHIPPING_FEES = {
+    "inside_dhaka": 70.0,
+    "outside_dhaka": 140.0,
+}
+
+VALID_PAYMENT_METHODS = {"bkash", "nagad", "cod"}
+
+
+def fetch_cart_items(user_id=None, guest_id=None):
     try:
-        return CartItem.query.filter_by(client_token=client_token).all()
+        if user_id:
+            return CartItem.query.filter_by(user_id=user_id).all()
+        return CartItem.query.filter_by(guest_id=guest_id).all()
     except SQLAlchemyError as e:
         current_app.logger.error(f"Database error in fetch_cart_items: {str(e)}")
         raise
+
 
 def validate_cart_not_empty(cart_items):
     """Checks if there is actually anything to buy."""
@@ -17,17 +32,13 @@ def validate_cart_not_empty(cart_items):
         return False, "Your cart is empty"
     return True, None
 
+
 def validate_stock_availability(cart_items):
     """
     Checks stock for each cart line against the product's variant_mode:
       - "unified": one shared product.stock number covers every combination
       - "per_variant": each combination in product.variants['combinations']
         has its own stock; item.selected_variants identifies which one
-
-    SURGICAL CHANGE: cart items now carry `selected_variants` (a JSON
-    dict, e.g. {"size": "200ml", "color": "Red"}) instead of a flat
-    `size` string — required so a jar_candle line can record size AND
-    scent AND color together, which a single string column can't hold.
     """
     out_of_stock = []
     for item in cart_items:
@@ -70,18 +81,44 @@ def validate_stock_availability(cart_items):
         return False, "Insufficient stock for some items", out_of_stock
     return True, None, []
 
+
+def validate_shipping_zone(shipping_zone):
+    if shipping_zone not in SHIPPING_FEES:
+        return False, f"Invalid shipping zone '{shipping_zone}'. Must be one of: {', '.join(SHIPPING_FEES.keys())}"
+    return True, None
+
+
+def validate_payment_details(payment_method, transaction_id, payment_number, shipping_fee):
+    """
+    Enforces payment-method-specific requirements:
+      - bkash / nagad: a real transaction requires both a transaction_id
+        and the payment_number it was sent from.
+      - cod: the customer still pays the shipping fee upfront via
+        mobile payment as an advance (common practice to deter no-shows
+        on cash-on-delivery orders) — so transaction_id/payment_number
+        are still required here too, representing that advance payment
+        rather than the full order total.
+    In every case the fields themselves are the same two columns;
+    what differs is only whether they're required and what they
+    represent, so this doesn't need branching logic beyond the
+    "were they provided" check itself.
+    """
+    if payment_method not in VALID_PAYMENT_METHODS:
+        return False, f"Invalid payment method '{payment_method}'. Must be one of: {', '.join(VALID_PAYMENT_METHODS)}"
+
+    if not transaction_id or not payment_number:
+        if payment_method == "cod":
+            return False, f"Advance payment details required for Cash on Delivery (shipping fee: ৳{shipping_fee:.2f})"
+        return False, f"Transaction ID and payment number are required for {payment_method}"
+
+    return True, None
+
+
 def reduce_stock_logic(cart_items):
     """
     Deducts stock for each cart line via product_service.reduce_variant_stock,
     which already knows how to branch on variant_mode (unified vs
-    per_variant) correctly. Delegating here instead of re-implementing
-    the same branching a second time — two independent copies of this
-    logic is exactly what caused it to fall out of sync with the schema
-    once already in this codebase.
-
-    SURGICAL CHANGE: reads item.selected_variants (JSON dict) instead
-    of item.size (flat string) — see validate_stock_availability above
-    for why.
+    per_variant) correctly.
     """
     from services.product_service import reduce_variant_stock  # local import avoids a circular import at module load time
 
@@ -96,79 +133,93 @@ def reduce_stock_logic(cart_items):
             # silently continue, so create_order_from_cart's rollback fires.
             raise ValueError(f"Stock reduction failed for {product.name}: {message}")
 
-def create_order_from_cart(client_token, customer_data):
+
+def create_order_from_cart(user_id, guest_id, customer_data):
     """
-    Creates an order from cart items. 
-    Strictly validates that bKash payment data is provided in the customer_data payload.
+    Creates an order from the caller's cart (identified by user_id XOR
+    guest_id — exactly one is non-None, same convention as
+    cart_service.get_cart_owner). Validates shipping zone and
+    payment-method-specific requirements before ever touching stock or
+    creating rows, so a bad request fails cleanly with nothing
+    half-created.
     """
     try:
-        # 1. Validate Payment Details (Mandatory Refactor)
+        shipping_zone = customer_data.get('shipping_zone')
+        payment_method = customer_data.get('payment_method')
         payment_number = customer_data.get('payment_number')
         transaction_id = customer_data.get('transaction_id')
 
-        # 2. Fetch and Validate Cart
-        cart_items = fetch_cart_items(client_token)
+        is_valid_zone, zone_err = validate_shipping_zone(shipping_zone)
+        if not is_valid_zone:
+            current_app.logger.warning(f"Order failed: {zone_err}")
+            return None, zone_err
+
+        shipping_fee = SHIPPING_FEES[shipping_zone]
+
+        is_valid_payment, payment_err = validate_payment_details(
+            payment_method, transaction_id, payment_number, shipping_fee
+        )
+        if not is_valid_payment:
+            current_app.logger.warning(f"Order failed: {payment_err}")
+            return None, payment_err
+
+        cart_items = fetch_cart_items(user_id=user_id, guest_id=guest_id)
         is_not_empty, empty_err = validate_cart_not_empty(cart_items)
         if not is_not_empty:
             current_app.logger.warning(f"Order failed: {empty_err}")
-            return None
+            return None, empty_err
 
-        # 3. Validate Stock
-        is_available, message, details = validate_stock_availability(cart_items)
+        is_available, stock_err, _details = validate_stock_availability(cart_items)
         if not is_available:
-            current_app.logger.warning(f"Order failed stock check: {message}")
-            return None
+            current_app.logger.warning(f"Order failed stock check: {stock_err}")
+            return None, stock_err
 
-        # 4. Total calculation
-        total_price = sum(item.price * item.quantity for item in cart_items)
-        
-        # 5. Create the Order (Mapping direct form fields)
-        # BUG FIX: order_id was never set here despite `uuid` being
-        # imported at the top of this file for exactly this purpose —
-        # Order.order_id is NOT NULL, so this would have failed on save.
+        subtotal = sum(item.price * item.quantity for item in cart_items)
+        total_price = subtotal + shipping_fee
+
         new_order = Order(
             order_id=str(uuid.uuid4()),
+            user_id=user_id,
             customer_name=customer_data['customer_name'],
             phone=customer_data['phone'],
             address=customer_data['address'],
+            social_platform=customer_data.get('social_platform'),
+            social_handle=customer_data.get('social_handle'),
+            shipping_zone=shipping_zone,
+            shipping_fee=shipping_fee,
+            payment_method=payment_method,
             payment_number=payment_number,
             transaction_id=transaction_id,
+            subtotal=subtotal,
             total=total_price,
             status='Pending'
         )
         db.session.add(new_order)
         db.session.flush()
 
-        # 6. Transfer Cart items to Order items
         for item in cart_items:
             order_item = OrderItem(
-                # BUG FIX: OrderItem.order_id is an Integer FK to
-                # orders.id (the real database primary key). The
-                # original code passed new_order.order_id, which is
-                # the STRING public order number (Order.order_id) —
-                # a type/reference mismatch that would either crash or
-                # silently create a broken foreign key. new_order.id
-                # is the correct value here.
                 order_id=new_order.id,
                 product_id=item.product_id,
                 product_name=item.product.name,
                 quantity=item.quantity,
                 price=item.price,
-                # SURGICAL CHANGE: selected_variants (JSON dict) instead
-                # of size (flat string) — same reasoning as above.
-                selected_variants=item.selected_variants
+                selected_variants=item.selected_variants,
+                # Jersey (or other) print request, copied as-is from the
+                # cart line — see models/cart_item.py.
+                customization=item.customization,
             )
             db.session.add(order_item)
-        
-        # 7. Handle Inventory
+
         reduce_stock_logic(cart_items)
 
-        # 8. Clear Cart
-        CartItem.query.filter_by(client_token=client_token).delete()
+        if user_id:
+            CartItem.query.filter_by(user_id=user_id).delete()
+        else:
+            CartItem.query.filter_by(guest_id=guest_id).delete()
 
-        # 9. COMMIT
         db.session.commit()
-        return new_order
+        return new_order, None
 
     except ValueError as ve:
         db.session.rollback()
@@ -186,9 +237,7 @@ def update_order_status(order_id, new_status):
     """
     order_id here is the database primary key (Order.query.get() looks
     up by PK) — not the public-facing Order.order_id string, despite
-    the parameter name matching that field. Kept as-is since that's
-    how the original code already called it and Query.get() only
-    works by primary key.
+    the parameter name matching that field.
     """
     from models import OrderStatus  # local import avoids a circular import at module load time
 
@@ -206,4 +255,3 @@ def update_order_status(order_id, new_status):
         db.session.rollback()
         current_app.logger.error(f"Status Update Error: {str(e)}")
         raise
-

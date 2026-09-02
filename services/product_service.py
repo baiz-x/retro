@@ -64,6 +64,21 @@ def get_product_by_slug_service(slug):
         current_app.logger.error(f"Database error in get_product_by_slug_service: {str(e)}")
         raise
 
+def _parse_bool(raw, default):
+    """
+    Form-data sends booleans as strings, not real booleans — a plain
+    ``bool(raw)`` would treat the string "false" as truthy (non-empty
+    string). Used for is_preorder from both create_product's form-data
+    POST and update_product's PATCH. Missing/None keeps `default`
+    rather than coercing to False, so a partial update that doesn't
+    touch the toggle doesn't accidentally flip it.
+    """
+    if raw is None:
+        return default
+    if isinstance(raw, bool):
+        return raw
+    return str(raw).strip().lower() in ("true", "1", "on", "yes")
+
 def create_slug(title):
     # Lowercase and strip common stop words before hyphenating
     slug = title.lower()
@@ -71,6 +86,46 @@ def create_slug(title):
     # Replace non-alphanumeric with a single hyphen
     slug = re.sub(r'[^a-z0-9]+', '-', slug)
     return slug.strip('-')
+
+def recompute_base_price_and_stock(variant_mode, variants, fallback_price, fallback_stock):
+    """
+    Per Hasan's confirmed fix: for per_variant products, product.price/
+    stock are SERVER-COMPUTED from variants.combinations, never trusted
+    from whatever the dashboard form happened to send — this is the fix
+    for the reported bug (base stock=0 with real per-variant stock made
+    the product read as out-of-stock/excluded everywhere, since every
+    downstream read path — filter's stock>0 gate, build_stock_note,
+    resolve_product_availability, card price — reads product.stock/
+    price directly and none of them re-walk variants.combinations
+    themselves).
+
+    variant_mode == "unified": returns (fallback_price, fallback_stock)
+    unchanged — untouched, exactly as typed in the dashboard.
+
+    variant_mode == "per_variant":
+      stock = sum of every combination's stock (matches the rolling
+        total reduce_variant_stock already maintains after an order —
+        this just makes it correct from creation, not only after the
+        first sale).
+      price = MIN of every combination's price (the "From ৳X" display
+        value), per Hasan's confirmed decision.
+      If combinations is empty (e.g. axes entered but matrix not yet
+      filled), falls back to (fallback_price, fallback_stock) rather
+      than (0, 0) — an incomplete per_variant product shouldn't read
+      as guaranteed-out-of-stock before the admin finishes the form.
+    """
+    if variant_mode != "per_variant":
+        return fallback_price, fallback_stock
+
+    combinations = (variants or {}).get("combinations") or []
+    if not combinations:
+        return fallback_price, fallback_stock
+
+    total_stock = sum(int(c.get("stock") or 0) for c in combinations)
+    variant_prices = [float(c["price"]) for c in combinations if c.get("price") not in (None, "")]
+    computed_price = min(variant_prices) if variant_prices else fallback_price
+
+    return computed_price, total_stock
 
 def create_product(data, image_file, gallery_files=None):
     """
@@ -103,8 +158,15 @@ def create_product(data, image_file, gallery_files=None):
         # shape. See models.py for the
         # full shape. This part of the schema is unchanged by the Retro
         # Studio pivot — it was already generic over axis names.
-        base_price = float(data.get('price', 0))
-        total_stock = int(data.get('stock', 0))
+        variant_mode = data.get('variant_mode', 'unified')
+        form_price = float(data.get('price', 0))
+        form_stock = int(data.get('stock', 0))
+
+        # Server-computed for per_variant, per Hasan's confirmed fix —
+        # see recompute_base_price_and_stock() docstring above.
+        base_price, total_stock = recompute_base_price_and_stock(
+            variant_mode, parsed_variants, form_price, form_stock
+        )
 
         # category renamed to collection_tags (JSON list) + collection_label
         # (display name), matching models.py. As of the Retro Studio pivot,
@@ -164,7 +226,8 @@ def create_product(data, image_file, gallery_files=None):
             image=image_url,
             gallery=gallery_urls,
             variants=parsed_variants,
-            variant_mode=data.get('variant_mode', 'unified')
+            variant_mode=variant_mode,
+            is_preorder=_parse_bool(data.get('is_preorder'), default=True)
         )
 
         db.session.add(new_product)
@@ -184,8 +247,6 @@ def update_product(product_id, data, image_file=None, gallery_files=None):
     try:
         if 'name' in data: product.name = data['name']
         if 'description' in data: product.description = data['description']
-        if 'price' in data: product.price = float(data['price'])
-        if 'stock' in data: product.stock = int(data['stock'])
         if 'club' in data: product.club = data['club']
         if 'category' in data: product.category = data['category']
         if 'edition' in data: product.edition = data['edition']
@@ -199,6 +260,8 @@ def update_product(product_id, data, image_file=None, gallery_files=None):
         if 'gsm' in data:
             gsm_raw = data['gsm']
             product.gsm = int(gsm_raw) if gsm_raw not in (None, '') else None
+        if 'is_preorder' in data:
+            product.is_preorder = _parse_bool(data['is_preorder'], default=product.is_preorder)
 
         if 'collection_label' in data: product.collection_label = data['collection_label']
         if 'collection_tags' in data:
@@ -211,12 +274,33 @@ def update_product(product_id, data, image_file=None, gallery_files=None):
             # in create_product.
             product.product_type = tags[0] if tags else None
 
+        # variant_mode and variants applied BEFORE price/stock below —
+        # recompute_base_price_and_stock() needs the final variant_mode
+        # and variants state, not what was on the product before this
+        # request. Same ordering concern as create_product, just more
+        # visible here since update_product can change price/stock,
+        # variant_mode, and variants all in a single request.
         if 'variant_mode' in data: product.variant_mode = data['variant_mode']
         if 'variants' in data:
             variants = data['variants']
             if isinstance(variants, str):
                 variants = json.loads(variants) if variants else {}
             product.variants = variants
+
+        # Price/stock: per Hasan's confirmed fix, recomputed from
+        # variants on EVERY update when variant_mode is per_variant —
+        # not just at creation — so editing a per_variant product's
+        # matrix (or its price/stock fields, which get overridden
+        # anyway) always leaves product.price/stock correct. Uses
+        # whatever the form sent as the fallback (for unified mode, or
+        # a per_variant product with no combinations yet) rather than
+        # the product's prior value, matching create_product's shape.
+        if 'price' in data or 'stock' in data or 'variant_mode' in data or 'variants' in data:
+            form_price = float(data['price']) if 'price' in data else product.price
+            form_stock = int(data['stock']) if 'stock' in data else product.stock
+            product.price, product.stock = recompute_base_price_and_stock(
+                product.variant_mode, product.variants, form_price, form_stock
+            )
 
         # Handle Main Image Update
         if image_file and image_file.filename != '':
@@ -510,25 +594,20 @@ def request_base_url():
 def resolve_product_availability(product):
     """
     Maps this product's stock onto a schema.org/ItemAvailability value.
-    Mirrors the exact stock semantics already used elsewhere (see
-    reduce_variant_stock in product_service.py and the equivalent
-    isOutOfStock()/getResolvedStock() logic in product.js):
-      - "unified" mode: product.stock is the one authoritative number.
-      - "per_variant" mode: product.stock is kept as a rolling total
-        across all combinations (reduce_variant_stock recomputes it on
-        every stock change), so it's still safe to read directly here
-        without walking variants.combinations again.
-    Kit Collective sells on a pre-order / sourced-on-demand basis (see
-    the on-page banner), so genuine on-hand stock maps to InStock (or
-    LimitedAvailability, matching the page's own "order fast, low
-    quantity" note), and everything else — including zero recorded
-    stock, since nothing here is ever truly unavailable to order — maps
-    to PreOrder rather than OutOfStock.
+    Per Hasan's confirmed source_type design:
+      is_preorder=True  -> always PreOrder, regardless of stock number
+        (which is artificially high by design and not real inventory —
+        see is_out_of_stock's docstring).
+      is_preorder=False -> real stock rules: InStock / LimitedAvailability
+        / OutOfStock based on the actual on-hand count.
     """
+    if product.is_preorder:
+        return "https://schema.org/PreOrder"
+
     stock = product.stock or 0
     if stock <= 0:
-        return "https://schema.org/PreOrder"
-    if stock <= 5:  # matches LOW_STOCK_THRESHOLD in product.js
+        return "https://schema.org/OutOfStock"
+    if stock <= LOW_STOCK_THRESHOLD:
         return "https://schema.org/LimitedAvailability"
     return "https://schema.org/InStock"
 
@@ -540,11 +619,17 @@ LOW_STOCK_THRESHOLD = 5  # same constant/value as product.js — kept in
 
 def is_out_of_stock(product):
     """
-    Same semantics as isOutOfStock() in product.js: unified mode reads
-    product.stock directly; per_variant mode is out of stock only if
-    EVERY combination has zero stock (a product can still be orderable
-    in one size while others are gone).
+    Same semantics as isOutOfStock() in product.js, with Hasan's
+    confirmed pre-order rule layered on top: a pre-order product is
+    never considered out of stock for messaging/availability purposes,
+    since its stock number is intentionally kept artificially high
+    (e.g. 1000) and doesn't represent real inventory — only a
+    store-owned (is_preorder=False) product's stock is meaningful
+    enough to ever read as "out of stock".
     """
+    if product.is_preorder:
+        return False
+
     variants = product.variants or {}
     if (product.variant_mode or "unified") == "per_variant":
         combos = variants.get("combinations") or []
@@ -651,16 +736,28 @@ def build_color_pills(product):
 
 def build_stock_note(product):
     """
-    Same three-state note as updateStockNote() in product.js: out of
-    stock, low quantity (with the live count), or the pre-order framing
-    for everything else. Returns (text, css_class).
+    Per Hasan's confirmed source_type design:
+      is_preorder=True  -> ALWAYS the pre-order disclaimer. Stock is
+        never inspected for messaging here — Hasan keeps pre-order
+        variant stock artificially high by design specifically so it
+        never reads as low/out, so real stock semantics don't apply to
+        this product's messaging at all.
+      is_preorder=False -> real 3-state note: out of stock / low
+        quantity (with live count) / neutral-empty (no extra text —
+        "nothing existed", per Hasan's own phrasing) once stock is 6+.
+    Returns (text, css_class) — a neutral-empty state returns ("", "")
+    so product.html can render nothing rather than an empty <p> with a
+    stray class.
     """
+    if product.is_preorder:
+        return "Pre-Order — all products will be sourced after order", "pdp-stock-preorder"
+
     stock = product.stock or 0
     if is_out_of_stock(product):
         return "Out of stock", "pdp-stock-low"
     if stock <= LOW_STOCK_THRESHOLD:
         return f"Order fast, low quantity — {stock} left", "pdp-stock-low"
-    return "Pre-Order — all products will be sourced after order", "pdp-stock-preorder"
+    return "", ""
 
 
 def build_gallery_images(product):
@@ -685,6 +782,23 @@ def build_gallery_images(product):
     return images
 
 
+def build_add_to_cart_label(product, mobile=False):
+    """
+    Per Hasan's confirmed wording rule: is_preorder products say
+    "Reserve" (this is a request/reservation, sourced afterward — the
+    on-page pre-order banner explains this explicitly). Store-owned
+    (is_preorder=False) products say "Order" instead, since the item is
+    actually in hand and nothing is being reserved for later sourcing —
+    the wording should match what's really happening.
+    Out-of-stock always overrides both, regardless of is_preorder.
+    """
+    if is_out_of_stock(product):
+        return "Out of Stock"
+    if product.is_preorder:
+        return "Reserve" if mobile else "Reserve this item"
+    return "Order" if mobile else "Order this item"
+
+
 def build_product_view_context(product):
     """
     Single place that computes every derived value product.html needs
@@ -701,6 +815,8 @@ def build_product_view_context(product):
         "stock_note_text": stock_note_text,
         "stock_note_class": stock_note_class,
         "show_personalization": product.product_type == "jersey",
+        "add_to_cart_label": build_add_to_cart_label(product, mobile=False),
+        "add_to_cart_label_mobile": build_add_to_cart_label(product, mobile=True),
     }
 
 
@@ -763,6 +879,7 @@ def build_product_json_ld(product, base_url):
     # missing on a real product) — Google's parser is stricter about
     # explicit nulls than about an absent key.
     return {k: v for k, v in data.items() if v is not None}
+
 
 
 

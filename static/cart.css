@@ -1,0 +1,260 @@
+/* =====================================================================
+   cart.css — shared styles for cart.html and checkout.html
+   Imports index.css for design tokens — this file only adds what
+   these two pages need on top, same pattern as product.css.
+   ===================================================================== */
+
+/* ---------- Cart line item ---------- */
+.cart-line {
+  display: flex;
+  gap: 1.25rem;
+  background: var(--cream-50);
+  border: 1px solid var(--sand-200);
+  border-radius: 1.5rem;
+  padding: 1.25rem;
+}
+
+.cart-line-media {
+  width: 6rem;
+  height: 6rem;
+  flex-shrink: 0;
+  border-radius: 1rem;
+  overflow: hidden;
+  background: var(--sand-100);
+}
+.cart-line-media img { width: 100%; height: 100%; object-fit: cover; }
+
+.cart-line-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.4rem;
+}
+
+.cart-line-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  background: var(--sand-100);
+  border: 1px solid var(--sand-200);
+  color: var(--slate-700);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cart-line-custom {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  background: rgba(101, 125, 105, 0.12);
+  border: 1px solid rgba(101, 125, 105, 0.3);
+  color: var(--sage-700);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cart-line-qty-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1.5px solid var(--sand-200);
+  border-radius: 9999px;
+  overflow: hidden;
+  width: fit-content;
+}
+.cart-line-qty-btn {
+  width: 2.25rem;
+  height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--slate-800);
+  cursor: pointer;
+}
+.cart-line-qty-btn:hover:not(:disabled) { background: var(--sand-100); }
+.cart-line-qty-btn:disabled { color: var(--sand-300); cursor: not-allowed; }
+.cart-line-qty-value {
+  min-width: 2rem;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+.cart-line-remove {
+  color: var(--slate-500);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.35rem;
+  transition: color 0.15s ease;
+}
+.cart-line-remove:hover { color: var(--clay); }
+
+/* ---------- Empty state ---------- */
+.cart-empty {
+  text-align: center;
+  padding: 4rem 1.5rem;
+  background: var(--sand-100);
+  border: 2px dashed var(--sand-200);
+  border-radius: 1.75rem;
+}
+
+/* ---------- Selection cards (shipping zone / payment method) ---------- */
+.select-card-row {
+  display: grid;
+  gap: 0.75rem;
+}
+@media (min-width: 640px) {
+  .select-card-row { grid-template-columns: 1fr 1fr; }
+}
+
+.select-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  border: 1.5px solid var(--sand-200);
+  border-radius: 1.1rem;
+  cursor: pointer;
+  background: var(--cream-50);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.select-card:hover { border-color: var(--sage-300); }
+.select-card input { margin-top: 0.2rem; accent-color: var(--sage-500); }
+.select-card.active {
+  border-color: var(--sage-400);
+  background: rgba(101, 125, 105, 0.06);
+}
+.select-card-title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--slate-800);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.select-card-sub {
+  font-size: 0.75rem;
+  color: var(--slate-500);
+  margin-top: 0.15rem;
+}
+
+/* ---------- Payment instructions panel ---------- */
+.payment-instructions {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+.payment-instructions.open { max-height: 32rem; }
+
+.payment-instructions-inner {
+  background: var(--sand-100);
+  border: 1px solid var(--sand-200);
+  border-radius: 1.1rem;
+  padding: 1.1rem 1.25rem;
+  margin-top: 0.85rem;
+  font-size: 0.8125rem;
+  color: var(--slate-700);
+}
+.payment-instructions-inner ol { margin: 0.5rem 0 0; padding-left: 1.1rem; }
+.payment-instructions-inner li { margin-bottom: 0.35rem; }
+.payment-merchant-number {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  letter-spacing: 0.03em;
+  color: var(--slate-800);
+}
+
+/* ---------- Order summary card ---------- */
+.summary-card {
+  background: var(--cream-50);
+  border: 1px solid var(--sand-200);
+  border-radius: 1.5rem;
+  padding: 1.5rem;
+}
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+  color: var(--slate-500);
+  padding: 0.4rem 0;
+}
+.summary-row strong { color: var(--slate-800); }
+.summary-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-top: 1rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--sand-200);
+}
+
+/* ---------- Checkout form fields (reusing auth.css conventions) ---------- */
+.checkout-input {
+  width: 100%;
+  background: var(--cream-50);
+  border: 1.5px solid var(--sand-200);
+  border-radius: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.9rem;
+  font-family: var(--font-body);
+  color: var(--slate-800);
+  transition: border-color 0.15s ease;
+}
+.checkout-input:focus { outline: none; border-color: var(--sage-400); }
+.checkout-input::placeholder { color: rgba(91, 101, 94, 0.45); }
+.checkout-label {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--slate-500);
+  margin-bottom: 0.4rem;
+}
+.checkout-error-text {
+  color: var(--clay);
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-top: 0.4rem;
+}
+
+.checkout-guest-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  background: rgba(101, 125, 105, 0.08);
+  border: 1px solid rgba(101, 125, 105, 0.25);
+  border-radius: 1.1rem;
+  padding: 0.9rem 1.1rem;
+  font-size: 0.8125rem;
+  color: var(--sage-700);
+  margin-bottom: 1.5rem;
+}
+
+.checkout-status-panel {
+  padding: 1.75rem;
+  border-radius: 1.5rem;
+  text-align: center;
+}
+.checkout-status-success {
+  background: rgba(101, 125, 105, 0.1);
+  border: 1px solid rgba(101, 125, 105, 0.3);
+  color: var(--sage-800);
+}
+.checkout-status-error {
+  background: rgba(181, 87, 58, 0.1);
+  border: 1px solid rgba(181, 87, 58, 0.25);
+  color: var(--clay);
+}
