@@ -134,7 +134,7 @@ def reduce_stock_logic(cart_items):
             raise ValueError(f"Stock reduction failed for {product.name}: {message}")
 
 
-def create_order_from_cart(user_id, guest_id, customer_data):
+def create_order_from_cart(user_id, guest_id, customer_data, cart_item_id=None):
     """
     Creates an order from the caller's cart (identified by user_id XOR
     guest_id — exactly one is non-None, same convention as
@@ -142,6 +142,12 @@ def create_order_from_cart(user_id, guest_id, customer_data):
     payment-method-specific requirements before ever touching stock or
     creating rows, so a bad request fails cleanly with nothing
     half-created.
+
+    cart_item_id: optional. When provided (the PDP "Order" button's
+    flow — see routes/order_route.py), the order is built from ONLY
+    that one cart line instead of the caller's whole cart, and only
+    that line is removed afterward — the rest of the cart is left
+    untouched. Used for /checkout?item=<id> single-line checkout.
     """
     try:
         shipping_zone = customer_data.get('shipping_zone')
@@ -163,7 +169,21 @@ def create_order_from_cart(user_id, guest_id, customer_data):
             current_app.logger.warning(f"Order failed: {payment_err}")
             return None, payment_err
 
-        cart_items = fetch_cart_items(user_id=user_id, guest_id=guest_id)
+        all_cart_items = fetch_cart_items(user_id=user_id, guest_id=guest_id)
+
+        if cart_item_id is not None:
+            # Single-line checkout: narrow to just the requested line,
+            # but still scoped to this caller's own cart items (never
+            # trust a cart_item_id to belong to the caller without
+            # checking — same ownership guarantee cart_service's
+            # remove/update routes already enforce).
+            cart_items = [i for i in all_cart_items if i.id == cart_item_id]
+            if not cart_items:
+                current_app.logger.warning(f"Order failed: cart_item_id {cart_item_id} not found in caller's cart")
+                return None, "Selected item was not found in your cart"
+        else:
+            cart_items = all_cart_items
+
         is_not_empty, empty_err = validate_cart_not_empty(cart_items)
         if not is_not_empty:
             current_app.logger.warning(f"Order failed: {empty_err}")
@@ -213,7 +233,12 @@ def create_order_from_cart(user_id, guest_id, customer_data):
 
         reduce_stock_logic(cart_items)
 
-        if user_id:
+        if cart_item_id is not None:
+            # Only remove the line(s) this order was built from — the
+            # rest of the caller's cart stays exactly as it was.
+            for item in cart_items:
+                db.session.delete(item)
+        elif user_id:
             CartItem.query.filter_by(user_id=user_id).delete()
         else:
             CartItem.query.filter_by(guest_id=guest_id).delete()
@@ -255,3 +280,4 @@ def update_order_status(order_id, new_status):
         db.session.rollback()
         current_app.logger.error(f"Status Update Error: {str(e)}")
         raise
+

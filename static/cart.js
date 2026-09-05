@@ -50,8 +50,12 @@ function escapeHtml(str) {
 }
 
 function renderLine(item) {
+  // unit price kept on the line itself so changeQuantity() can
+  // recompute the subtotal optimistically without waiting on the
+  // server's response.
+  const unitPrice = item.quantity > 0 ? (item.subtotal / item.quantity) : (item.price || 0);
   return `
-    <div class="cart-line" data-cart-item-id="${item.id}">
+    <div class="cart-line" data-cart-item-id="${item.id}" data-unit-price="${unitPrice}">
       <div class="cart-line-media">
         ${item.image ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.product_name || '')}" />` : ''}
       </div>
@@ -75,7 +79,7 @@ function renderLine(item) {
               <i data-lucide="plus" class="w-3.5 h-3.5"></i>
             </button>
           </div>
-          <span class="font-bold text-sm text-slate-800">${formatTaka(item.subtotal)}</span>
+          <span class="font-bold text-sm text-slate-800 cart-line-subtotal">${formatTaka(item.subtotal)}</span>
         </div>
       </div>
     </div>
@@ -120,15 +124,51 @@ async function loadCart() {
   }
 }
 
-/* Every quantity/remove action re-renders from the response the
-   server sends back (each cart mutation route returns the full
-   updated cart — see services/cart_service.py) rather than
-   optimistically guessing the new state client-side, so stock limits
-   enforced server-side are always reflected accurately. */
+/* Optimistic quantity updates — the +/- click should feel instant, not
+   wait on a round trip before the number on screen moves (that lag
+   reads as "is this broken?" to a shopper). So: update the qty value
+   and this line's subtotal in the DOM immediately, then fire the PATCH
+   in the background. Only if the server actually rejects it (stock
+   limit, line no longer exists, network failure) do we roll the UI
+   back to the real state — via a full loadCart(), same as before,
+   since at that point correctness matters more than speed. A small
+   toast explains what happened rather than the line just silently
+   snapping back. */
+function showCartError(message) {
+  const existing = document.getElementById('cartErrorToast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'cartErrorToast';
+  toast.className = 'cart-error-toast';
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3200);
+}
+
 async function changeQuantity(cartItemId, delta) {
   const line = cartLines.querySelector(`[data-cart-item-id="${cartItemId}"]`);
-  const currentQty = parseInt(line.querySelector('.cart-line-qty-value').textContent, 10);
+  if (!line) return;
+
+  const qtyEl = line.querySelector('.cart-line-qty-value');
+  const subtotalEl = line.querySelector('.cart-line-subtotal');
+  const currentQty = parseInt(qtyEl.textContent, 10);
   const newQty = currentQty + delta;
+
+  if (newQty < 1) {
+    // Same end state as removing the line (see update_item_quantity in
+    // cart_service.py) — just remove it directly rather than letting
+    // qty visibly hit 0 first.
+    removeItem(cartItemId);
+    return;
+  }
+
+  // --- Optimistic update: apply immediately, before the server responds ---
+  const unitPrice = parseFloat(line.dataset.unitPrice || '0');
+  qtyEl.textContent = newQty;
+  if (subtotalEl && unitPrice) {
+    subtotalEl.textContent = formatTaka(unitPrice * newQty);
+  }
 
   try {
     const res = await csrfFetch(`${API_BASE}/cart/update`, {
@@ -138,15 +178,19 @@ async function changeQuantity(cartItemId, delta) {
     });
     const payload = await res.json();
     if (payload.status === 'success') {
+      // Re-render from the server's real numbers (totals, stock-capped
+      // quantity, etc.) — usually a no-op visually since it matches
+      // what we already optimistically showed.
       renderCart(payload.data);
     } else {
-      // e.g. stock limit hit — reload to show the server's actual state
-      // rather than leaving the stepper showing a quantity that wasn't
-      // actually applied.
+      // Rejected (e.g. stock limit) — only now does the person see a
+      // rollback, with an explanation for why.
+      showCartError(payload.message || 'Could not update quantity');
       await loadCart();
     }
   } catch (err) {
     console.error('Failed to update quantity:', err);
+    showCartError('Connection error — quantity was not updated');
     await loadCart();
   }
 }
@@ -195,3 +239,4 @@ clearBtn.addEventListener('click', () => {
 
 loadCart();
 lucide.createIcons();
+

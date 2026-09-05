@@ -49,9 +49,10 @@ function hideAuthError() {
   document.getElementById('formError').classList.add('hidden');
 }
 
-function setSubmitBusy(isBusy, busyLabel, idleLabel) {
-  const btn = document.getElementById('submitBtn');
-  const label = document.getElementById('submitLabel');
+function setSubmitBusy(isBusy, busyLabel, idleLabel, btnId = 'submitBtn', labelId = 'submitLabel') {
+  const btn = document.getElementById(btnId);
+  const label = document.getElementById(labelId);
   btn.disabled = isBusy;
   label.textContent = isBusy ? busyLabel : idleLabel;
 }
+

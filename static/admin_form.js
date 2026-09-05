@@ -67,7 +67,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await fetch('/api/admin/admin-login', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': data.csrf_token
                     },
                     body: JSON.stringify(data)
                 });

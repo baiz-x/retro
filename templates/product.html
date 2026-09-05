@@ -124,15 +124,15 @@
 
 <main>
 
-  <!-- ============ BREADCRUMB ============ -->
+  <!-- ============ BACK LINK — replaces the old Home / Category /
+       Product Name breadcrumb trail (cluttered, no real navigation
+       value since the category link and product name blurred
+       together). Just a single "back to shop" link, per Hasan. ============ -->
   <nav class="max-w-6xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6" aria-label="Breadcrumb">
-    <ol class="flex items-center flex-wrap gap-1.5 text-xs text-slate-500/70">
-      <li><a href="/" class="hover:text-sage-600 transition-colors">Home</a></li>
-      <li aria-hidden="true">/</li>
-      <li><a href="/products?product_type={{ product.product_type or '' }}" class="hover:text-sage-600 transition-colors">{{ {'jersey': 'Jerseys', 'boots': 'Boots', 'others': 'Others'}.get(product.product_type, 'Shop') }}</a></li>
-      <li aria-hidden="true">/</li>
-      <li class="text-slate-800 font-medium" aria-current="page">{{ product.name }}</li>
-    </ol>
+    <a href="/products?product_type={{ product.product_type or '' }}" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500/70 hover:text-sage-600 transition-colors">
+      <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+      Back to {{ {'jersey': 'Jerseys', 'boots': 'Boots', 'others': 'Others'}.get(product.product_type, 'Shop') }}
+    </a>
   </nav>
 
   <!-- ============ PRODUCT DETAIL — server-rendered from `product`
@@ -295,11 +295,21 @@
             </div>
           </div>
 
-          <!-- ---------- CTA (desktop inline; hidden on mobile in favor of sticky bar) ---------- -->
-          <button id="addToCartBtn" class="pdp-add-btn mt-7 hidden lg:flex" {{ 'disabled' if out_of_stock else '' }}>
-            <i data-lucide="shopping-bag" class="w-4 h-4"></i>
-            <span id="addToCartLabel">{{ add_to_cart_label }}</span>
-          </button>
+          <!-- ---------- CTAs (desktop inline; hidden on mobile in favor of sticky bar) ----------
+               Two distinct actions: "Cart" adds the line and lets the
+               shopper keep browsing; "Order" adds the line then jumps
+               straight to checkout for just this line (see
+               product.js's goToOrder / checkout.js's ?item= handling). ---------- -->
+          <div class="mt-7 hidden lg:flex gap-3">
+            <button id="addToCartBtn" class="pdp-add-btn pdp-add-btn-secondary flex-1" {{ 'disabled' if out_of_stock else '' }}>
+              <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+              <span id="addToCartLabel">Cart</span>
+            </button>
+            <button id="orderNowBtn" class="pdp-add-btn flex-1" {{ 'disabled' if out_of_stock else '' }}>
+              <i data-lucide="zap" class="w-4 h-4"></i>
+              <span id="orderNowLabel">{{ add_to_cart_label }}</span>
+            </button>
+          </div>
           <p id="selectionHint" class="text-xs text-clay mt-2 hidden">Please select a size to continue.</p>
 
           <!-- ---------- ACCORDION ---------- -->
@@ -437,10 +447,14 @@
       <p id="mobileCtaPrice" class="font-display text-lg text-slate-800">৳{{ '{:,.0f}'.format(product.price or 0) }}</p>
       <p id="mobileCtaStockNote" class="pdp-stock-note text-[11px] {{ stock_note_class }}">{{ stock_note_text }}</p>
     </div>
-    <button id="mobileAddToCartBtn" class="pdp-add-btn pdp-add-btn-compact" {{ 'disabled' if out_of_stock else '' }}>
-      <i data-lucide="shopping-bag" class="w-4 h-4"></i>
-      <span id="mobileAddToCartLabel">{{ add_to_cart_label_mobile }}</span>
-    </button>
+    <div class="flex gap-2">
+      <button id="mobileAddToCartBtn" class="pdp-add-btn pdp-add-btn-compact pdp-add-btn-secondary" aria-label="Add to cart" {{ 'disabled' if out_of_stock else '' }}>
+        <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+      </button>
+      <button id="mobileOrderNowBtn" class="pdp-add-btn pdp-add-btn-compact" {{ 'disabled' if out_of_stock else '' }}>
+        <span id="mobileOrderNowLabel">{{ add_to_cart_label_mobile }}</span>
+      </button>
+    </div>
   </div>
 
   <!-- Standard bottom nav, unchanged from homepage -->
@@ -508,3 +522,4 @@
 <script src="/static/product.js"></script>
 </body>
 </html>
+

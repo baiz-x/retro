@@ -346,6 +346,29 @@
   font-size: 0.75rem;
 }
 
+/* Secondary variant — used for "Cart" so it reads as the lighter-weight
+   action next to "Order" (which stays the solid, primary CTA). */
+.pdp-add-btn-secondary {
+  background: var(--cream-50);
+  color: var(--sage-700);
+  border: 1.5px solid var(--sand-200);
+}
+.pdp-add-btn-secondary:hover:not(:disabled) {
+  background: var(--sage-100);
+  color: var(--sage-800);
+}
+.pdp-add-btn-secondary:disabled {
+  background: var(--sand-100);
+  color: var(--slate-500);
+  border-color: var(--sand-200);
+}
+/* Compact mobile Cart button is icon-only (see product.html) — square
+   footprint instead of stretching to fill space next to Order. */
+.pdp-mobile-cta .pdp-add-btn-compact.pdp-add-btn-secondary {
+  padding: 0.75rem;
+  width: 3rem;
+}
+
 /* =====================================================================
    Accordion (Description / Shipping / FAQ)
    ===================================================================== */
@@ -397,4 +420,5 @@
 @media (prefers-reduced-motion: reduce) {
   .pdp-spinner { animation-duration: 1.4s; }
 }
+
 

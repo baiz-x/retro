@@ -40,6 +40,13 @@
 
     <div id="formError" class="auth-error hidden" role="alert"></div>
 
+    <!-- Shown only when a login attempt fails because the account is
+         unverified (auth_service.authenticate_user error_code
+         "unverified"). Hidden the rest of the time. -->
+    <button type="button" id="resendCodeBtn" class="auth-optional-toggle w-full justify-center hidden">
+      Resend verification code
+    </button>
+
     <form id="loginForm" class="space-y-4" novalidate>
       <label class="block">
         <span class="auth-label">Username</span>
@@ -71,3 +78,4 @@
 <script src="/static/login.js"></script>
 </body>
 </html>
+

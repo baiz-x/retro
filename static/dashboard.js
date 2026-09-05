@@ -55,6 +55,14 @@ document.addEventListener("DOMContentLoaded", () => {
     refreshData();
 });
 
+// Reads the CSRF token from the hidden input rendered in the form
+// (name="csrf_token"). Used for JSON fetch() calls, which — unlike
+// the FormData submission in handleProductUpload — don't carry the
+// token in the body, so Flask-WTF needs it via the X-CSRFToken header.
+function getCsrfToken() {
+    return document.querySelector('input[name="csrf_token"]')?.value || '';
+}
+
 function initClock() {
     const clockEl = document.getElementById('clock');
     if (!clockEl) return;
@@ -481,8 +489,8 @@ function handleProductUpload(e) {
     switchTab('edit', document.querySelector('[data-tab="edit"]'));
 
     const request = isEditing
-        ? fetch(`/api/admin/products/${targetId}`, { method: 'PATCH', body: formData })
-        : fetch('/api/admin/products', { method: 'POST', body: formData });
+        ? fetch(`/api/admin/products/${targetId}`, { method: 'PATCH', headers: { 'X-CSRFToken': getCsrfToken() }, body: formData })
+        : fetch('/api/admin/products', { method: 'POST', headers: { 'X-CSRFToken': getCsrfToken() }, body: formData });
 
     request
         .then(async (res) => {
@@ -699,7 +707,7 @@ async function updateOrderStatus(orderId, newStatus) {
     try {
         const res = await fetch(`/api/admin/orders/${orderId}/status`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
             body: JSON.stringify({ status: newStatus })
         });
         const data = await res.json();
@@ -770,7 +778,7 @@ async function adjustStock(productId, delta) {
     try {
         const res = await fetch(`/api/admin/products/${productId}/stock`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
             body: JSON.stringify({ delta: delta })
         });
         const data = await res.json();
@@ -783,6 +791,7 @@ async function adjustStock(productId, delta) {
         alert(`Error: ${err.message}`);
     }
 }
+
 
 
 

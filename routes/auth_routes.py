@@ -1,7 +1,13 @@
 import logging
 from flask import Blueprint, request, jsonify, session
 from models import User
-from services.auth_service import register_user, authenticate_user, migrate_guest_cart_to_user
+from services.auth_service import (
+    register_user,
+    authenticate_user,
+    migrate_guest_cart_to_user,
+    verify_email_code,
+    resend_verification_code,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -33,21 +39,23 @@ def signup():
 
         username = (data.get("username") or "").strip()
         phone_number = (data.get("phone_number") or "").strip()
+        email = (data.get("email") or "").strip().lower()
         password = data.get("password") or ""
         social_platform = data.get("social_platform")
         social_handle = data.get("social_handle")
 
-        user, error = register_user(username, phone_number, password, social_platform, social_handle)
+        user, error = register_user(username, phone_number, email, password, social_platform, social_handle)
         if error:
             return jsonify({"status": "error", "message": error}), 400
 
-        guest_id = session.get("guest_id")
-        _log_user_in(user)
-
-        if guest_id:
-            migrate_guest_cart_to_user(guest_id, user.id)
-
-        return jsonify({"status": "success", "data": user.to_dict()}), 201
+        # Account is created but unverified — no session yet. The
+        # cart is NOT migrated here; that now happens on the
+        # verify-email step below, once the account is actually usable.
+        return jsonify({
+            "status": "pending_verification",
+            "message": "We've sent a verification code to your email.",
+            "data": {"email": user.email},
+        }), 201
     except Exception as e:
         logger.error(f"Unexpected error in signup: {str(e)}", exc_info=True)
         return jsonify({"status": "error", "message": "An internal error occurred"}), 500
@@ -63,9 +71,12 @@ def login():
         username = (data.get("username") or "").strip()
         password = data.get("password") or ""
 
-        user, error = authenticate_user(username, password)
+        user, error, error_code = authenticate_user(username, password)
         if error:
-            return jsonify({"status": "error", "message": error}), 401
+            body = {"status": "error", "message": error}
+            if error_code:
+                body["error_code"] = error_code
+            return jsonify(body), 401
 
         guest_id = session.get("guest_id")
         _log_user_in(user)
@@ -76,6 +87,58 @@ def login():
         return jsonify({"status": "success", "data": user.to_dict()}), 200
     except Exception as e:
         logger.error(f"Unexpected error in login: {str(e)}", exc_info=True)
+        return jsonify({"status": "error", "message": "An internal error occurred"}), 500
+
+
+@auth_bp.route("/verify-email", methods=["POST"])
+def verify_email():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"status": "error", "message": "Missing request body"}), 400
+
+        email = (data.get("email") or "").strip().lower()
+        code = (data.get("code") or "").strip()
+
+        user, error = verify_email_code(email, code)
+        if error:
+            return jsonify({"status": "error", "message": error}), 400
+
+        # Now that the account is verified, log them in and migrate
+        # any guest cart — mirrors what signup/login did before.
+        guest_id = session.get("guest_id")
+        _log_user_in(user)
+
+        if guest_id:
+            migrate_guest_cart_to_user(guest_id, user.id)
+
+        return jsonify({"status": "success", "data": user.to_dict()}), 200
+    except Exception as e:
+        logger.error(f"Unexpected error in verify_email: {str(e)}", exc_info=True)
+        return jsonify({"status": "error", "message": "An internal error occurred"}), 500
+
+
+@auth_bp.route("/resend-code", methods=["POST"])
+def resend_code():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"status": "error", "message": "Missing request body"}), 400
+
+        email = (data.get("email") or "").strip().lower()
+
+        success, error = resend_verification_code(email)
+        if not success:
+            return jsonify({"status": "error", "message": error}), 400
+
+        # Always the same message whether or not the email existed —
+        # see resend_verification_code's docstring on enumeration.
+        return jsonify({
+            "status": "success",
+            "message": "If an account with that email needs verification, a new code has been sent.",
+        }), 200
+    except Exception as e:
+        logger.error(f"Unexpected error in resend_code: {str(e)}", exc_info=True)
         return jsonify({"status": "error", "message": "An internal error occurred"}), 500
 
 
@@ -99,3 +162,4 @@ def me():
         return jsonify({"status": "error", "message": "Not logged in"}), 401
 
     return jsonify({"status": "success", "data": user.to_dict()}), 200
+

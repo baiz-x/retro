@@ -1,5 +1,6 @@
 from datetime import datetime
 from . import db
+from sqlalchemy.dialects.postgresql import JSONB
 
 class CartItem(db.Model):
     __tablename__ = "cart_items"
@@ -28,13 +29,13 @@ class CartItem(db.Model):
     # one cart row — a single flat column cannot hold that. e.g.
     # {"size": "200ml", "color": "Red", "scent": "Lavender"}
     # For a unified-mode product with no axes chosen, this can be {}.
-    selected_variants = db.Column(db.JSON, nullable=True, default=dict)
+    selected_variants = db.Column(JSONB, nullable=True, default=dict)
 
     # Jersey (or other) print customization, independent of variant
     # selection — e.g. {"name": "ARJUN", "number": "10"}. Only
     # meaningful for products where the storefront collects it (jerseys);
     # left as {} for everything else.
-    customization = db.Column(db.JSON, nullable=True, default=dict)
+    customization = db.Column(JSONB, nullable=True, default=dict)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

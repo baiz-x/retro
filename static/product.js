@@ -292,13 +292,19 @@ document.getElementById('qtyPlusBtn').addEventListener('click', () => {
 });
 
 /* ---------------------------------------------------------------------
-   Add-to-cart label wording — mirrors app.py's build_add_to_cart_label().
-   is_preorder products say "Reserve" (a request/reservation, sourced
-   afterward); store-owned products say "Order" (the item is actually
-   in hand, nothing is being reserved for later). Out of stock always
-   overrides both, regardless of is_preorder.
+   Button label wording.
+   - Cart button: always just "Cart" — it only ever adds a line, so its
+     label doesn't need to change with preorder/stock state beyond
+     disabling it.
+   - Order button: mirrors app.py's build_add_to_cart_label() as
+     before — "Reserve" for is_preorder products (a request, sourced
+     afterward), "Order" for store-owned stock. Out of stock overrides
+     both regardless of is_preorder.
    --------------------------------------------------------------------- */
-function addToCartLabel(mobile) {
+function cartBtnLabel() {
+  return isOutOfStock(product) ? 'Out of Stock' : 'Cart';
+}
+function orderBtnLabel(mobile) {
   if (isOutOfStock(product)) return 'Out of Stock';
   if (product.is_preorder) return mobile ? 'Reserve' : 'Reserve this item';
   return mobile ? 'Order' : 'Order this item';
@@ -314,6 +320,8 @@ function addToCartLabel(mobile) {
 function updateAddToCartState() {
   const btn = document.getElementById('addToCartBtn');
   const mobileBtn = document.getElementById('mobileAddToCartBtn');
+  const orderBtn = document.getElementById('orderNowBtn');
+  const mobileOrderBtn = document.getElementById('mobileOrderNowBtn');
   const hint = document.getElementById('selectionHint');
 
   const oos = isOutOfStock(product);
@@ -321,10 +329,11 @@ function updateAddToCartState() {
   const needsColor = product.product_type === 'boots' && colorAxisExists(product);
   const missingSelection = (needsSize && !selectedSize) || (needsColor && !selectedColor);
 
-  [btn, mobileBtn].forEach(b => { b.disabled = oos; });
+  [btn, mobileBtn, orderBtn, mobileOrderBtn].forEach(b => { b.disabled = oos; });
 
-  document.getElementById('addToCartLabel').textContent = addToCartLabel(false);
-  document.getElementById('mobileAddToCartLabel').textContent = addToCartLabel(true);
+  document.getElementById('addToCartLabel').textContent = cartBtnLabel();
+  document.getElementById('orderNowLabel').textContent = orderBtnLabel(false);
+  document.getElementById('mobileOrderNowLabel').textContent = orderBtnLabel(true);
 
   hint.classList.toggle('hidden', !missingSelection || oos);
   updateQtyDisplay();
@@ -358,71 +367,149 @@ function buildCustomization() {
   return customization;
 }
 
-function setAddToCartLabel(text) {
-  document.getElementById('addToCartLabel').textContent = text;
-  document.getElementById('mobileAddToCartLabel').textContent = text;
+function setBtnLabel(el, text) {
+  if (el) el.textContent = text;
 }
 
-// Restores each button to its own correctly-sized resting label
-// (desktop: "Reserve this item"/"Order this item", mobile: "Reserve"/
-// "Order") — setAddToCartLabel() alone would put the longer desktop
-// text on the mobile button too, which doesn't fit the compact CTA.
-function restoreAddToCartLabels() {
-  document.getElementById('addToCartLabel').textContent = addToCartLabel(false);
-  document.getElementById('mobileAddToCartLabel').textContent = addToCartLabel(true);
+// Restores a pair of (desktop, mobile) label elements to their normal
+// resting text after a transient state (Adding.../Added/error).
+function restoreCartLabels() {
+  setBtnLabel(document.getElementById('addToCartLabel'), cartBtnLabel());
+}
+function restoreOrderLabels() {
+  setBtnLabel(document.getElementById('orderNowLabel'), orderBtnLabel(false));
+  setBtnLabel(document.getElementById('mobileOrderNowLabel'), orderBtnLabel(true));
 }
 
-async function addToCart() {
+/* ---------------------------------------------------------------------
+   Shared add-to-cart call — posts to POST /api/cart/add and returns
+   the parsed payload (or null on a thrown/network error) so both the
+   Cart button and Order button can react to the same outcome
+   differently (Cart: show "Added" and stay put; Order: redirect to
+   checkout for just this line on success).
+   --------------------------------------------------------------------- */
+function selectionMissing() {
   const needsSize = sizeAxisExists(product);
   const needsColor = product.product_type === 'boots' && colorAxisExists(product);
-  if ((needsSize && !selectedSize) || (needsColor && !selectedColor)) {
-    document.getElementById('selectionHint').classList.remove('hidden');
-    document.getElementById('sizeSection').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    return;
-  }
+  return (needsSize && !selectedSize) || (needsColor && !selectedColor);
+}
+
+function flagMissingSelection() {
+  document.getElementById('selectionHint').classList.remove('hidden');
+  document.getElementById('sizeSection').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+async function postAddToCart() {
+  const res = await csrfFetch(`${API_BASE}/cart/add`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      product_id: product.id,
+      quantity,
+      selected_variants: buildSelectedVariants(),
+      customization: buildCustomization(),
+    }),
+  });
+  return res.json();
+}
+
+/* ---------------- Cart button: add the line, stay on the page ---------------- */
+async function addToCart() {
+  if (selectionMissing()) { flagMissingSelection(); return; }
 
   const btn = document.getElementById('addToCartBtn');
   const mobileBtn = document.getElementById('mobileAddToCartBtn');
+  const label = document.getElementById('addToCartLabel');
 
   [btn, mobileBtn].forEach(b => { b.disabled = true; });
-  setAddToCartLabel('Adding...');
+  setBtnLabel(label, 'Adding...');
 
   try {
-    const res = await csrfFetch(`${API_BASE}/cart/add`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        product_id: product.id,
-        quantity,
-        selected_variants: buildSelectedVariants(),
-        customization: buildCustomization(),
-      }),
-    });
-    const payload = await res.json();
+    const payload = await postAddToCart();
 
     if (payload.status !== 'success') {
-      setAddToCartLabel(payload.message || 'Could not add to bag');
-      setTimeout(restoreAddToCartLabels, 1800);
+      setBtnLabel(label, payload.message || 'Could not add');
+      setTimeout(restoreCartLabels, 1800);
       [btn, mobileBtn].forEach(b => { b.disabled = isOutOfStock(product); });
       return;
     }
 
     cartCountEl.textContent = payload.data.total_items || 0;
-    setAddToCartLabel('Added');
+    setBtnLabel(label, 'Added');
     setTimeout(() => {
-      restoreAddToCartLabels();
+      restoreCartLabels();
       [btn, mobileBtn].forEach(b => { b.disabled = isOutOfStock(product); });
     }, 900);
   } catch (err) {
     console.error('Add to cart failed:', err);
-    setAddToCartLabel('Connection error');
-    setTimeout(restoreAddToCartLabels, 1800);
+    setBtnLabel(label, 'Connection error');
+    setTimeout(restoreCartLabels, 1800);
     [btn, mobileBtn].forEach(b => { b.disabled = isOutOfStock(product); });
+  }
+}
+
+/* ---------------- Order button: add the line, then jump straight to
+   checkout for just that line via ?item=<cart_item_id>. The added
+   line's id comes back in the /api/cart/add response's cart data
+   (fetch_cart_contents() includes each item's own id — see
+   cart_service.py). On failure, stay on the page and show the error
+   the same way the Cart button does, rather than navigating away from
+   a failed add. --------------------------------------------------- */
+async function orderNow() {
+  if (selectionMissing()) { flagMissingSelection(); return; }
+
+  const btn = document.getElementById('orderNowBtn');
+  const mobileBtn = document.getElementById('mobileOrderNowBtn');
+
+  [btn, mobileBtn].forEach(b => { if (b) b.disabled = true; });
+  setBtnLabel(document.getElementById('orderNowLabel'), 'Adding...');
+  setBtnLabel(document.getElementById('mobileOrderNowLabel'), 'Adding...');
+
+  try {
+    const payload = await postAddToCart();
+
+    if (payload.status !== 'success') {
+      setBtnLabel(document.getElementById('orderNowLabel'), payload.message || 'Could not add');
+      setBtnLabel(document.getElementById('mobileOrderNowLabel'), payload.message || 'Could not add');
+      setTimeout(restoreOrderLabels, 1800);
+      [btn, mobileBtn].forEach(b => { if (b) b.disabled = isOutOfStock(product); });
+      return;
+    }
+
+    cartCountEl.textContent = payload.data.total_items || 0;
+
+    // Find the line we (or an existing matching line, since equal
+    // product+variants+customization merge — see cart_service.py)
+    // just added, so checkout can filter down to it specifically.
+    const variants = buildSelectedVariants();
+    const customization = buildCustomization();
+    const items = (payload.data && payload.data.items) || [];
+    const line = items.find(i =>
+      i.product_id === product.id &&
+      JSON.stringify(i.selected_variants || {}) === JSON.stringify(variants) &&
+      JSON.stringify(i.customization || {}) === JSON.stringify(customization)
+    );
+
+    if (line) {
+      window.location.href = `/checkout?item=${encodeURIComponent(line.id)}`;
+    } else {
+      // Shouldn't happen, but fail safe to the full cart rather than
+      // a broken checkout link.
+      window.location.href = '/checkout';
+    }
+  } catch (err) {
+    console.error('Order failed:', err);
+    setBtnLabel(document.getElementById('orderNowLabel'), 'Connection error');
+    setBtnLabel(document.getElementById('mobileOrderNowLabel'), 'Connection error');
+    setTimeout(restoreOrderLabels, 1800);
+    [btn, mobileBtn].forEach(b => { if (b) b.disabled = isOutOfStock(product); });
   }
 }
 
 document.getElementById('addToCartBtn').addEventListener('click', addToCart);
 document.getElementById('mobileAddToCartBtn').addEventListener('click', addToCart);
+document.getElementById('orderNowBtn').addEventListener('click', orderNow);
+document.getElementById('mobileOrderNowBtn').addEventListener('click', orderNow);
 
 /* ---------------------------------------------------------------------
    Accordion — Description/Shipping panels are already server-rendered
@@ -666,3 +753,4 @@ renderAccordionFaq();
 loadDiscovery();
 refreshCartCount();
 lucide.createIcons();
+

@@ -21,6 +21,7 @@
             <div id="message-container" class="hidden mb-6 p-4 rounded-2xl text-xs font-bold uppercase tracking-widest text-center border"></div>
 
             <form id="login-form" class="space-y-6">
+ 		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div>
                     <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gray-500 mb-2 ml-1">Username</label>
                     <input type="text" name="username" class="input-field" placeholder="Admin username" required>

@@ -26,8 +26,21 @@ def checkout():
             if not data.get(field):
                 return jsonify({'status': 'error', 'message': f'Missing field: {field}'}), 400
 
+        # Optional: present when checkout was reached via the PDP
+        # "Order" button (?item=<id> — see checkout.js), meaning only
+        # this one cart line should become the order. Absent for the
+        # normal cart "Checkout" button, which still checks out
+        # everything, unchanged.
+        cart_item_id = data.get('cart_item_id')
+        if cart_item_id is not None:
+            try:
+                cart_item_id = int(cart_item_id)
+            except (ValueError, TypeError):
+                return jsonify({'status': 'error', 'message': 'Invalid cart_item_id'}), 400
+
         user_id, guest_id = get_cart_owner()
-        cart_items = fetch_cart_items(user_id=user_id, guest_id=guest_id)
+        all_cart_items = fetch_cart_items(user_id=user_id, guest_id=guest_id)
+        cart_items = [i for i in all_cart_items if i.id == cart_item_id] if cart_item_id is not None else all_cart_items
 
         is_valid, error_message = validate_cart_not_empty(cart_items)
         if not is_valid:
@@ -39,9 +52,10 @@ def checkout():
 
         # The service internally validates shipping zone + payment
         # method, copies selected_variants/customization from CartItem
-        # to OrderItem, and clears the cart's own items as part of the
-        # same transaction.
-        order, error = create_order_from_cart(user_id, guest_id, data)
+        # to OrderItem, and clears either the whole cart or just the
+        # one targeted line (when cart_item_id is given) as part of
+        # the same transaction.
+        order, error = create_order_from_cart(user_id, guest_id, data, cart_item_id=cart_item_id)
         if error:
             return jsonify({'status': 'error', 'message': error}), 400
 
@@ -111,3 +125,4 @@ def update_order_status_route(order_id):
         db.session.rollback()
         current_app.logger.error(f"Unexpected error in update_order_status_route: {str(e)}")
         return jsonify({'status': 'error', 'message': 'Internal error'}), 500
+

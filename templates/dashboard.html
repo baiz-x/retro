@@ -94,6 +94,7 @@
             <h2 class="font-heading text-xl font-bold uppercase tracking-widest mb-6 border-b border-navy/10 pb-2 text-navy">Asset Registration</h2>
             
             <form id="uploadForm" class="bg-white p-6 md:p-8 rounded-2xl border border-navy/10 shadow-sm space-y-6">
+		<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="product_id" id="edit_product_id" value="">
                 <div>
                     <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gold mb-1">Asset Designation (Name)</label>

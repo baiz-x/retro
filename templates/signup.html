@@ -47,6 +47,11 @@
       </label>
 
       <label class="block">
+        <span class="auth-label">Email</span>
+        <input id="email" name="email" type="email" class="auth-input" autocomplete="email" required />
+      </label>
+
+      <label class="block">
         <span class="auth-label">Phone Number</span>
         <input id="phone_number" name="phone_number" type="tel" class="auth-input" placeholder="01XXXXXXXXX" autocomplete="tel" required />
       </label>
@@ -92,9 +97,30 @@
       </button>
     </form>
 
-    <p class="text-center text-sm text-slate-500/70 mt-6">
+    <p id="loginLink" class="text-center text-sm text-slate-500/70 mt-6">
       Already have an account? <a href="/login" class="text-sage-600 font-semibold hover:text-sage-700">Log in</a>
     </p>
+
+    <!-- Verify-email step: hidden until signupForm succeeds, then
+         swapped in inline (no page navigation) via signup.js. -->
+    <form id="verifyForm" class="space-y-4 hidden" novalidate>
+      <p class="text-sm text-slate-500/70 text-center mb-2">
+        We've sent a 6-digit code to <strong id="verifyEmailDisplay"></strong>.
+      </p>
+
+      <label class="block">
+        <span class="auth-label">Verification Code</span>
+        <input id="verification_code" name="verification_code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" class="auth-input" autocomplete="one-time-code" required />
+      </label>
+
+      <button type="submit" id="verifySubmitBtn" class="pdp-add-btn w-full mt-2">
+        <span id="verifySubmitLabel">Verify Email</span>
+      </button>
+
+      <button type="button" id="resendCodeBtn" class="auth-optional-toggle w-full justify-center">
+        Resend code
+      </button>
+    </form>
   </div>
 </div>
 
@@ -102,3 +128,4 @@
 <script src="/static/signup.js"></script>
 </body>
 </html>
+
