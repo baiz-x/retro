@@ -9,11 +9,11 @@ loginForm.addEventListener('submit', async (e) => {
   hideAuthError();
   resendCodeBtn.classList.add('hidden');
 
-  const username = document.getElementById('username').value.trim();
+  const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
 
-  if (!username || !password) {
-    showAuthError('Please enter both your username and password.');
+  if (!email || !password) {
+    showAuthError('Please enter both your email and password.');
     return;
   }
 
@@ -23,7 +23,7 @@ loginForm.addEventListener('submit', async (e) => {
     const res = await csrfFetch('/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ email, password }),
     });
     const payload = await res.json();
 
@@ -51,11 +51,13 @@ loginForm.addEventListener('submit', async (e) => {
 });
 
 resendCodeBtn.addEventListener('click', async () => {
-  // The login form only collects a username, not an email — but
-  // /auth/resend-code requires an email address. Rather than guess or
-  // silently fail, ask for it directly via a browser prompt.
-  const email = window.prompt('Enter the email address you signed up with:');
-  if (!email) return;
+  // The login form already collects an email address, so reuse
+  // whatever's currently typed there rather than asking again.
+  const email = document.getElementById('email').value.trim();
+  if (!email) {
+    showAuthError('Enter your email above first, then tap resend.');
+    return;
+  }
 
   hideAuthError();
   resendCodeBtn.disabled = true;
@@ -66,7 +68,7 @@ resendCodeBtn.addEventListener('click', async () => {
     const res = await csrfFetch('/auth/resend-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email.trim() }),
+      body: JSON.stringify({ email }),
     });
     const payload = await res.json();
     if (payload.status === 'success') {

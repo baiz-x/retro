@@ -4,18 +4,18 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<title>{{ product.name }} — Kit Collective</title>
-<meta name="description" content="{{ product.description[:155] if product.description else (product.name ~ ' — available now at Kit Collective. Premium club and national team jerseys, boots, and matchday gear.') }}" />
+<title>{{ product.name }} — RetroFit BD</title>
+<meta name="description" content="{{ product.description[:155] if product.description else (product.name ~ ' — available now at RetroFit BD. Premium club and national team jerseys, boots, and matchday gear.') }}" />
 <link rel="canonical" href="{{ canonical_url }}" />
 <meta name="csrf-token" content="{{ csrf_token() }}" />
 
 <!-- Open Graph / link previews (WhatsApp, Facebook, etc.) -->
 <meta property="og:type" content="product" />
 <meta property="og:title" content="{{ product.name }}" />
-<meta property="og:description" content="{{ product.description[:200] if product.description else 'Available now at Kit Collective.' }}" />
+<meta property="og:description" content="{{ product.description[:200] if product.description else 'Available now at RetroFit BD.' }}" />
 {% if product.image %}<meta property="og:image" content="{{ product.image }}" />{% endif %}
 <meta property="og:url" content="{{ canonical_url }}" />
-<meta property="og:site_name" content="Kit Collective" />
+<meta property="og:site_name" content="RetroFit BD" />
 <meta property="product:price:amount" content="{{ '%.2f'|format(product.price or 0) }}" />
 <meta property="product:price:currency" content="BDT" />
 
@@ -75,13 +75,9 @@
       </button>
 
       <!-- Logo -->
-      <a href="/" class="flex items-center gap-2 group absolute left-1/2 -translate-x-1/2 lg:static lg:translate-x-0" aria-label="Kit Collective home">
-        <svg width="28" height="28" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg" class="shrink-0">
-          <path d="M17 1L31 8.5V19.5C31 26.4 24.9 31.6 17 33C9.1 31.6 3 26.4 3 19.5V8.5L17 1Z" stroke="#657d69" stroke-width="1.7"/>
-          <path d="M17 7L25 11.2V18.2C25 22.4 21.5 25.6 17 26.5C12.5 25.6 9 22.4 9 18.2V11.2L17 7Z" fill="#a7bda2"/>
-          <path d="M17 12L14 17H16.3L14.7 22L21 15.5H18.2L20 12H17Z" fill="#2C3531"/>
-        </svg>
-        <span class="font-display text-lg sm:text-xl tracking-wider text-sage-950 whitespace-nowrap">KIT COLLECTIVE</span>
+      <a href="/" class="flex items-center gap-2 group absolute left-1/2 -translate-x-1/2 lg:static lg:translate-x-0" aria-label="RetroFit BD home">
+        <img src="/static/img/retrofit-bd-logo.webp" alt="RetroFit BD logo" width="28" height="28" class="shrink-0 object-contain" />
+        <span class="font-display text-lg sm:text-xl tracking-wider text-sage-950 whitespace-nowrap">RETROFIT BD</span>
       </a>
 
       <!-- Desktop category pills -->
@@ -99,10 +95,9 @@
         <button id="searchBtn" aria-label="Search catalog" class="p-2 text-sage-800 hover:text-sage-500 transition-colors">
           <i data-lucide="search" class="w-5 h-5"></i>
         </button>
-        <button id="cartBtn" aria-label="Open bag, 0 items" class="relative p-2 text-sage-800 hover:text-sage-500 transition-colors">
-          <i data-lucide="shopping-bag" class="w-5 h-5"></i>
-          <span id="cartCount" class="absolute -top-0.5 -right-0.5 bg-clay text-sand-50 text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">0</span>
-        </button>
+        <a href="/account" aria-label="Your account" class="p-2 text-sage-800 hover:text-sage-500 transition-colors">
+          <i data-lucide="user" class="w-5 h-5"></i>
+        </a>
       </div>
     </div>
 
@@ -393,13 +388,10 @@
     <div class="grid sm:grid-cols-3 gap-10 pb-10 border-b border-slate-700">
       <div>
         <a href="/" class="flex items-center gap-2 mb-3">
-          <svg width="28" height="28" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M17 1L31 8.5V19.5C31 26.4 24.9 31.6 17 33C9.1 31.6 3 26.4 3 19.5V8.5L17 1Z" stroke="#a7bda2" stroke-width="1.7"/>
-            <path d="M17 7L25 11.2V18.2C25 22.4 21.5 25.6 17 26.5C12.5 25.6 9 22.4 9 18.2V11.2L17 7Z" fill="#7C9082"/>
-          </svg>
-          <span class="font-display text-lg tracking-wider text-cream-50">KIT COLLECTIVE</span>
+          <img src="/static/retrofit-bd-logo.webp" alt="RetroFit BD logo" width="28" height="28" class="object-contain" />
+          <span class="font-display text-lg tracking-wider text-cream-50">RETROFIT BD</span>
         </a>
-        <p class="text-sm text-cream-50/60 max-w-xs leading-relaxed">Premium club and national team jerseys, retro drops, and matchday gear — crafted for comfort and timeless style.</p>
+        <p class="text-sm text-cream-50/60 max-w-xs leading-relaxed">Bangladesh's go-to shop for premium club and national team football jerseys, retro drops, and matchday gear — delivering to Dhaka and nationwide.</p>
       </div>
 
       <div>
@@ -423,7 +415,7 @@
     </div>
 
     <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 text-xs text-cream-50/50">
-      <p>© 2026 Kit Collective. All rights reserved.</p>
+      <p>© 2026 RetroFit BD. All rights reserved. Football jerseys delivered across Bangladesh.</p>
       <div class="flex items-center gap-5">
         <a href="#" class="hover:text-cream-50 transition-colors">Privacy Policy</a>
         <a href="#" class="hover:text-cream-50 transition-colors">Terms of Service</a>
@@ -471,35 +463,13 @@
       <i data-lucide="search" class="w-5 h-5"></i>
       <span class="text-[10px] font-medium">Search</span>
     </button>
-    <button id="mobileCartBtn" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1 relative">
+    <a href="/cart" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1 relative">
       <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+      <span id="cartCountMobile" class="cart-count-badge absolute -top-0.5 right-1 bg-clay text-sand-50 text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">0</span>
       <span class="text-[10px] font-medium">Bag</span>
-    </button>
+    </a>
   </div>
 </div>
-
-<!-- ============ CART DRAWER — identical markup to index.html ============ -->
-<div id="cartOverlay" class="cart-overlay fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50"></div>
-<aside id="cartDrawer" class="cart-drawer fixed top-0 right-0 h-full w-full sm:w-[400px] bg-cream-50 z-50 flex flex-col" role="dialog" aria-modal="true" aria-label="Shopping bag">
-  <div class="flex items-center justify-between px-5 py-4 border-b border-sand-200">
-    <h2 class="font-display text-xl text-slate-800 uppercase tracking-wide">Your Bag</h2>
-    <button id="cartCloseBtn" aria-label="Close bag" class="p-2 text-slate-500/80 hover:text-slate-800">
-      <i data-lucide="x" class="w-5 h-5"></i>
-    </button>
-  </div>
-  <div class="flex-1 flex flex-col items-center justify-center px-8 text-center gap-4">
-    <div class="w-16 h-16 rounded-full bg-sand-100 flex items-center justify-center">
-      <i data-lucide="shopping-bag" class="w-7 h-7 text-sage-500"></i>
-    </div>
-    <div>
-      <p class="font-semibold text-slate-800 mb-1">Your bag is empty</p>
-      <p class="text-sm text-slate-500/70">Looks like you haven't added any jerseys yet.</p>
-    </div>
-    <button id="cartStartShoppingBtn" class="mt-2 bg-sage-400 text-cream-50 font-bold uppercase text-sm tracking-wide px-6 py-3 rounded-full hover:bg-sage-500 transition-colors">
-      Start Shopping
-    </button>
-  </div>
-</aside>
 
 <!-- ============ SEARCH OVERLAY — identical markup to index.html ============ -->
 <div id="searchOverlay" class="search-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-start justify-center px-4 pt-20 sm:pt-28">

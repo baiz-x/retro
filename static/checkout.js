@@ -23,12 +23,6 @@ const phoneError = document.getElementById('phoneError');
 const SHIPPING_FEES = { inside_dhaka: 70, outside_dhaka: 140 };
 let currentSubtotal = 0;
 
-/* Single-line checkout: set when this page was reached via the PDP
-   "Order" button (/checkout?item=<cart_item_id> — see product.js).
-   When present, the summary and the eventual checkout submission are
-   both scoped to just this one cart line instead of the whole cart. */
-const singleItemId = new URLSearchParams(window.location.search).get('item');
-
 function formatTaka(amount) {
   return `৳${Number(amount).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 }
@@ -52,18 +46,7 @@ async function loadOrderSummary() {
       return;
     }
 
-    // Single-line mode: narrow to just the requested line. If it's
-    // gone (e.g. removed in another tab), fall back to the full cart
-    // rather than showing a broken/empty checkout.
-    let items = payload.data.items;
-    let total_price = payload.data.total_price;
-    if (singleItemId !== null) {
-      const match = items.find(i => String(i.id) === String(singleItemId));
-      if (match) {
-        items = [match];
-        total_price = match.subtotal;
-      }
-    }
+    const { items, total_price } = payload.data;
     currentSubtotal = total_price;
 
     orderItemsList.innerHTML = items.map(item => {
@@ -151,10 +134,15 @@ async function checkAuthState() {
     if (payload.status !== 'success') {
       guestBanner.classList.remove('hidden');
     } else {
-      // Pre-fill known details for a logged-in user, same intent as
-      // plan.md's GET /auth/me "for frontend auto-fill" note.
+      // Pre-fill known details for a logged-in user — editable, not
+      // locked: these are plain inputs, so the person can change any
+      // of them before submitting, same as a guest typing from
+      // scratch. Nothing here submits on its own; it only submits
+      // when the existing form submit handler below fires.
       const user = payload.data;
+      if (user.name) document.getElementById('customer_name').value = user.name;
       if (user.phone_number) phoneInput.value = user.phone_number;
+      if (user.address) document.getElementById('address').value = user.address;
     }
   } catch (err) {
     guestBanner.classList.remove('hidden');
@@ -211,7 +199,6 @@ checkoutForm.addEventListener('submit', async (e) => {
 
   const formData = new FormData(checkoutForm);
   const payload = Object.fromEntries(formData.entries());
-  if (singleItemId !== null) payload.cart_item_id = singleItemId;
 
   submitBtn.disabled = true;
   submitLabel.textContent = 'Processing Order...';

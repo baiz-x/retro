@@ -7,12 +7,26 @@ class User(db.Model):
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False, index=True)
+
+    # Display name only — deliberately NOT unique. Login is by email
+    # (see authenticate_user in auth_service.py), so two people can
+    # share the same name without any ambiguity at login time.
+    name = db.Column(db.String(120), nullable=False)
+
     phone_number = db.Column(db.String(40), nullable=False)
+    email = db.Column(db.String(255), unique=True, nullable=False, index=True)
+    address = db.Column(db.Text, nullable=False)
 
     # Never store or return the raw hash to a client — password_hash is
     # intentionally excluded from to_dict() below.
     password_hash = db.Column(db.String(255), nullable=False)
+
+    # Email verification. The row is created immediately at signup with
+    # is_verified=False; login is blocked (see auth_service.authenticate_user)
+    # until verify_email_code() clears these and flips is_verified to True.
+    is_verified = db.Column(db.Boolean, nullable=False, default=False)
+    verification_code = db.Column(db.String(6), nullable=True)
+    verification_code_expires_at = db.Column(db.DateTime, nullable=True)
 
     # Optional social contact info, e.g. for order-related outreach.
     social_platform = db.Column(db.String(40), nullable=True)  # WhatsApp, Instagram, Facebook, TikTok
@@ -34,9 +48,13 @@ class User(db.Model):
         """Safe for direct JSON serialization — password_hash is deliberately omitted."""
         return {
             "id": self.id,
-            "username": self.username,
+            "name": self.name,
             "phone_number": self.phone_number,
+            "email": self.email,
+            "address": self.address,
+            "is_verified": self.is_verified,
             "social_platform": self.social_platform,
             "social_handle": self.social_handle,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+

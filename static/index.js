@@ -111,39 +111,28 @@ async function loadDiscovery() {
 loadArrivals();
 loadDiscovery();
 
-/* ---------------- Cart ---------------- */
-let cartCount = 0;
-const cartCountEl = document.getElementById('cartCount');
-document.addEventListener('click', e => {
-  const btn = e.target.closest('.add-btn');
-  if (!btn) return;
-  e.preventDefault();
-  cartCount++;
-  cartCountEl.textContent = cartCount;
-  btn.textContent = 'Added';
-  setTimeout(() => { btn.textContent = 'Add'; }, 900);
-});
+/* ---------------- Cart count badge ----------------
+   The drawer (and its shared cart-drawer.js) is gone — nothing on
+   this page opens a cart preview anymore, the desktop nav icon is now
+   an account link, and the mobile bottom bar's Bag icon goes straight
+   to /cart. This just keeps that Bag icon's badge accurate on load. */
+function refreshCartCountBadge() {
+  fetch('/api/cart')
+    .then(res => res.json())
+    .then(payload => {
+      if (payload.status !== 'success') return;
+      document.querySelectorAll('.cart-count-badge').forEach(el => {
+        el.textContent = payload.data.total_items || 0;
+      });
+    })
+    .catch(err => console.error('Failed to load cart count:', err));
+}
+refreshCartCountBadge();
 
-const cartOverlay = document.getElementById('cartOverlay');
-const cartDrawer = document.getElementById('cartDrawer');
-function openCart() {
-  cartOverlay.classList.add('open');
-  cartDrawer.classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-function closeCart() {
-  cartOverlay.classList.remove('open');
-  cartDrawer.classList.remove('open');
-  document.body.style.overflow = '';
-}
-document.getElementById('cartBtn').addEventListener('click', openCart);
-document.getElementById('mobileCartBtn').addEventListener('click', openCart);
-document.getElementById('cartCloseBtn').addEventListener('click', closeCart);
-document.getElementById('cartOverlay').addEventListener('click', closeCart);
-document.getElementById('cartStartShoppingBtn').addEventListener('click', () => {
-  closeCart();
-  document.getElementById('new-arrivals').scrollIntoView({ behavior: 'smooth' });
-});
+/* This homepage's "Add" buttons on product cards are decorative
+   placeholders only (no product_id/variant selection happens on a
+   card), so they intentionally do nothing yet rather than fake a
+   real add. */
 
 /* ---------------- Search ---------------- */
 const searchOverlay = document.getElementById('searchOverlay');
@@ -161,7 +150,7 @@ document.getElementById('mobileSearchBtn').addEventListener('click', openSearch)
 document.getElementById('searchCloseBtn').addEventListener('click', closeSearch);
 searchOverlay.addEventListener('click', e => { if (e.target === searchOverlay) closeSearch(); });
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeSearch(); closeCart(); }
+  if (e.key === 'Escape') { closeSearch(); }
 });
 
 // The homepage has no product grid of its own to filter live — search

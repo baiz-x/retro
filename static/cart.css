@@ -4,14 +4,16 @@
    these two pages need on top, same pattern as product.css.
    ===================================================================== */
 
-/* ---------- Cart line item ---------- */
+/* ---------- Cart line item ----------
+   Sized ~30% smaller than the original (media, padding, gap) per
+   Hasan — the card should feel compact, not like a product-page hero. */
 .cart-line {
   display: flex;
-  gap: 1.5rem;
+  gap: 1.05rem;
   background: var(--cream-50);
   border: 1px solid var(--sand-200);
-  border-radius: 1.75rem;
-  padding: 1.5rem;
+  border-radius: 1.35rem;
+  padding: 1.05rem;
   box-shadow: 0 2px 10px rgba(23, 29, 25, 0.04);
   transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
@@ -23,13 +25,13 @@
 /* Vertical rhythm between stacked lines — separate from the .space-y-4
    utility on #cartLines so this card's own spacing isn't dependent on
    a Tailwind class living correctly on the parent. */
-.cart-line + .cart-line { margin-top: 1.1rem; }
+.cart-line + .cart-line { margin-top: 0.85rem; }
 
 .cart-line-media {
-  width: 6.5rem;
-  height: 6.5rem;
+  width: 4.5rem;
+  height: 4.5rem;
   flex-shrink: 0;
-  border-radius: 1.25rem;
+  border-radius: 0.9rem;
   overflow: hidden;
   background: var(--sand-100);
   border: 1px solid var(--sand-200);
@@ -41,7 +43,7 @@
   align-items: center;
   gap: 0.4rem;
   flex-wrap: wrap;
-  margin-top: 0.55rem;
+  margin-top: 0.4rem;
 }
 
 .cart-line-tag {
@@ -82,8 +84,8 @@
   width: fit-content;
 }
 .cart-line-qty-btn {
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 1.9rem;
+  height: 1.9rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -96,10 +98,10 @@
 .cart-line-qty-btn:hover:not(:disabled) { background: var(--sage-150); }
 .cart-line-qty-btn:disabled { color: var(--sand-300); cursor: not-allowed; }
 .cart-line-qty-value {
-  min-width: 2rem;
+  min-width: 1.75rem;
   text-align: center;
   font-weight: 700;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: var(--slate-800);
 }
 
@@ -114,26 +116,70 @@
 }
 .cart-line-remove:hover { color: var(--clay); background: rgba(181, 87, 58, 0.08); }
 
-/* ---------- Optimistic-update error toast (cart.js) ---------- */
-.cart-error-toast {
+/* Error toast for optimistic quantity updates now lives in index.css
+   (shared with cart-drawer.js's own toast) — not duplicated here. */
+
+/* ---------- Pinned bottom action bar (cart.html) ----------
+   Fully opaque (no translucency/blur) and a higher z-index than
+   anything in the card stack, so cards visibly scroll UNDER it rather
+   than just behind a tinted overlay — per Hasan's spec. Sits above the
+   mobile bottom nav (z-30) and below the drawer/overlay (z-50), since
+   the drawer should still cover it when open. */
+.cart-action-bar {
   position: fixed;
-  left: 50%;
-  bottom: 1.5rem;
-  transform: translateX(-50%);
-  background: var(--slate-800);
-  color: var(--cream-50);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  padding: 0.75rem 1.25rem;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  background: var(--cream-50);
+  border-top: 1px solid var(--sand-200);
+  box-shadow: 0 -8px 24px rgba(23, 29, 25, 0.08);
+}
+/* Clears the fixed mobile bottom nav (index.css's own bar) so the two
+   fixed elements stack instead of overlapping on small screens. */
+@media (max-width: 1023px) {
+  .cart-action-bar { bottom: 60px; }
+}
+
+.cart-action-clear-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+  background: none;
+  border: 1.5px solid var(--clay);
+  color: var(--clay);
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.85rem 1.1rem;
   border-radius: 9999px;
-  box-shadow: 0 8px 24px rgba(23, 29, 25, 0.25);
-  z-index: 60;
-  animation: cartToastIn 0.2s ease;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
-@keyframes cartToastIn {
-  from { opacity: 0; transform: translate(-50%, 8px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
+.cart-action-clear-btn:hover {
+  background: var(--clay);
+  color: var(--cream-50);
 }
+
+.cart-action-order-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sage-400);
+  color: var(--cream-50);
+  font-weight: 700;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.9rem 1.5rem;
+  border-radius: 9999px;
+  transition: background-color 0.15s ease;
+}
+.cart-action-order-btn:hover { background: var(--sage-500); }
 
 /* ---------- Empty state ---------- */
 .cart-empty {

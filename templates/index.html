@@ -26,6 +26,7 @@
 <meta name="twitter:image" content="https://retrofitbd.com/static/img/og-image.webp" />
 
 <meta name="theme-color" content="#657d69" />
+<meta name="csrf-token" content="{{ csrf_token() }}" />
 
 <!-- Structured data -->
 <script type="application/ld+json">
@@ -87,6 +88,7 @@
     <symbol id="icon-shopping-bag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></symbol>
     <symbol id="icon-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></symbol>
     <symbol id="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
+    <symbol id="icon-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
     <symbol id="icon-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
   </defs>
 </svg>
@@ -139,10 +141,9 @@
         <button id="searchBtn" aria-label="Search catalog" class="p-2 text-sage-800 hover:text-sage-500 transition-colors">
           <svg class="w-5 h-5" aria-hidden="true"><use href="#icon-search"></use></svg>
         </button>
-        <button id="cartBtn" aria-label="Open bag, 0 items" class="relative p-2 text-sage-800 hover:text-sage-500 transition-colors">
-          <svg class="w-5 h-5" aria-hidden="true"><use href="#icon-shopping-bag"></use></svg>
-          <span id="cartCount" class="absolute -top-0.5 -right-0.5 bg-clay text-sand-50 text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">0</span>
-        </button>
+        <a href="/account" aria-label="Your account" class="p-2 text-sage-800 hover:text-sage-500 transition-colors">
+          <svg class="w-5 h-5" aria-hidden="true"><use href="#icon-user"></use></svg>
+        </a>
       </div>
     </div>
 
@@ -432,34 +433,12 @@
     <svg class="w-5 h-5" aria-hidden="true"><use href="#icon-search"></use></svg>
     <span class="text-[10px] font-medium">Search</span>
   </button>
-  <button id="mobileCartBtn" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1 relative">
+  <a href="/cart" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1 relative">
     <svg class="w-5 h-5" aria-hidden="true"><use href="#icon-shopping-bag"></use></svg>
+    <span id="cartCountMobile" class="cart-count-badge absolute -top-0.5 right-1 bg-clay text-sand-50 text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">0</span>
     <span class="text-[10px] font-medium">Bag</span>
-  </button>
+  </a>
 </div>
-
-<!-- ============ CART DRAWER ============ -->
-<div id="cartOverlay" class="cart-overlay fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50"></div>
-<aside id="cartDrawer" class="cart-drawer fixed top-0 right-0 h-full w-full sm:w-[400px] bg-cream-50 z-50 flex flex-col" role="dialog" aria-modal="true" aria-label="Shopping bag">
-  <div class="flex items-center justify-between px-5 py-4 border-b border-sand-200">
-    <h2 class="font-display text-xl text-slate-800 uppercase tracking-wide">Your Bag</h2>
-    <button id="cartCloseBtn" aria-label="Close bag" class="p-2 text-slate-500/80 hover:text-slate-800">
-      <svg class="w-5 h-5" aria-hidden="true"><use href="#icon-x"></use></svg>
-    </button>
-  </div>
-  <div class="flex-1 flex flex-col items-center justify-center px-8 text-center gap-4">
-    <div class="w-16 h-16 rounded-full bg-sand-100 flex items-center justify-center">
-      <svg class="w-7 h-7 text-sage-500" aria-hidden="true"><use href="#icon-shopping-bag"></use></svg>
-    </div>
-    <div>
-      <p class="font-semibold text-slate-800 mb-1">Your bag is empty</p>
-      <p class="text-sm text-slate-500/70">Looks like you haven't added any jerseys yet.</p>
-    </div>
-    <button id="cartStartShoppingBtn" class="mt-2 bg-sage-400 text-cream-50 font-bold uppercase text-sm tracking-wide px-6 py-3 rounded-full hover:bg-sage-500 transition-colors">
-      Start Shopping
-    </button>
-  </div>
-</aside>
 
 <!-- ============ SEARCH OVERLAY ============ -->
 <div id="searchOverlay" class="search-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-start justify-center px-4 pt-20 sm:pt-28">
@@ -479,6 +458,7 @@
   </div>
 </div>
 
-<script src="/static/index.js" defer></script>
+<script src="/static/index.js"></script>
 </body>
 </html>
+

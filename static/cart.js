@@ -14,8 +14,8 @@ const emptyState = document.getElementById('emptyState');
 const cartContents = document.getElementById('cartContents');
 const cartLines = document.getElementById('cartLines');
 const cartCountHeader = document.getElementById('cartCountHeader');
-const summarySubtotal = document.getElementById('summarySubtotal');
 const cartGrandTotal = document.getElementById('cartGrandTotal');
+const cartActionBar = document.getElementById('cartActionBar');
 const clearBtn = document.getElementById('clearBtn');
 
 function formatTaka(amount) {
@@ -91,19 +91,21 @@ function renderCart(data) {
   cartLoading.classList.add('hidden');
 
   cartCountHeader.textContent = `${data.total_items || 0} Item${data.total_items === 1 ? '' : 's'}`;
+  document.querySelectorAll('.cart-count-badge').forEach(el => { el.textContent = data.total_items || 0; });
 
   if (items.length === 0) {
     emptyState.classList.remove('hidden');
     cartContents.classList.add('hidden');
+    cartActionBar.classList.add('hidden');
     lucide.createIcons();
     return;
   }
 
   emptyState.classList.add('hidden');
   cartContents.classList.remove('hidden');
+  cartActionBar.classList.remove('hidden');
 
   cartLines.innerHTML = items.map(renderLine).join('');
-  summarySubtotal.textContent = formatTaka(data.total_price || 0);
   cartGrandTotal.textContent = formatTaka(data.total_price || 0);
 
   lucide.createIcons();

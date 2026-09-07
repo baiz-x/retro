@@ -3,17 +3,29 @@ import secrets
 from datetime import datetime, timedelta
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from models import db, User, CartItem
-from email_service import send_verification_email, EmailSendError
+from services.email_service import send_verification_email, EmailSendError
 
-USERNAME_RE = re.compile(r"^[a-zA-Z0-9_.]{3,80}$")
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 MIN_PASSWORD_LENGTH = 8
 VERIFICATION_CODE_TTL_MINUTES = 10
 
 
-def validate_username(username):
-    if not username or not USERNAME_RE.match(username):
-        return False, "Username must be 3-80 characters (letters, numbers, underscore, period only)"
+def validate_name(name):
+    """
+    Just a presence/length check — name is deliberately NOT unique
+    (see User.name in models/user.py), so there's no lookup here, only
+    basic sanity on the input itself.
+    """
+    if not name or not name.strip():
+        return False, "Name is required"
+    if len(name.strip()) > 120:
+        return False, "Name must be 120 characters or fewer"
+    return True, None
+
+
+def validate_address(address):
+    if not address or not address.strip():
+        return False, "Address is required"
     return True, None
 
 
@@ -35,7 +47,7 @@ def validate_password_strength(password):
     return True, None
 
 
-def register_user(username, phone_number, email, password, social_platform=None, social_handle=None):
+def register_user(name, phone_number, email, address, password, social_platform=None, social_handle=None):
     """
     Creates a new, unverified user with a securely hashed password and
     emails them a 6-digit verification code. Returns (user, error) —
@@ -44,21 +56,28 @@ def register_user(username, phone_number, email, password, social_platform=None,
     memory, so login/authenticate_user is what actually gates access
     until verify_email_code() is called.
 
-    Uniqueness is enforced both here (pre-check for a fast, friendly
-    error) and at the DB level (unique constraints on username/email)
-    to close the race-condition window between check and insert.
+    Only email is checked for uniqueness — name is deliberately NOT
+    unique (two people can share a name; email is the login
+    identifier, see authenticate_user). Uniqueness is enforced both
+    here (pre-check for a fast, friendly error) and at the DB level
+    (unique constraint on email) to close the race-condition window
+    between check and insert.
 
-    If a matching username or email already exists but was never
-    verified, signup is blocked (not silently resumed) — the caller is
-    told to use "resend code" from the login page instead, per product
-    decision, so a duplicate submit doesn't quietly regenerate codes
-    for an address someone else may have mistyped.
+    If a matching email already exists but was never verified, signup
+    is blocked (not silently resumed) — the caller is told to use
+    "resend code" on the login page instead, per product decision, so
+    a duplicate submit doesn't quietly regenerate codes for an address
+    someone else may have mistyped.
     """
-    valid, err = validate_username(username)
+    valid, err = validate_name(name)
     if not valid:
         return None, err
 
     valid, err = validate_email(email)
+    if not valid:
+        return None, err
+
+    valid, err = validate_address(address)
     if not valid:
         return None, err
 
@@ -70,22 +89,21 @@ def register_user(username, phone_number, email, password, social_platform=None,
         return None, "Phone number is required"
 
     try:
-        existing = User.query.filter(
-            (User.username == username) | (User.email == email)
-        ).first()
+        existing = User.query.filter_by(email=email).first()
         if existing and not existing.is_verified:
             return None, (
-                "An account with this username or email is already pending verification. "
+                "An account with this email is already pending verification. "
                 "Please use \"resend code\" on the login page."
             )
         if existing:
-            return None, "Username or email is already taken"
+            return None, "An account with this email already exists"
 
         code = _generate_verification_code()
         user = User(
-            username=username,
+            name=name.strip(),
             phone_number=phone_number,
             email=email,
+            address=address.strip(),
             social_platform=social_platform or None,
             social_handle=social_handle or None,
             is_verified=False,
@@ -109,7 +127,7 @@ def register_user(username, phone_number, email, password, social_platform=None,
         return user, None
     except IntegrityError:
         db.session.rollback()
-        return None, "Username or email is already taken"
+        return None, "An account with this email already exists"
     except SQLAlchemyError as e:
         db.session.rollback()
         return None, f"Database error: {str(e)}"
@@ -186,22 +204,25 @@ def resend_verification_code(email):
         return False, f"Database error: {str(e)}"
 
 
-def authenticate_user(username, password):
+def authenticate_user(email, password):
     """
     Validates credentials. Returns (user, error, error_code).
     error_code is "unverified" when the credentials are correct but the
     account hasn't completed email verification yet — distinguished
     from bad credentials so the frontend can offer a "resend code"
     action specifically in that case, without this generic-error
-    function otherwise revealing whether a username exists.
+    function otherwise revealing whether an email is registered.
+
+    Looks up by email (not name) — name is not unique, so it can't
+    identify a single account (see User.name in models/user.py).
     """
-    if not username or not password:
-        return None, "Username and password are required", None
+    if not email or not password:
+        return None, "Email and password are required", None
 
     try:
-        user = User.query.filter_by(username=username).first()
+        user = User.query.filter_by(email=email).first()
         if not user or not user.check_password(password):
-            return None, "Invalid username or password", None
+            return None, "Invalid email or password", None
         if not user.is_verified:
             return None, "Please verify your email before logging in.", "unverified"
         return user, None, None

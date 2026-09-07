@@ -37,14 +37,15 @@ def signup():
         if not data:
             return jsonify({"status": "error", "message": "Missing request body"}), 400
 
-        username = (data.get("username") or "").strip()
+        name = (data.get("name") or "").strip()
         phone_number = (data.get("phone_number") or "").strip()
         email = (data.get("email") or "").strip().lower()
+        address = (data.get("address") or "").strip()
         password = data.get("password") or ""
         social_platform = data.get("social_platform")
         social_handle = data.get("social_handle")
 
-        user, error = register_user(username, phone_number, email, password, social_platform, social_handle)
+        user, error = register_user(name, phone_number, email, address, password, social_platform, social_handle)
         if error:
             return jsonify({"status": "error", "message": error}), 400
 
@@ -68,10 +69,10 @@ def login():
         if not data:
             return jsonify({"status": "error", "message": "Missing request body"}), 400
 
-        username = (data.get("username") or "").strip()
+        email = (data.get("email") or "").strip().lower()
         password = data.get("password") or ""
 
-        user, error, error_code = authenticate_user(username, password)
+        user, error, error_code = authenticate_user(email, password)
         if error:
             body = {"status": "error", "message": error}
             if error_code:

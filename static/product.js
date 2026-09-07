@@ -434,7 +434,7 @@ async function addToCart() {
       return;
     }
 
-    cartCountEl.textContent = payload.data.total_items || 0;
+    setCartCountBadges(payload.data.total_items);
     setBtnLabel(label, 'Added');
     setTimeout(() => {
       restoreCartLabels();
@@ -476,7 +476,7 @@ async function orderNow() {
       return;
     }
 
-    cartCountEl.textContent = payload.data.total_items || 0;
+    setCartCountBadges(payload.data.total_items);
 
     // Find the line we (or an existing matching line, since equal
     // product+variants+customization merge — see cart_service.py)
@@ -648,44 +648,24 @@ async function loadDiscovery() {
    ships the exact same markup for these (nav, overlays, footer).
    ======================================================================= */
 
-/* ---------------- Cart ---------------- */
-const cartCountEl = document.getElementById('cartCount');
-
-/* Reflects the caller's real cart (guest or logged-in — resolved
-   server-side, see cart_service.get_cart_owner) rather than a
-   per-page-load local counter that reset to 0 on every navigation. */
-async function refreshCartCount() {
-  try {
-    const res = await fetch(`${API_BASE}/cart`);
-    const payload = await res.json();
-    if (payload.status === 'success') {
-      cartCountEl.textContent = payload.data.total_items || 0;
-    }
-  } catch (err) {
-    console.error('Failed to load cart count:', err);
-  }
+/* ---------------- Cart count badge ----------------
+   The drawer (and cart-drawer.js) is gone — the desktop nav icon is
+   now an account link, so the only place a live count still shows is
+   the mobile bottom bar's Bag badge. setCartCountBadges() updates it
+   immediately from a response addToCart()/orderNow() already have;
+   refreshCartCountBadge() does the one-time fetch needed on page load
+   before either of those has run. */
+function setCartCountBadges(totalItems) {
+  document.querySelectorAll('.cart-count-badge').forEach(el => {
+    el.textContent = totalItems || 0;
+  });
 }
-
-const cartOverlay = document.getElementById('cartOverlay');
-const cartDrawer = document.getElementById('cartDrawer');
-function openCart() {
-  cartOverlay.classList.add('open');
-  cartDrawer.classList.add('open');
-  document.body.style.overflow = 'hidden';
+function refreshCartCountBadge() {
+  fetch(`${API_BASE}/cart`)
+    .then(res => res.json())
+    .then(payload => { if (payload.status === 'success') setCartCountBadges(payload.data.total_items); })
+    .catch(err => console.error('Failed to load cart count:', err));
 }
-function closeCart() {
-  cartOverlay.classList.remove('open');
-  cartDrawer.classList.remove('open');
-  document.body.style.overflow = '';
-}
-document.getElementById('cartBtn').addEventListener('click', openCart);
-document.getElementById('mobileCartBtn').addEventListener('click', openCart);
-document.getElementById('cartCloseBtn').addEventListener('click', closeCart);
-document.getElementById('cartOverlay').addEventListener('click', closeCart);
-document.getElementById('cartStartShoppingBtn').addEventListener('click', () => {
-  closeCart();
-  window.location.href = '/products';
-});
 
 /* ---------------- Search ---------------- */
 const searchOverlay = document.getElementById('searchOverlay');
@@ -703,7 +683,7 @@ document.getElementById('mobileSearchBtn').addEventListener('click', openSearch)
 document.getElementById('searchCloseBtn').addEventListener('click', closeSearch);
 searchOverlay.addEventListener('click', e => { if (e.target === searchOverlay) closeSearch(); });
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeSearch(); closeCart(); }
+  if (e.key === 'Escape') { closeSearch(); }
 });
 
 const searchInputEl = document.getElementById('searchInput');
@@ -751,6 +731,6 @@ refreshColorAvailability();
 updateAddToCartState();
 renderAccordionFaq();
 loadDiscovery();
-refreshCartCount();
+refreshCartCountBadge();
 lucide.createIcons();
 

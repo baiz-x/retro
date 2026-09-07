@@ -36,24 +36,29 @@
     </a>
 
     <h1 class="font-display text-3xl text-slate-800 uppercase tracking-wide text-center mb-1.5">Create account</h1>
-    <p class="text-sm text-slate-500/70 text-center mb-7">Save your cart, track orders, checkout faster.</p>
+    <p class="text-sm text-slate-500/70 text-center mb-5">Save your cart, track orders, checkout faster.</p>
+
+    <!-- Progress indicator: 3 dots + "Step X of 3" label. Built from
+         existing sage/sand tokens only — no new color classes. -->
+    <div class="flex items-center justify-center gap-2 mb-2" aria-hidden="true">
+      <span class="auth-step-dot" data-step-dot="1"></span>
+      <span class="auth-step-dot" data-step-dot="2"></span>
+      <span class="auth-step-dot" data-step-dot="3"></span>
+    </div>
+    <p id="stepLabel" class="text-center text-[11px] font-bold uppercase tracking-widest text-slate-500/70 mb-6">Step 1 of 3</p>
 
     <div id="formError" class="auth-error hidden" role="alert"></div>
 
-    <form id="signupForm" class="space-y-4" novalidate>
+    <!-- ============ STEP 1: Account ============ -->
+    <form id="step1Form" class="space-y-4" novalidate data-step="1">
       <label class="block">
-        <span class="auth-label">Username <span class="auth-label-hint">(3–80 characters, letters/numbers/_/. only)</span></span>
-        <input id="username" name="username" type="text" class="auth-input" autocomplete="username" required />
+        <span class="auth-label">Name</span>
+        <input id="name" name="name" type="text" class="auth-input" autocomplete="name" required />
       </label>
 
       <label class="block">
         <span class="auth-label">Email</span>
         <input id="email" name="email" type="email" class="auth-input" autocomplete="email" required />
-      </label>
-
-      <label class="block">
-        <span class="auth-label">Phone Number</span>
-        <input id="phone_number" name="phone_number" type="tel" class="auth-input" placeholder="01XXXXXXXXX" autocomplete="tel" required />
       </label>
 
       <label class="block">
@@ -64,6 +69,23 @@
             <i data-lucide="eye" class="w-4 h-4"></i>
           </button>
         </div>
+      </label>
+
+      <button type="submit" class="pdp-add-btn w-full mt-2">
+        <span>Next</span>
+      </button>
+    </form>
+
+    <!-- ============ STEP 2: Phone / Address / Social ============ -->
+    <form id="step2Form" class="space-y-4 hidden" novalidate data-step="2">
+      <label class="block">
+        <span class="auth-label">Phone Number</span>
+        <input id="phone_number" name="phone_number" type="tel" class="auth-input" placeholder="01XXXXXXXXX" autocomplete="tel" required />
+      </label>
+
+      <label class="block">
+        <span class="auth-label">Address</span>
+        <textarea id="address" name="address" rows="3" class="auth-input resize-none" placeholder="House, Road, Area, City" required></textarea>
       </label>
 
       <!-- Optional social contact, per plan.md's social_platform/social_handle
@@ -92,18 +114,22 @@
         </div>
       </div>
 
-      <button type="submit" id="submitBtn" class="pdp-add-btn w-full mt-2">
-        <span id="submitLabel">Create Account</span>
-      </button>
+      <div class="flex gap-3 mt-2">
+        <button type="button" id="step2BackBtn" class="auth-optional-toggle justify-center flex-1">Back</button>
+        <button type="submit" id="submitBtn" class="pdp-add-btn flex-1">
+          <span id="submitLabel">Create Account</span>
+        </button>
+      </div>
     </form>
 
     <p id="loginLink" class="text-center text-sm text-slate-500/70 mt-6">
       Already have an account? <a href="/login" class="text-sage-600 font-semibold hover:text-sage-700">Log in</a>
     </p>
 
-    <!-- Verify-email step: hidden until signupForm succeeds, then
-         swapped in inline (no page navigation) via signup.js. -->
-    <form id="verifyForm" class="space-y-4 hidden" novalidate>
+    <!-- ============ STEP 3: Verify email ============ -->
+    <!-- Hidden until step2Form succeeds, then swapped in inline (no
+         page navigation) via signup.js. -->
+    <form id="verifyForm" class="space-y-4 hidden" novalidate data-step="3">
       <p class="text-sm text-slate-500/70 text-center mb-2">
         We've sent a 6-digit code to <strong id="verifyEmailDisplay"></strong>.
       </p>
@@ -123,6 +149,25 @@
     </form>
   </div>
 </div>
+
+<style>
+  /* Minimal, scoped to this page only — reuses existing tokens, adds
+     no new palette. Dots for the step progress indicator above. */
+  .auth-step-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+    background: var(--sand-200);
+    transition: background-color 0.2s ease, transform 0.2s ease;
+  }
+  .auth-step-dot.active {
+    background: var(--sage-400);
+    transform: scale(1.25);
+  }
+  .auth-step-dot.complete {
+    background: var(--sage-300);
+  }
+</style>
 
 <script src="/static/auth.js"></script>
 <script src="/static/signup.js"></script>

@@ -1,56 +1,110 @@
 /* signup.js — depends on auth.js (csrfFetch, showAuthError, setSubmitBusy)
-   being loaded first. */
+   being loaded first.
 
-const signupForm = document.getElementById('signupForm');
+   3-step wizard: Step 1 (name/email/password) -> Step 2 (phone/
+   address/social) -> Step 3 (email verification). Steps 1-2 are
+   plain client-side gated navigation (nothing is sent to the server
+   until step 2 submits); step 3 only appears after the server has
+   actually created the account. Going "Back" from step 2 to step 1
+   keeps whatever was typed, since the inputs simply stay in the DOM
+   (only visibility toggles, not their values). */
+
+const step1Form = document.getElementById('step1Form');
+const step2Form = document.getElementById('step2Form');
 const verifyForm = document.getElementById('verifyForm');
 const loginLink = document.getElementById('loginLink');
 const verifyEmailDisplay = document.getElementById('verifyEmailDisplay');
 const resendCodeBtn = document.getElementById('resendCodeBtn');
-const USERNAME_RE = /^[a-zA-Z0-9_.]{3,80}$/;
+const stepLabel = document.getElementById('stepLabel');
+const stepDots = document.querySelectorAll('[data-step-dot]');
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+// Set once step 1 passes validation, so step 2's submit handler has
+// everything needed to send the full signup payload in one request
+// (the backend has no partial-signup endpoint — the account is only
+// created once, on step 2's submit).
+let step1Data = null;
 
 // Set once signup succeeds, so verifyForm's submit handler and the
 // resend button both know which address they're acting on.
 let pendingEmail = null;
 
-function showVerifyStep(email) {
-  pendingEmail = email;
-  verifyEmailDisplay.textContent = email;
-  signupForm.classList.add('hidden');
-  loginLink.classList.add('hidden');
-  verifyForm.classList.remove('hidden');
-  document.getElementById('verification_code').focus();
+function setStep(stepNumber) {
+  stepLabel.textContent = `Step ${stepNumber} of 3`;
+  stepDots.forEach((dot) => {
+    const n = Number(dot.dataset.stepDot);
+    dot.classList.toggle('active', n === stepNumber);
+    dot.classList.toggle('complete', n < stepNumber);
+  });
 }
 
-signupForm.addEventListener('submit', async (e) => {
+/* ---------------- Step 1: Name / Email / Password ---------------- */
+step1Form.addEventListener('submit', (e) => {
   e.preventDefault();
   hideAuthError();
 
-  const username = document.getElementById('username').value.trim();
+  const name = document.getElementById('name').value.trim();
   const email = document.getElementById('email').value.trim();
-  const phoneNumber = document.getElementById('phone_number').value.trim();
   const password = document.getElementById('password').value;
-  const socialPlatform = document.getElementById('social_platform').value;
-  const socialHandle = document.getElementById('social_handle').value.trim();
 
   // Client-side checks mirror services/auth_service.py's
-  // validate_username/validate_email/validate_password_strength — real
+  // validate_name/validate_email/validate_password_strength — real
   // enforcement still happens server-side, this is just to avoid a
   // round trip for obviously-invalid input.
-  if (!USERNAME_RE.test(username)) {
-    showAuthError('Username must be 3-80 characters (letters, numbers, underscore, period only).');
+  if (!name) {
+    showAuthError('Please enter your name.');
     return;
   }
   if (!EMAIL_RE.test(email)) {
     showAuthError('Please enter a valid email address.');
     return;
   }
+  if (password.length < 8) {
+    showAuthError('Password must be at least 8 characters.');
+    return;
+  }
+
+  step1Data = { name, email, password };
+  step1Form.classList.add('hidden');
+  step2Form.classList.remove('hidden');
+  setStep(2);
+  document.getElementById('phone_number').focus();
+});
+
+/* ---------------- Step 2 back button ---------------- */
+document.getElementById('step2BackBtn').addEventListener('click', () => {
+  hideAuthError();
+  step2Form.classList.add('hidden');
+  step1Form.classList.remove('hidden');
+  setStep(1);
+});
+
+/* ---------------- Step 2: Phone / Address / Social -> submit ---------------- */
+function showVerifyStep(email) {
+  pendingEmail = email;
+  verifyEmailDisplay.textContent = email;
+  step2Form.classList.add('hidden');
+  loginLink.classList.add('hidden');
+  verifyForm.classList.remove('hidden');
+  setStep(3);
+  document.getElementById('verification_code').focus();
+}
+
+step2Form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  hideAuthError();
+
+  const phoneNumber = document.getElementById('phone_number').value.trim();
+  const address = document.getElementById('address').value.trim();
+  const socialPlatform = document.getElementById('social_platform').value;
+  const socialHandle = document.getElementById('social_handle').value.trim();
+
   if (!phoneNumber) {
     showAuthError('Phone number is required.');
     return;
   }
-  if (password.length < 8) {
-    showAuthError('Password must be at least 8 characters.');
+  if (!address) {
+    showAuthError('Address is required.');
     return;
   }
 
@@ -61,10 +115,11 @@ signupForm.addEventListener('submit', async (e) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        username,
-        email,
+        name: step1Data.name,
+        email: step1Data.email,
+        password: step1Data.password,
         phone_number: phoneNumber,
-        password,
+        address,
         social_platform: socialPlatform || null,
         social_handle: socialHandle || null,
       }),
@@ -88,6 +143,7 @@ signupForm.addEventListener('submit', async (e) => {
   }
 });
 
+/* ---------------- Step 3: Verify email ---------------- */
 verifyForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   hideAuthError();
@@ -150,4 +206,6 @@ resendCodeBtn.addEventListener('click', async () => {
     resendCodeBtn.textContent = originalText;
   }
 });
+
+setStep(1);
 
