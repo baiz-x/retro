@@ -9,8 +9,26 @@
  * bedrooms/bathrooms/locations — none of that exists on this model.
  */
 
+/* ---------------- Icon hydration (local inline sprite, no external
+   library) — matches index.js's approach now that this page no
+   longer loads the lucide CDN script. Replaces any data-lucide
+   markup with <use> refs into the inline sprite from
+   partials/_icon_sprite.html. Safe to call repeatedly/idempotent. */
+function hydrateIcons(root = document) {
+  root.querySelectorAll('i[data-lucide]').forEach(el => {
+    const name = el.getAttribute('data-lucide');
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    if (el.className) svg.setAttribute('class', el.className);
+    svg.setAttribute('aria-hidden', 'true');
+    const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+    use.setAttribute('href', `#icon-${name}`);
+    svg.appendChild(use);
+    el.replaceWith(svg);
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  lucide.createIcons();
+  hydrateIcons();
 
   // ================= ELEMENT REFERENCES =================
   const gridEl        = document.getElementById('productGrid');
@@ -118,8 +136,13 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        cartCount++;
-        cartCountEl.textContent = cartCount;
+        // #cartCount (the old drawer trigger badge) no longer exists —
+        // the shared mobile bottom bar's .cart-count-badge is now the
+        // one visible cart indicator on this page, same as index.html.
+        document.querySelectorAll('.cart-count-badge').forEach(el => {
+          cartCount++;
+          el.textContent = cartCount;
+        });
         btn.textContent = 'Added';
         setTimeout(() => { btn.textContent = 'Add'; }, 900);
       });
@@ -318,8 +341,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ================= CART DRAWER =================
+  // The header's account icon now links straight to /account and the
+  // mobile bottom bar's Bag icon links straight to /cart (shared
+  // partials/_navbar.html and partials/_mobile_bar.html), matching
+  // every other page — neither opens this drawer anymore. #cartBtn
+  // and #mobileCartBtn no longer exist in the markup, so this drawer
+  // is left wired to its close controls only and is otherwise unused
+  // rather than deleted outright (a bigger removal than requested).
   let cartCount = 0;
-  const cartCountEl = document.getElementById('cartCount');
   const cartOverlay = document.getElementById('cartOverlay');
   const cartDrawer = document.getElementById('cartDrawer');
   function openCart() {
@@ -332,8 +361,6 @@ document.addEventListener('DOMContentLoaded', () => {
     cartDrawer.classList.remove('open');
     document.body.style.overflow = '';
   }
-  document.getElementById('cartBtn').addEventListener('click', openCart);
-  document.getElementById('mobileCartBtn').addEventListener('click', openCart);
   document.getElementById('cartCloseBtn').addEventListener('click', closeCart);
   cartOverlay.addEventListener('click', closeCart);
   document.getElementById('cartStartShoppingBtn').addEventListener('click', closeCart);
@@ -364,7 +391,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const isOpen = mobileMenu.classList.toggle('open');
     mobileMenuBtn.setAttribute('aria-expanded', isOpen);
     mobileMenuBtn.innerHTML = isOpen ? '<i data-lucide="x" class="w-5 h-5"></i>' : '<i data-lucide="menu" class="w-5 h-5"></i>';
-    lucide.createIcons();
+    hydrateIcons();
   });
 
   // ================= THEME TOGGLE (visual, capsule navbar) =================
@@ -375,7 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
     themeToggleBtn.innerHTML = isDarkIcon
       ? '<i data-lucide="moon" class="w-[18px] h-[18px]"></i>'
       : '<i data-lucide="sun" class="w-[18px] h-[18px]"></i>';
-    lucide.createIcons();
+    hydrateIcons();
   });
 
   // ================= INIT =================
@@ -388,6 +415,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchProducts();
   });
 });
+
 
 
 

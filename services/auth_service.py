@@ -230,6 +230,160 @@ def authenticate_user(email, password):
         return None, f"Database error: {str(e)}", None
 
 
+def update_profile_fields(user_id, name=None, phone_number=None, address=None,
+                           social_platform=None, social_handle=None):
+    """
+    Updates the non-sensitive profile fields on the account settings
+    page. Email and password are handled by their own dedicated
+    functions below (email needs re-verification; password needs
+    current-password confirmation), so neither is touched here even
+    if passed in.
+
+    Each field is optional — only the ones actually provided (not
+    None) are validated and updated, so a partial-form submit from
+    the frontend doesn't wipe out fields the user didn't touch.
+    Returns (user, error).
+    """
+    try:
+        user = User.query.get(user_id)
+        if not user:
+            return None, "Account not found"
+
+        if name is not None:
+            valid, err = validate_name(name)
+            if not valid:
+                return None, err
+            user.name = name.strip()
+
+        if phone_number is not None:
+            if not phone_number.strip():
+                return None, "Phone number is required"
+            user.phone_number = phone_number.strip()
+
+        if address is not None:
+            valid, err = validate_address(address)
+            if not valid:
+                return None, err
+            user.address = address.strip()
+
+        # Social handle is optional even when the platform is set, and
+        # vice versa isn't enforced here — matches register_user, which
+        # also accepts either independently.
+        if social_platform is not None:
+            user.social_platform = social_platform.strip() or None
+        if social_handle is not None:
+            user.social_handle = social_handle.strip() or None
+
+        db.session.commit()
+        return user, None
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return None, f"Database error: {str(e)}"
+
+
+def request_email_change(user_id, new_email, current_password):
+    """
+    Changes the account's email address immediately and re-triggers
+    verification — same pattern as a fresh signup: `email` is
+    overwritten right away, `is_verified` flips to False, and a new
+    6-digit code is emailed to the new address using the existing
+    verification_code/verification_code_expires_at columns (no
+    separate pending_* fields).
+
+    Requires the current password first (so a hijacked logged-in
+    session can't redirect the account to an attacker's address).
+
+    Effect: the OLD email stops being usable immediately (login is
+    blocked while is_verified is False — see authenticate_user). The
+    current browser session is NOT cleared, so this device stays
+    logged in; it's the next login attempt (this device or another)
+    that requires verify_email_code() first. Returns (user, error).
+    """
+    new_email = (new_email or "").strip().lower()
+
+    valid, err = validate_email(new_email)
+    if not valid:
+        return None, err
+
+    if not current_password:
+        return None, "Please enter your current password to change your email"
+
+    try:
+        user = User.query.get(user_id)
+        if not user:
+            return None, "Account not found"
+
+        if not user.check_password(current_password):
+            return None, "Current password is incorrect"
+
+        if new_email == user.email:
+            return None, "That's already your current email address"
+
+        existing = User.query.filter(User.email == new_email, User.id != user.id).first()
+        if existing:
+            return None, "That email address is already in use"
+
+        code = _generate_verification_code()
+        user.email = new_email
+        user.is_verified = False
+        user.verification_code = code
+        user.verification_code_expires_at = datetime.utcnow() + timedelta(minutes=VERIFICATION_CODE_TTL_MINUTES)
+        db.session.commit()
+
+        try:
+            send_verification_email(new_email, code)
+        except EmailSendError:
+            # The email column is already changed and is_verified is
+            # already False at this point — same as register_user's
+            # equivalent case, we don't roll that back (the row is
+            # correctly in an unverified state either way); the user
+            # can retry via resend_verification_code.
+            return None, "Could not send verification email. Please try again or contact support."
+
+        return user, None
+    except IntegrityError:
+        db.session.rollback()
+        return None, "That email address is already in use"
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return None, f"Database error: {str(e)}"
+
+
+def change_password(user_id, current_password, new_password):
+    """
+    Requires the current password (standard re-auth-for-sensitive-
+    action pattern — same reasoning as request_email_change above),
+    validates the new password's strength, and rejects a "new"
+    password identical to the current one. Session is left alive
+    (no forced re-login) — matches how signup/login work today.
+    Returns (user, error).
+    """
+    if not current_password:
+        return None, "Please enter your current password"
+
+    valid, err = validate_password_strength(new_password)
+    if not valid:
+        return None, err
+
+    try:
+        user = User.query.get(user_id)
+        if not user:
+            return None, "Account not found"
+
+        if not user.check_password(current_password):
+            return None, "Current password is incorrect"
+
+        if user.check_password(new_password):
+            return None, "New password must be different from your current password"
+
+        user.set_password(new_password)
+        db.session.commit()
+        return user, None
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return None, f"Database error: {str(e)}"
+
+
 def migrate_guest_cart_to_user(guest_id, user_id):
     """
     Re-parents every cart line from a guest_id to a logged-in user_id,
@@ -250,4 +404,5 @@ def migrate_guest_cart_to_user(guest_id, user_id):
     except SQLAlchemyError:
         db.session.rollback()
         raise
+
 

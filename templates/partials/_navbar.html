@@ -1,0 +1,62 @@
+<!-- ============================================================
+     Shared top navbar — single source of truth for every page.
+     Desktop pills: All Products, Clearance Sale, New Season 26/27.
+     Right side: search, then My Account (logged in) or Login +
+     Sign Up (logged out), icon wrapped in a sage circle.
+     Requires: is_logged_in in the template context (see app.py
+     context_processor). Requires the mobile hamburger button with
+     id="mobileMenuBtn" and panel id="mobileMenu" to be present
+     right after this include (see _mobile_menu.html).
+     ============================================================ -->
+<header class="sticky top-0 z-40 pt-3 pb-2 px-3 sm:px-4">
+  <div class="max-w-6xl mx-auto">
+    <div class="flex items-center justify-between h-[60px] px-3 sm:px-4 rounded-full bg-sand-50 text-sage-950 shadow-lg shadow-sage-950/20 border border-sage-200/60">
+
+      <!-- Mobile menu button -->
+      <button id="mobileMenuBtn" aria-label="Open menu" aria-expanded="false" class="lg:hidden p-2 text-sage-800 hover:text-sage-500 transition-colors">
+        <svg class="w-5 h-5" aria-hidden="true"><use href="#icon-menu"></use></svg>
+      </button>
+
+      <!-- Theme toggle (visual only) -->
+      <button id="themeToggleBtn" aria-label="Toggle theme" class="hidden sm:inline-flex p-2 text-sage-800 hover:text-sage-500 transition-colors">
+        <svg class="w-[18px] h-[18px]" aria-hidden="true"><use href="#icon-moon"></use></svg>
+      </button>
+
+      <!-- Logo -->
+      <a href="/" class="flex items-center gap-2 group absolute left-1/2 -translate-x-1/2 lg:static lg:translate-x-0" aria-label="RetroFit BD home">
+        <img src="/static/img/retrofit-bd-logo.webp" alt="RetroFit BD logo" width="28" height="28" class="shrink-0 object-contain" />
+        <span class="font-display text-lg sm:text-xl tracking-wider text-sage-950 whitespace-nowrap">RETROFIT BD</span>
+      </a>
+
+      <!-- Desktop nav -->
+      <nav class="hidden lg:flex items-center gap-0.5 text-[12px] font-semibold uppercase tracking-wide" aria-label="Primary navigation">
+        <a href="/products" class="px-2.5 py-2 rounded-full text-sage-700 hover:bg-sage-100 hover:text-sage-950 transition-colors">All Products</a>
+        <a href="/products?category=Clearance" class="px-2.5 py-2 rounded-full text-clay hover:bg-sage-100 transition-colors">Clearance Sale</a>
+        <a href="/products?category=new-gen" class="px-2.5 py-2 rounded-full text-sage-700 hover:bg-sage-100 hover:text-sage-950 transition-colors">New Season 26/27</a>
+      </nav>
+
+      <!-- Right icons -->
+      <div class="flex items-center gap-1 sm:gap-2">
+        <button id="searchBtn" aria-label="Search catalog" class="p-2 text-sage-800 hover:text-sage-500 transition-colors">
+          <svg class="w-5 h-5" aria-hidden="true"><use href="#icon-search"></use></svg>
+        </button>
+
+        {% if is_logged_in %}
+        <a href="/account" aria-label="Your account" class="w-9 h-9 flex items-center justify-center rounded-full bg-sage-100 text-sage-800 hover:bg-sage-200 transition-colors">
+          <svg class="w-[18px] h-[18px]" aria-hidden="true"><use href="#icon-user"></use></svg>
+        </a>
+        {% else %}
+        <a href="/login" aria-label="Log in" class="hidden sm:inline-flex px-3.5 py-2 rounded-full text-sage-700 hover:bg-sage-100 hover:text-sage-950 transition-colors text-[12px] font-semibold uppercase tracking-wide">
+          Login
+        </a>
+        <a href="/signup" class="inline-flex px-3 py-2 sm:px-4 rounded-full bg-sage-400 text-cream-50 hover:bg-sage-500 transition-colors text-[11px] sm:text-[12px] font-bold uppercase tracking-wide whitespace-nowrap">
+          Sign Up
+        </a>
+        {% endif %}
+      </div>
+    </div>
+
+    {% include "partials/_mobile_menu.html" %}
+  </div>
+</header>
+

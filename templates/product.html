@@ -35,9 +35,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-<!-- Icons -->
-<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-
 <!-- Styles: index.css is untouched (homepage owns it) — product.css
      imports it for shared tokens/navbar/footer/overlay rules, then
      adds only what this page needs on top. -->
@@ -47,11 +44,13 @@
 
 <body class="bg-cream-50 text-slate-800 antialiased">
 
+{% include "partials/_icon_sprite.html" %}
+
 <!-- ============ REVIEWS BANNER (unchanged from homepage) ============ -->
 <a href="#" class="flex items-center justify-center gap-2.5 bg-gradient-to-r from-sage-600 via-sage-500 to-sage-600 text-sand-50 text-center text-[11px] sm:text-xs font-bold uppercase tracking-wide py-2.5 px-4 hover:brightness-110 transition-all">
-  <i data-lucide="instagram" class="w-4 h-4 shrink-0"></i>
+  <svg class="w-4 h-4 shrink-0" aria-hidden="true"><use href="#icon-instagram"></use></svg>
   <span>Check out our customer reviews</span>
-  <i data-lucide="chevron-right" class="w-3.5 h-3.5 shrink-0"></i>
+  <svg class="w-3.5 h-3.5 shrink-0" aria-hidden="true"><use href="#icon-chevron-right"></use></svg>
 </a>
 
 <!-- ============ TOP ANNOUNCEMENT BAR (unchanged from homepage) ============ -->
@@ -59,65 +58,9 @@
   Free delivery on all prepaid orders
 </div>
 
-<!-- ============ HEADER / NAV — identical markup to index.html ============ -->
-<header class="sticky top-0 z-40 pt-3 pb-2 px-3 sm:px-4">
-  <div class="max-w-6xl mx-auto">
-    <div class="flex items-center justify-between h-[60px] px-3 sm:px-4 rounded-full bg-sand-50 text-sage-950 shadow-lg shadow-sage-950/20 border border-sage-200/60">
+{% include "partials/_navbar.html" %}
 
-      <!-- Mobile menu button -->
-      <button id="mobileMenuBtn" aria-label="Open menu" aria-expanded="false" class="lg:hidden p-2 text-sage-800 hover:text-sage-500 transition-colors">
-        <i data-lucide="menu" class="w-5 h-5"></i>
-      </button>
-
-      <!-- Theme toggle (visual only) -->
-      <button id="themeToggleBtn" aria-label="Toggle theme" class="hidden sm:inline-flex p-2 text-sage-800 hover:text-sage-500 transition-colors">
-        <i data-lucide="moon" class="w-[18px] h-[18px]"></i>
-      </button>
-
-      <!-- Logo -->
-      <a href="/" class="flex items-center gap-2 group absolute left-1/2 -translate-x-1/2 lg:static lg:translate-x-0" aria-label="RetroFit BD home">
-        <img src="/static/img/retrofit-bd-logo.webp" alt="RetroFit BD logo" width="28" height="28" class="shrink-0 object-contain" />
-        <span class="font-display text-lg sm:text-xl tracking-wider text-sage-950 whitespace-nowrap">RETROFIT BD</span>
-      </a>
-
-      <!-- Desktop category pills -->
-      <nav class="hidden lg:flex items-center gap-0.5 text-[12px] font-semibold uppercase tracking-wide" aria-label="Primary categories">
-        <a href="/#new-arrivals" class="px-2.5 py-2 rounded-full text-sage-700 hover:bg-sage-100 hover:text-sage-950 transition-colors">All Products</a>
-        <a href="/products?category=Accessories" class="px-2.5 py-2 rounded-full text-sage-700 hover:bg-sage-100 hover:text-sage-950 transition-colors">Accessories</a>
-        <a href="/products?category=Clearance" class="px-2.5 py-2 rounded-full text-clay hover:bg-sage-100 transition-colors">Clearance</a>
-        <a href="/products?category=Footwear" class="px-2.5 py-2 rounded-full text-sage-700 hover:bg-sage-100 hover:text-sage-950 transition-colors">Footwear</a>
-        <a href="/products?category=26+and+27+Kits" class="px-2.5 py-2 rounded-full text-sage-700 hover:bg-sage-100 hover:text-sage-950 transition-colors">New Season</a>
-        <a href="/products?category=Retro+Jerseys" class="px-2.5 py-2 rounded-full text-sage-700 hover:bg-sage-100 hover:text-sage-950 transition-colors">Retro</a>
-      </nav>
-
-      <!-- Right icons -->
-      <div class="flex items-center gap-0.5 sm:gap-1">
-        <button id="searchBtn" aria-label="Search catalog" class="p-2 text-sage-800 hover:text-sage-500 transition-colors">
-          <i data-lucide="search" class="w-5 h-5"></i>
-        </button>
-        <a href="/account" aria-label="Your account" class="p-2 text-sage-800 hover:text-sage-500 transition-colors">
-          <i data-lucide="user" class="w-5 h-5"></i>
-        </a>
-      </div>
-    </div>
-
-    <!-- Mobile menu -->
-    <div id="mobileMenu" class="mobile-menu lg:hidden mt-2 rounded-3xl bg-sand-50 text-sage-950 shadow-lg shadow-sage-950/20 border border-sage-200/60 overflow-hidden">
-      <nav class="flex flex-col py-2 px-2 text-sm font-semibold uppercase tracking-wide" aria-label="Mobile categories">
-        <a href="/#new-arrivals" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">All Products</a>
-        <a href="/products?category=Accessories" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">Accessories</a>
-        <a href="/products?category=Clearance" class="px-3 py-3 rounded-2xl text-clay hover:bg-sage-100">Clearance Sale</a>
-        <a href="/products?category=Footwear" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">Footwear</a>
-        <a href="/products?category=26+and+27+Kits" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">New Season 26/27</a>
-        <a href="/products?edition=Player" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">Player Version</a>
-        <a href="/products?category=Retro+Jerseys" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">Retro Jerseys</a>
-        <a href="/products?category=World+Cup" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">World Cup 2026</a>
-      </nav>
-    </div>
-  </div>
-</header>
-
-<main>
+<main class="pb-32 lg:pb-0">
 
   <!-- ============ BACK LINK — replaces the old Home / Category /
        Product Name breadcrumb trail (cluttered, no real navigation
@@ -383,47 +326,7 @@
 </main>
 
 <!-- ============ FOOTER — identical markup to index.html ============ -->
-<footer class="bg-slate-800 border-t border-slate-700 pt-14 pb-28 lg:pb-10">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6">
-    <div class="grid sm:grid-cols-3 gap-10 pb-10 border-b border-slate-700">
-      <div>
-        <a href="/" class="flex items-center gap-2 mb-3">
-          <img src="/static/retrofit-bd-logo.webp" alt="RetroFit BD logo" width="28" height="28" class="object-contain" />
-          <span class="font-display text-lg tracking-wider text-cream-50">RETROFIT BD</span>
-        </a>
-        <p class="text-sm text-cream-50/60 max-w-xs leading-relaxed">Bangladesh's go-to shop for premium club and national team football jerseys, retro drops, and matchday gear — delivering to Dhaka and nationwide.</p>
-      </div>
-
-      <div>
-        <h4 class="text-xs font-bold uppercase tracking-widest text-sage-300 mb-4">Shop</h4>
-        <ul class="space-y-2.5 text-sm text-cream-50/70">
-          <li><a href="/products" class="hover:text-cream-50 transition-colors">All Products</a></li>
-          <li><a href="/products?category=26+and+27+Kits" class="hover:text-cream-50 transition-colors">New Season 26/27</a></li>
-          <li><a href="/products?category=Retro+Jerseys" class="hover:text-cream-50 transition-colors">Retro Jerseys</a></li>
-          <li><a href="/products?category=Accessories" class="hover:text-cream-50 transition-colors">Accessories</a></li>
-        </ul>
-      </div>
-
-      <div>
-        <h4 class="text-xs font-bold uppercase tracking-widest text-sage-300 mb-4">Support</h4>
-        <ul class="space-y-2.5 text-sm text-cream-50/70">
-          <li><a href="#" class="hover:text-cream-50 transition-colors">Track Your Order</a></li>
-          <li><a href="#" class="hover:text-cream-50 transition-colors">Shipping Policy</a></li>
-          <li><a href="#" class="hover:text-cream-50 transition-colors">Contact Us</a></li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 text-xs text-cream-50/50">
-      <p>© 2026 RetroFit BD. All rights reserved. Football jerseys delivered across Bangladesh.</p>
-      <div class="flex items-center gap-5">
-        <a href="#" class="hover:text-cream-50 transition-colors">Privacy Policy</a>
-        <a href="#" class="hover:text-cream-50 transition-colors">Terms of Service</a>
-        <a href="#" class="hover:text-cream-50 transition-colors">Refund Policy</a>
-      </div>
-    </div>
-  </div>
-</footer>
+{% include "partials/_footer.html" %}
 
 <!-- ============ MOBILE STICKY BAR — replaced on this page with a
      product-aware sticky bar showing price + Reserve action, so the
@@ -441,7 +344,7 @@
     </div>
     <div class="flex gap-2">
       <button id="mobileAddToCartBtn" class="pdp-add-btn pdp-add-btn-compact pdp-add-btn-secondary" aria-label="Add to cart" {{ 'disabled' if out_of_stock else '' }}>
-        <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+        <svg class="w-4 h-4" aria-hidden="true"><use href="#icon-shopping-bag"></use></svg>
       </button>
       <button id="mobileOrderNowBtn" class="pdp-add-btn pdp-add-btn-compact" {{ 'disabled' if out_of_stock else '' }}>
         <span id="mobileOrderNowLabel">{{ add_to_cart_label_mobile }}</span>
@@ -449,23 +352,34 @@
     </div>
   </div>
 
-  <!-- Standard bottom nav, unchanged from homepage -->
+  <!-- Bottom nav row — NOT the shared _mobile_bar.html include here.
+       That partial's own root carries `fixed bottom-0` (it's designed
+       to be dropped straight into <body> on index/products/cart/
+       checkout). Nesting it inside this page's own `fixed bottom-0`
+       wrapper made it break out and pin itself to the real viewport
+       bottom, landing on top of/beside the CTA strip above instead of
+       stacking under it — the "card sticking out from under the nav"
+       bug. This is the same row's markup, just as a plain in-flow div
+       so it stacks correctly beneath the CTA strip in this page's own
+       fixed wrapper. -->
   <div class="bg-cream-50/95 backdrop-blur border-t border-sand-200 px-4 py-2.5 flex items-center justify-around">
     <a href="/" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1">
-      <i data-lucide="home" class="w-5 h-5"></i>
+      <svg class="w-5 h-5" aria-hidden="true"><use href="#icon-home"></use></svg>
       <span class="text-[10px] font-medium">Home</span>
     </a>
     <a href="/products" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1">
-      <i data-lucide="shirt" class="w-5 h-5"></i>
+      <svg class="w-5 h-5" aria-hidden="true"><use href="#icon-shirt"></use></svg>
       <span class="text-[10px] font-medium">Shop</span>
     </a>
     <button id="mobileSearchBtn" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1">
-      <i data-lucide="search" class="w-5 h-5"></i>
+      <svg class="w-5 h-5" aria-hidden="true"><use href="#icon-search"></use></svg>
       <span class="text-[10px] font-medium">Search</span>
     </button>
     <a href="/cart" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1 relative">
-      <i data-lucide="shopping-bag" class="w-5 h-5"></i>
-      <span id="cartCountMobile" class="cart-count-badge absolute -top-0.5 right-1 bg-clay text-sand-50 text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">0</span>
+      <span class="relative inline-flex">
+        <svg class="w-5 h-5" aria-hidden="true"><use href="#icon-shopping-bag"></use></svg>
+        <span id="cartCountMobile" class="cart-count-badge absolute bg-clay text-sand-50 text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">0</span>
+      </span>
       <span class="text-[10px] font-medium">Bag</span>
     </a>
   </div>
@@ -492,4 +406,5 @@
 <script src="/static/product.js"></script>
 </body>
 </html>
+
 

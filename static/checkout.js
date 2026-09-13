@@ -6,11 +6,28 @@ function csrfFetch(url, options = {}) {
   return fetch(url, options);
 }
 
+/* ---------------- Icon hydration (local inline sprite, no external
+   library) — matches index.js's approach now that this page no
+   longer loads the lucide CDN script. Replaces any data-lucide
+   markup with <use> refs into the inline sprite from
+   partials/_icon_sprite.html. Safe to call repeatedly/idempotent. */
+function hydrateIcons(root = document) {
+  root.querySelectorAll('i[data-lucide]').forEach(el => {
+    const name = el.getAttribute('data-lucide');
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    if (el.className) svg.setAttribute('class', el.className);
+    svg.setAttribute('aria-hidden', 'true');
+    const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+    use.setAttribute('href', `#icon-${name}`);
+    svg.appendChild(use);
+    el.replaceWith(svg);
+  });
+}
+
 const checkoutForm = document.getElementById('checkoutForm');
 const submitBtn = document.getElementById('submitBtn');
 const submitLabel = document.getElementById('submitLabel');
 const statusContainer = document.getElementById('statusContainer');
-const checkoutWrapper = document.getElementById('checkoutWrapper');
 const guestBanner = document.getElementById('guestBanner');
 
 const orderItemsList = document.getElementById('orderItemsList');
@@ -63,7 +80,7 @@ async function loadOrderSummary() {
         .join(' · ');
 
       return `
-        <div class="flex items-start justify-between gap-3 text-sm">
+        <div class="flex items-start justify-between gap-4 text-sm">
           <div class="min-w-0">
             <p class="font-semibold text-slate-800 truncate">${escapeHtml(item.product_name || 'Product')} <span class="text-slate-500/70 font-normal">×${item.quantity}</span></p>
             ${variantLine ? `<p class="text-xs text-slate-500/70">${variantLine}</p>` : ''}
@@ -126,14 +143,17 @@ phoneInput.addEventListener('blur', () => {
   phoneError.classList.toggle('hidden', valid || phoneInput.value.trim() === '');
 });
 
-/* ---------------- Guest banner ---------------- */
-async function checkAuthState() {
+/* ---------------- Prefill for logged-in users ----------------
+   Guest-banner visibility is now decided server-side by the
+   /checkout route (is_loggedin, from app.py's session check) and
+   rendered directly into checkout.html — guestBanner won't even
+   exist in the DOM when the user is logged in, so no more toggling
+   a hidden class here. This function now only handles prefill. */
+async function prefillIfLoggedIn() {
   try {
     const res = await fetch('/auth/me');
     const payload = await res.json();
-    if (payload.status !== 'success') {
-      guestBanner.classList.remove('hidden');
-    } else {
+    if (payload.status === 'success') {
       // Pre-fill known details for a logged-in user — editable, not
       // locked: these are plain inputs, so the person can change any
       // of them before submitting, same as a guest typing from
@@ -145,10 +165,10 @@ async function checkAuthState() {
       if (user.address) document.getElementById('address').value = user.address;
     }
   } catch (err) {
-    guestBanner.classList.remove('hidden');
+    console.error('Failed to load user details for prefill:', err);
   }
 }
-checkAuthState();
+prefillIfLoggedIn();
 
 /* ---------------- Submit ---------------- */
 function showStatus(html) {
@@ -169,12 +189,12 @@ function showSuccessMessage(order) {
     <div class="checkout-status-panel checkout-status-success">
       <h3 class="font-display text-2xl uppercase tracking-wide mb-2">Order Confirmed</h3>
       <p class="mb-4 text-sm">Thank you, <strong>${escapeHtml(order.customer_name)}</strong>. Your order has been placed.</p>
-      <div class="bg-cream-50/60 p-4 rounded-2xl text-left text-xs space-y-2 mb-6">
+      <div class="checkout-status-receipt text-left text-xs space-y-2 mb-6">
         <p><strong>Order ID:</strong> #${escapeHtml(order.order_id)}</p>
         <ul class="list-disc ml-4">${itemsList}</ul>
-        <p class="border-t border-sage-300/40 pt-2 font-bold text-sm">Total: ${formatTaka(order.total)}</p>
+        <p class="checkout-status-receipt-total">Total: ${formatTaka(order.total)}</p>
       </div>
-      <a href="/" class="inline-block bg-sage-500 text-cream-50 px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest">Back to Home</a>
+      <a href="/" class="checkout-status-home-btn">Back to Home</a>
     </div>
   `);
 }
@@ -225,6 +245,52 @@ checkoutForm.addEventListener('submit', async (e) => {
   }
 });
 
+/* ---------------- Mobile menu ----------------
+   New on this page — checkout.html previously had no hamburger at
+   all (bare "Secure Checkout" header, no nav). The shared navbar
+   (partials/_navbar.html + partials/_mobile_menu.html) now includes
+   one, same as every other page, so it needs the same open/close
+   wiring index.js/product.js/cart.js already have. */
+const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+const mobileMenu = document.getElementById('mobileMenu');
+mobileMenuBtn.addEventListener('click', () => {
+  const isOpen = mobileMenu.classList.toggle('open');
+  mobileMenuBtn.setAttribute('aria-expanded', isOpen);
+  mobileMenuBtn.innerHTML = isOpen ? '<i data-lucide="x" class="w-5 h-5"></i>' : '<i data-lucide="menu" class="w-5 h-5"></i>';
+  hydrateIcons();
+});
+
+/* ---------------- Theme toggle (visual, capsule navbar) ----------------
+   Also new on this page for the same reason as the mobile menu above. */
+const themeToggleBtn = document.getElementById('themeToggleBtn');
+let isDarkIcon = true;
+themeToggleBtn.addEventListener('click', () => {
+  isDarkIcon = !isDarkIcon;
+  themeToggleBtn.innerHTML = isDarkIcon
+    ? '<i data-lucide="moon" class="w-[18px] h-[18px]"></i>'
+    : '<i data-lucide="sun" class="w-[18px] h-[18px]"></i>';
+  hydrateIcons();
+});
+
+/* ---------------- Cart count badge (mobile bottom bar) ----------------
+   New on this page too, for the same reason — the shared mobile bar
+   shows the item count, so it needs to be kept in sync the same way
+   index.js/product.js/cart.js already do. */
+fetch(`${API_BASE}/cart`)
+  .then(res => res.json())
+  .then(payload => {
+    if (payload.status === 'success') {
+      document.querySelectorAll('.cart-count-badge').forEach(el => {
+        el.textContent = payload.data.total_items || 0;
+      });
+    }
+  })
+  .catch(err => console.error('Failed to load cart count:', err));
+
 loadOrderSummary();
-lucide.createIcons();
+hydrateIcons();
+
+
+
+
 

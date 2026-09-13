@@ -1,0 +1,28 @@
+<!-- ============================================================
+     Shared mobile hamburger menu — same 3 category links as the
+     desktop nav, plus account/login/signup at the bottom.
+     Included from _navbar.html only — not meant to be included
+     directly on a page.
+     ============================================================ -->
+<div id="mobileMenu" class="mobile-menu lg:hidden mt-2 rounded-3xl bg-sand-50 text-sage-950 shadow-lg shadow-sage-950/20 border border-sage-200/60 overflow-hidden">
+  <nav class="flex flex-col py-2 px-2 text-sm font-semibold uppercase tracking-wide" aria-label="Mobile navigation">
+    <a href="/products" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">All Products</a>
+    <a href="/products?category=Clearance" class="px-3 py-3 rounded-2xl text-clay hover:bg-sage-100">Clearance Sale</a>
+    <a href="/products?category=new-gen" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">New Season 26/27</a>
+
+    <div class="my-2 border-t border-sand-200"></div>
+
+    {% if is_logged_in %}
+    <a href="/account" class="flex items-center gap-2.5 px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">
+      <span class="w-7 h-7 shrink-0 flex items-center justify-center rounded-full bg-sage-100 text-sage-800">
+        <svg class="w-[15px] h-[15px]" aria-hidden="true"><use href="#icon-user"></use></svg>
+      </span>
+      My Account
+    </a>
+    {% else %}
+    <a href="/login" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">Login</a>
+    <a href="/signup" class="mx-3 mt-1 mb-1 text-center bg-sage-400 text-cream-50 rounded-full py-3 hover:bg-sage-500 transition-colors">Sign Up</a>
+    {% endif %}
+  </nav>
+</div>
+

@@ -4,16 +4,37 @@
    these two pages need on top, same pattern as product.css.
    ===================================================================== */
 
+/* ---------- Page shell ----------
+   cart.html's <main> wraps the loading skeleton, empty state, and the
+   populated cart — whichever one is visible. Without a min-height here,
+   an empty cart (icon + heading + button) or a 1-item cart left the
+   footer visible on load, no scroll needed. min-height: 100dvh forces
+   <main> to always claim at least one full screen (dvh, not vh, so
+   mobile browser chrome resizing doesn't cause a jump), regardless of
+   which state is showing or how many items are in it. A many-item cart
+   already overflows past 100dvh on its own — this rule doesn't need to
+   do anything special for that case, it just sets the floor. */
+main {
+  min-height: 100dvh;
+}
+
 /* ---------- Cart line item ----------
-   Sized ~30% smaller than the original (media, padding, gap) per
-   Hasan — the card should feel compact, not like a product-page hero. */
+   Given real breathing room per Hasan (previous 1rem/16px padding and
+   1rem gap read as cramped, cards touching edge-to-edge). Card media
+   sized up to match the roomier padding rather than looking squeezed
+   into a corner. min-height keeps a single-item cart tall enough that
+   the page's real content fills the viewport before the footer starts
+   — without this, one short card left the fixed bottom action bar's
+   own height as the only thing between the card stack and the footer,
+   so the footer visibly "came up" underneath it without scrolling. */
 .cart-line {
   display: flex;
-  gap: 1.05rem;
+  gap: 1.5rem;
+  min-height: 7rem;
   background: var(--cream-50);
   border: 1px solid var(--sand-200);
-  border-radius: 1.35rem;
-  padding: 1.05rem;
+  border-radius: 1.5rem;
+  padding: 1.5rem;
   box-shadow: 0 2px 10px rgba(23, 29, 25, 0.04);
   transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
@@ -24,14 +45,15 @@
 
 /* Vertical rhythm between stacked lines — separate from the .space-y-4
    utility on #cartLines so this card's own spacing isn't dependent on
-   a Tailwind class living correctly on the parent. */
-.cart-line + .cart-line { margin-top: 0.85rem; }
+   a Tailwind class living correctly on the parent. Opened up from
+   1rem to 1.5rem so cards read as distinct items, not a packed list. */
+.cart-line + .cart-line { margin-top: 1.5rem; }
 
 .cart-line-media {
-  width: 4.5rem;
-  height: 4.5rem;
+  width: 5.5rem;
+  height: 5.5rem;
   flex-shrink: 0;
-  border-radius: 0.9rem;
+  border-radius: 1rem;
   overflow: hidden;
   background: var(--sand-100);
   border: 1px solid var(--sand-200);
@@ -41,9 +63,9 @@
 .cart-line-meta {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
-  margin-top: 0.4rem;
+  margin-top: 0.5rem;
 }
 
 .cart-line-tag {
@@ -110,7 +132,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  padding: 0.4rem;
+  padding: 0.5rem;
   border-radius: 9999px;
   transition: color 0.15s ease, background-color 0.15s ease;
 }
@@ -145,7 +167,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
   flex-shrink: 0;
   background: none;
   border: 1.5px solid var(--clay);
@@ -154,7 +176,7 @@
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  padding: 0.85rem 1.1rem;
+  padding: 0.75rem 1rem;
   border-radius: 9999px;
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease;
@@ -175,36 +197,55 @@
   font-size: 0.8125rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  padding: 0.9rem 1.5rem;
+  padding: 1rem 1.5rem;
   border-radius: 9999px;
   transition: background-color 0.15s ease;
 }
 .cart-action-order-btn:hover { background: var(--sage-500); }
 
-/* ---------- Empty state ---------- */
+/* ---------- Empty state ----------
+   Padding opened up further per Hasan (previous 4rem/1.5rem read as
+   cramped alongside the tight icon/heading/button spacing below). */
 .cart-empty {
   text-align: center;
-  padding: 4rem 1.5rem;
+  padding: 5rem 2rem;
   background: var(--sand-100);
   border: 2px dashed var(--sand-200);
-  border-radius: 1.75rem;
+  border-radius: 2rem;
 }
 
-/* ---------- Selection cards (shipping zone / payment method) ---------- */
+/* ---------- Selection cards (shipping zone) ---------- */
 .select-card-row {
   display: grid;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 @media (min-width: 640px) {
   .select-card-row { grid-template-columns: 1fr 1fr; }
+}
+
+/* ---------- Payment method cards ----------
+   Separate from .select-card-row on purpose: the old markup forced
+   these 3 into the same `repeat(3, 1fr)` inline-styled grid as the
+   2-option shipping row, which meant 3 equal-width columns even on a
+   narrow phone — "Cash on Delivery" had nowhere to go but overflow
+   the card and the form. This stacks to full-width cards on mobile,
+   then opens to 3 real columns once there's room (768px+), matching
+   Hasan's "3 to 4 separate cards, not one cramped form row" spec. */
+.payment-method-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+@media (min-width: 768px) {
+  .payment-method-row { grid-template-columns: repeat(3, 1fr); }
 }
 
 .select-card {
   position: relative;
   display: flex;
   align-items: flex-start;
-  gap: 0.75rem;
-  padding: 1rem 1.1rem;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
   border: 1.5px solid var(--sand-200);
   border-radius: 1.1rem;
   cursor: pointer;
@@ -242,8 +283,8 @@
   background: var(--sand-100);
   border: 1px solid var(--sand-200);
   border-radius: 1.1rem;
-  padding: 1.1rem 1.25rem;
-  margin-top: 0.85rem;
+  padding: 1.25rem 1.5rem;
+  margin-top: 1rem;
   font-size: 0.8125rem;
   color: var(--slate-700);
 }
@@ -260,8 +301,8 @@
 .summary-card {
   background: var(--cream-50);
   border: 1.5px solid var(--sage-200);
-  border-radius: 1.75rem;
-  padding: 1.75rem;
+  border-radius: 2rem;
+  padding: 2rem;
   box-shadow: 0 4px 16px rgba(23, 29, 25, 0.05);
 }
 .summary-row {
@@ -270,7 +311,7 @@
   align-items: center;
   font-size: 0.875rem;
   color: var(--slate-500);
-  padding: 0.4rem 0;
+  padding: 0.5rem 0;
 }
 .summary-row strong { color: var(--slate-800); }
 .summary-total-row {
@@ -288,7 +329,7 @@
   background: var(--cream-50);
   border: 1.5px solid var(--sand-200);
   border-radius: 0.75rem;
-  padding: 0.7rem 0.9rem;
+  padding: 0.75rem 1rem;
   font-size: 0.9rem;
   font-family: var(--font-body);
   color: var(--slate-800);
@@ -303,13 +344,13 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--slate-500);
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.5rem;
 }
 .checkout-error-text {
   color: var(--clay);
   font-size: 0.75rem;
   font-weight: 700;
-  margin-top: 0.4rem;
+  margin-top: 0.5rem;
 }
 
 .checkout-guest-banner {
@@ -321,25 +362,198 @@
   background: rgba(101, 125, 105, 0.08);
   border: 1px solid rgba(101, 125, 105, 0.25);
   border-radius: 1.1rem;
-  padding: 0.9rem 1.1rem;
+  padding: 1rem 1.5rem;
   font-size: 0.8125rem;
   color: var(--sage-700);
   margin-bottom: 1.5rem;
 }
 
+/* ---------- Checkout wizard stepper ----------
+   3 numbered circles (Delivery Zone / Payment / Details) connected by
+   a line that fills sage as each step completes. Only the ACTIVE
+   step's card is visible in the DOM at a time (checkout.js toggles
+   .hidden on .checkout-step) — this header is what tells the person
+   where they are and how much is left. */
+.checkout-stepper {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding: 0 0.5rem;
+}
+.checkout-stepper-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+.checkout-stepper-circle {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.8125rem;
+  background: var(--sand-100);
+  border: 1.5px solid var(--sand-200);
+  color: var(--slate-500);
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+.checkout-stepper-label {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--slate-500);
+  white-space: nowrap;
+}
+.checkout-stepper-step.is-active .checkout-stepper-circle {
+  background: var(--sage-400);
+  border-color: var(--sage-400);
+  color: var(--cream-50);
+}
+.checkout-stepper-step.is-active .checkout-stepper-label { color: var(--slate-800); }
+.checkout-stepper-step.is-done .checkout-stepper-circle {
+  background: var(--sage-150);
+  border-color: var(--sage-300);
+  color: var(--sage-700);
+}
+.checkout-stepper-line {
+  flex: 1;
+  height: 1.5px;
+  background: var(--sand-200);
+  margin-top: 1.1rem;
+  max-width: 4rem;
+  transition: background-color 0.2s ease;
+}
+.checkout-stepper-line.is-done { background: var(--sage-300); }
+
+/* ---------- Wizard step nav (Next / Back) ---------- */
+.checkout-step-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--sand-200);
+}
+.checkout-next-btn {
+  background: var(--sage-400);
+  color: var(--cream-50);
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.85rem 1.75rem;
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  margin-left: auto;
+}
+.checkout-next-btn:hover { background: var(--sage-500); }
+.checkout-back-btn {
+  background: none;
+  color: var(--slate-500);
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.85rem 1.5rem;
+  border-radius: 9999px;
+  border: 1.5px solid var(--sand-200);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.checkout-back-btn:hover { border-color: var(--sage-300); color: var(--sage-700); }
+
+/* ---------- Checkout cards: rounding + separation ----------
+   Confirmed against the compiled index.css: it only ships rounded-xl
+   (12px) / rounded-2xl (16px) / rounded-3xl (24px) / rounded-full, and
+   space-y-2 (8px) is the only space-y-* utility present. Neither the
+   radius nor the gap this needs exists in the build, so this is
+   written as plain CSS rather than a Tailwind class in the markup. */
+.checkout-card {
+  border-radius: 1.5rem !important; /* 24px — less rounded than the prior 48px */
+  padding: 1.25rem !important; /* little padding, down from 24px */
+  margin-bottom: 2rem !important; /* 32px — multiple of 8px */
+}
+.checkout-card:last-of-type {
+  margin-bottom: 1rem !important; /* 16px — small distance before the footer, not flush */
+}
+
+/* ---------- Order confirmation / status panel ----------
+   Restyled to match the rest of the theme (rounded-2rem card, sand
+   border, soft shadow — same family as .checkout-card / .summary-card)
+   instead of a flat tinted box. The receipt block uses a slightly
+   deeper cream so it reads as a nested "card within a card" rather
+   than a translucent smear over the sage tint. */
 .checkout-status-panel {
-  padding: 1.75rem;
-  border-radius: 1.5rem;
+  padding: 3rem 2rem;
+  border-radius: 2rem;
   text-align: center;
+  box-shadow: 0 4px 20px rgba(23, 29, 25, 0.06);
 }
 .checkout-status-success {
-  background: rgba(101, 125, 105, 0.1);
-  border: 1px solid rgba(101, 125, 105, 0.3);
+  background: var(--cream-50);
+  border: 1.5px solid var(--sage-200);
   color: var(--sage-800);
 }
 .checkout-status-error {
-  background: rgba(181, 87, 58, 0.1);
-  border: 1px solid rgba(181, 87, 58, 0.25);
+  background: var(--cream-50);
+  border: 1.5px solid rgba(181, 87, 58, 0.3);
   color: var(--clay);
 }
+.checkout-status-icon {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 9999px;
+  background: rgba(101, 125, 105, 0.12);
+  color: var(--sage-500);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.25rem;
+}
+.checkout-status-receipt {
+  background: var(--sand-100);
+  border: 1px solid var(--sand-200);
+  border-radius: 1.25rem;
+  padding: 1.25rem 1.5rem;
+  color: var(--slate-700);
+}
+.checkout-status-receipt-total {
+  border-top: 1px solid var(--sand-200);
+  padding-top: 0.5rem;
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--slate-800);
+}
+/* "Back to Home" previously used bg-sage-500/text-cream-50 utility
+   classes that cart.html/checkout.html never actually load (only
+   .bg-sage-300/.bg-sage-400 are defined in index.css) — the button
+   rendered with no background at all, so cream-on-cream text had
+   zero contrast. Defined directly here instead of relying on a
+   utility class that doesn't exist. */
+.checkout-status-home-btn {
+  display: inline-block;
+  background: var(--sage-500);
+  color: var(--cream-50);
+  padding: 0.9rem 2.5rem;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: background-color 0.15s ease;
+}
+.checkout-status-home-btn:hover { background: var(--sage-600); }
+
+
+
 

@@ -1,0 +1,31 @@
+<!-- ============================================================
+     Shared mobile sticky bottom bar — single source of truth.
+     Cart badge sits at the icon's top-right corner (not the
+     vertical middle) via .cart-count-badge in index.css:
+       top: -4px; right: -4px;
+     Pages needing a different bottom bar (e.g. product.html's
+     price/Reserve strip) can wrap this include with their own
+     extra markup rather than duplicating it — see product.html.
+     ============================================================ -->
+<div class="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-cream-50/95 backdrop-blur border-t border-sand-200 px-4 py-2.5 flex items-center justify-around">
+  <a href="/" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1">
+    <svg class="w-5 h-5" aria-hidden="true"><use href="#icon-home"></use></svg>
+    <span class="text-[10px] font-medium">Home</span>
+  </a>
+  <a href="/products" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1">
+    <svg class="w-5 h-5" aria-hidden="true"><use href="#icon-shirt"></use></svg>
+    <span class="text-[10px] font-medium">Shop</span>
+  </a>
+  <button id="mobileSearchBtn" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1">
+    <svg class="w-5 h-5" aria-hidden="true"><use href="#icon-search"></use></svg>
+    <span class="text-[10px] font-medium">Search</span>
+  </button>
+  <a href="/cart" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1 relative">
+    <span class="relative inline-flex">
+      <svg class="w-5 h-5" aria-hidden="true"><use href="#icon-shopping-bag"></use></svg>
+      <span id="cartCountMobile" class="cart-count-badge absolute bg-clay text-sand-50 text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">0</span>
+    </span>
+    <span class="text-[10px] font-medium">Bag</span>
+  </a>
+</div>
+

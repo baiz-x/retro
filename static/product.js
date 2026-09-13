@@ -1,4 +1,21 @@
-lucide.createIcons();
+/* ---------------- Icon hydration (local inline sprite, no external
+   library) — matches index.js's approach now that this page no
+   longer loads the lucide CDN script. Replaces any data-lucide
+   markup with <use> refs into the inline sprite from
+   partials/_icon_sprite.html. Safe to call repeatedly/idempotent. */
+function hydrateIcons(root = document) {
+  root.querySelectorAll('i[data-lucide]').forEach(el => {
+    const name = el.getAttribute('data-lucide');
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    if (el.className) svg.setAttribute('class', el.className);
+    svg.setAttribute('aria-hidden', 'true');
+    const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+    use.setAttribute('href', `#icon-${name}`);
+    svg.appendChild(use);
+    el.replaceWith(svg);
+  });
+}
+hydrateIcons();
 
 const API_BASE = '/api';
 
@@ -635,7 +652,7 @@ async function loadDiscovery() {
       } else {
         railEl.innerHTML = others.map(mapProductToCard).map(productCard).join('');
       }
-      lucide.createIcons();
+      hydrateIcons();
     }
   } catch (err) {
     console.error('Failed to load discovery rail:', err);
@@ -706,7 +723,7 @@ mobileMenuBtn.addEventListener('click', () => {
   const isOpen = mobileMenu.classList.toggle('open');
   mobileMenuBtn.setAttribute('aria-expanded', isOpen);
   mobileMenuBtn.innerHTML = isOpen ? '<i data-lucide="x" class="w-6 h-6"></i>' : '<i data-lucide="menu" class="w-6 h-6"></i>';
-  lucide.createIcons();
+  hydrateIcons();
 });
 
 /* ---------------- Theme toggle (visual, capsule navbar) ---------------- */
@@ -717,7 +734,7 @@ themeToggleBtn.addEventListener('click', () => {
   themeToggleBtn.innerHTML = isDarkIcon
     ? '<i data-lucide="moon" class="w-[18px] h-[18px]"></i>'
     : '<i data-lucide="sun" class="w-[18px] h-[18px]"></i>';
-  lucide.createIcons();
+  hydrateIcons();
 });
 
 /* ---------------------------------------------------------------------
@@ -732,5 +749,6 @@ updateAddToCartState();
 renderAccordionFaq();
 loadDiscovery();
 refreshCartCountBadge();
-lucide.createIcons();
+hydrateIcons();
+
 

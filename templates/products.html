@@ -3,90 +3,31 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Shop All Jerseys — Kit Collective</title>
-<meta name="description" content="Browse the full Kit Collective catalog — club and national team jerseys, retro drops, and matchday gear. Filter by club, category, price, and edition." />
+<title>Shop All Jerseys — RetroFit BD</title>
+<meta name="description" content="Browse the full RetroFit BD catalog — club and national team jerseys, retro drops, and matchday gear. Filter by club, category, price, and edition." />
+<meta name="theme-color" content="#657d69" />
+<meta name="csrf-token" content="{{ csrf_token() }}" />
 
 <!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-<!-- Icons -->
-<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-
 <!-- Styles -->
+<link rel="stylesheet" href="/static/index.css">
 <link rel="stylesheet" href="/static/products.css">
 </head>
 
 <body class="bg-cream-50 text-slate-800 antialiased">
+
+{% include "partials/_icon_sprite.html" %}
 
 <!-- ============ TOP ANNOUNCEMENT BAR ============ -->
 <div class="bg-sage-300 text-sage-950 text-center text-[11px] sm:text-xs font-semibold tracking-wide py-2 px-4">
   Free delivery on all prepaid orders
 </div>
 
-<!-- ============ HEADER / NAV (floating capsule) ============ -->
-<header class="sticky top-0 z-40 pt-3 pb-2 px-3 sm:px-4">
-  <div class="max-w-6xl mx-auto">
-    <div class="flex items-center justify-between h-[60px] px-3 sm:px-4 rounded-full bg-sand-50 text-sage-950 shadow-lg shadow-sage-950/20 border border-sage-200/60">
-
-      <!-- Mobile menu button -->
-      <button id="mobileMenuBtn" aria-label="Open menu" aria-expanded="false" class="lg:hidden p-2 text-sage-800 hover:text-sage-500 transition-colors">
-        <i data-lucide="menu" class="w-5 h-5"></i>
-      </button>
-
-      <!-- Theme toggle (visual only) -->
-      <button id="themeToggleBtn" aria-label="Toggle theme" class="hidden sm:inline-flex p-2 text-sage-800 hover:text-sage-500 transition-colors">
-        <i data-lucide="moon" class="w-[18px] h-[18px]"></i>
-      </button>
-
-      <!-- Logo -->
-      <a href="#" class="flex items-center gap-2 group absolute left-1/2 -translate-x-1/2 lg:static lg:translate-x-0" aria-label="Kit Collective home">
-        <svg width="28" height="28" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg" class="shrink-0">
-          <path d="M17 1L31 8.5V19.5C31 26.4 24.9 31.6 17 33C9.1 31.6 3 26.4 3 19.5V8.5L17 1Z" stroke="#657d69" stroke-width="1.7"/>
-          <path d="M17 7L25 11.2V18.2C25 22.4 21.5 25.6 17 26.5C12.5 25.6 9 22.4 9 18.2V11.2L17 7Z" fill="#a7bda2"/>
-          <path d="M17 12L14 17H16.3L14.7 22L21 15.5H18.2L20 12H17Z" fill="#2C3531"/>
-        </svg>
-        <span class="font-display text-lg sm:text-xl tracking-wider text-sage-950 whitespace-nowrap">KIT COLLECTIVE</span>
-      </a>
-
-      <!-- Desktop category pills -->
-      <nav class="hidden lg:flex items-center gap-0.5 text-[12px] font-semibold uppercase tracking-wide" aria-label="Primary categories">
-        <a href="#new-arrivals" class="px-2.5 py-2 rounded-full text-sage-700 hover:bg-sage-100 hover:text-sage-950 transition-colors">All Products</a>
-        <a href="/products?category=Accessories" class="px-2.5 py-2 rounded-full text-sage-700 hover:bg-sage-100 hover:text-sage-950 transition-colors">Accessories</a>
-        <a href="/products?category=Clearance" class="px-2.5 py-2 rounded-full text-clay hover:bg-sage-100 transition-colors">Clearance</a>
-        <a href="/products?category=Footwear" class="px-2.5 py-2 rounded-full text-sage-700 hover:bg-sage-100 hover:text-sage-950 transition-colors">Footwear</a>
-        <a href="/products?category=26+and+27+Kits" class="px-2.5 py-2 rounded-full text-sage-700 hover:bg-sage-100 hover:text-sage-950 transition-colors">New Season</a>
-        <a href="/products?category=Retro+Jerseys" class="px-2.5 py-2 rounded-full text-sage-700 hover:bg-sage-100 hover:text-sage-950 transition-colors">Retro</a>
-      </nav>
-
-      <!-- Right icons -->
-      <div class="flex items-center gap-0.5 sm:gap-1">
-        <button id="searchBtn" aria-label="Search catalog" class="p-2 text-sage-800 hover:text-sage-500 transition-colors">
-          <i data-lucide="search" class="w-5 h-5"></i>
-        </button>
-        <button id="cartBtn" aria-label="Open bag, 0 items" class="relative p-2 text-sage-800 hover:text-sage-500 transition-colors">
-          <i data-lucide="shopping-bag" class="w-5 h-5"></i>
-          <span id="cartCount" class="absolute -top-0.5 -right-0.5 bg-clay text-sand-50 text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">0</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Mobile menu -->
-    <div id="mobileMenu" class="mobile-menu lg:hidden mt-2 rounded-3xl bg-sand-50 text-sage-950 shadow-lg shadow-sage-950/20 border border-sage-200/60 overflow-hidden">
-      <nav class="flex flex-col py-2 px-2 text-sm font-semibold uppercase tracking-wide" aria-label="Mobile categories">
-        <a href="#new-arrivals" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">All Products</a>
-        <a href="/products?category=Accessories" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">Accessories</a>
-        <a href="/products?category=Clearance" class="px-3 py-3 rounded-2xl text-clay hover:bg-sage-100">Clearance Sale</a>
-        <a href="/products?category=Footwear" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">Footwear</a>
-        <a href="/products?category=26+and+27+Kits" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">New Season 26/27</a>
-        <a href="/products?edition=Player" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">Player Version</a>
-        <a href="/products?category=Retro+Jerseys" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">Retro Jerseys</a>
-        <a href="/products?category=World+Cup" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">World Cup 2026</a>
-      </nav>
-    </div>
-  </div>
-</header>
+{% include "partials/_navbar.html" %}
 
 <main>
 
@@ -204,71 +145,9 @@
 </main>
 
 <!-- ============ FOOTER ============ -->
-<footer class="bg-slate-900 text-cream-50/90">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-8 mb-10">
-      <div class="col-span-2 sm:col-span-1">
-        <div class="flex items-center gap-2 mb-3">
-          <svg width="26" height="26" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg" class="shrink-0">
-            <path d="M17 1L31 8.5V19.5C31 26.4 24.9 31.6 17 33C9.1 31.6 3 26.4 3 19.5V8.5L17 1Z" stroke="#a7bda2" stroke-width="1.7"/>
-            <path d="M17 7L25 11.2V18.2C25 22.4 21.5 25.6 17 26.5C12.5 25.6 9 22.4 9 18.2V11.2L17 7Z" fill="#526857"/>
-            <path d="M17 12L14 17H16.3L14.7 22L21 15.5H18.2L20 12H17Z" fill="#FBF9F5"/>
-          </svg>
-          <span class="font-display text-lg tracking-wider text-cream-50">KIT COLLECTIVE</span>
-        </div>
-        <p class="text-sm text-cream-50/60 leading-relaxed max-w-[220px]">Premium club and national team jerseys, retro drops, and matchday gear.</p>
-      </div>
+{% include "partials/_footer.html" %}
 
-      <div>
-        <h4 class="text-xs font-bold uppercase tracking-widest text-sage-300 mb-4">Shop</h4>
-        <ul class="space-y-2.5 text-sm text-cream-50/70">
-          <li><a href="/products" class="hover:text-cream-50 transition-colors">All Products</a></li>
-          <li><a href="#" class="hover:text-cream-50 transition-colors">New Season 26/27</a></li>
-          <li><a href="#" class="hover:text-cream-50 transition-colors">Retro Jerseys</a></li>
-          <li><a href="#" class="hover:text-cream-50 transition-colors">Accessories</a></li>
-        </ul>
-      </div>
-
-      <div>
-        <h4 class="text-xs font-bold uppercase tracking-widest text-sage-300 mb-4">Support</h4>
-        <ul class="space-y-2.5 text-sm text-cream-50/70">
-          <li><a href="#" class="hover:text-cream-50 transition-colors">Track Your Order</a></li>
-          <li><a href="#" class="hover:text-cream-50 transition-colors">Shipping Policy</a></li>
-          <li><a href="#" class="hover:text-cream-50 transition-colors">Contact Us</a></li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 text-xs text-cream-50/50">
-      <p>© 2026 Kit Collective. All rights reserved.</p>
-      <div class="flex items-center gap-5">
-        <a href="#" class="hover:text-cream-50 transition-colors">Privacy Policy</a>
-        <a href="#" class="hover:text-cream-50 transition-colors">Terms of Service</a>
-        <a href="#" class="hover:text-cream-50 transition-colors">Refund Policy</a>
-      </div>
-    </div>
-  </div>
-</footer>
-
-<!-- ============ MOBILE STICKY BAR ============ -->
-<div class="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-cream-50/95 backdrop-blur border-t border-sand-200 px-4 py-2.5 flex items-center justify-around">
-  <a href="/" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1">
-    <i data-lucide="home" class="w-5 h-5"></i>
-    <span class="text-[10px] font-medium">Home</span>
-  </a>
-  <a href="/products" class="flex flex-col items-center gap-1 text-sage-500 px-3 py-1">
-    <i data-lucide="shirt" class="w-5 h-5"></i>
-    <span class="text-[10px] font-medium">Shop</span>
-  </a>
-  <button id="mobileSearchBtn" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1">
-    <i data-lucide="search" class="w-5 h-5"></i>
-    <span class="text-[10px] font-medium">Search</span>
-  </button>
-  <button id="mobileCartBtn" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1 relative">
-    <i data-lucide="shopping-bag" class="w-5 h-5"></i>
-    <span class="text-[10px] font-medium">Bag</span>
-  </button>
-</div>
+{% include "partials/_mobile_bar.html" %}
 
 <!-- ============ FILTER DRAWER (mobile) ============ -->
 <div id="filterOverlay" class="filter-overlay fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50"></div>
@@ -371,5 +250,6 @@
 
 </body>
 </html>
+
 
 

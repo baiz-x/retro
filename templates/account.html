@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Account | RetroFit BD</title>
+<meta name="robots" content="noindex, nofollow" />
+<meta name="csrf-token" content="{{ csrf_token() }}" />
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<!-- Styles -->
+<link rel="stylesheet" href="/static/index.css">
+<link rel="stylesheet" href="/static/account.css">
+</head>
+
+<body class="bg-cream-50 text-slate-800 antialiased" data-is-verified="{{ 'true' if user.is_verified else 'false' }}">
+
+{% include "partials/_icon_sprite.html" %}
+
+{% include "partials/_navbar.html" %}
+
+<main class="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16 pb-28 lg:pb-16">
+
+  <h1 class="font-display text-3xl sm:text-4xl uppercase tracking-wide mb-1">My Account</h1>
+  <p class="text-sm text-slate-500/70 mb-8">Update your details, email, and password.</p>
+
+  <!-- Inline status banner — account.js shows/hides this, single spot
+       for both success and error feedback across every form on the
+       page rather than a toast-per-form. -->
+  <div id="statusBanner" class="account-banner hidden mb-6 rounded-2xl px-5 py-3.5 text-sm font-semibold"></div>
+
+  <div class="flex flex-col gap-6">
+
+    <!-- ============ PROFILE ============ -->
+    <section class="bg-sand-50 border border-sage-200/60 rounded-3xl p-5 sm:p-7">
+      <h2 class="font-display text-xl uppercase tracking-wide mb-1">Profile</h2>
+      <p class="text-xs text-slate-500/70 mb-5">Your name, phone, address, and social contact.</p>
+
+      <form id="profileForm" class="flex flex-col gap-4">
+        <div>
+          <label for="nameInput" class="account-label">Full name</label>
+          <input id="nameInput" name="name" type="text" required maxlength="120"
+                 value="{{ user.name }}" class="account-input" />
+        </div>
+
+        <div>
+          <label for="phoneInput" class="account-label">Phone number</label>
+          <input id="phoneInput" name="phone_number" type="tel" required
+                 value="{{ user.phone_number }}" class="account-input" />
+        </div>
+
+        <div>
+          <label for="addressInput" class="account-label">Address</label>
+          <textarea id="addressInput" name="address" required rows="3"
+                    class="account-input resize-none">{{ user.address }}</textarea>
+        </div>
+
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label for="socialPlatformInput" class="account-label">Social platform</label>
+            <select id="socialPlatformInput" name="social_platform" class="account-input">
+              <option value="" {% if not user.social_platform %}selected{% endif %}>None</option>
+              <option value="WhatsApp" {% if user.social_platform == 'WhatsApp' %}selected{% endif %}>WhatsApp</option>
+              <option value="Instagram" {% if user.social_platform == 'Instagram' %}selected{% endif %}>Instagram</option>
+              <option value="Facebook" {% if user.social_platform == 'Facebook' %}selected{% endif %}>Facebook</option>
+              <option value="TikTok" {% if user.social_platform == 'TikTok' %}selected{% endif %}>TikTok</option>
+            </select>
+          </div>
+          <div>
+            <label for="socialHandleInput" class="account-label">Handle / number</label>
+            <input id="socialHandleInput" name="social_handle" type="text"
+                   value="{{ user.social_handle or '' }}" class="account-input" placeholder="Optional" />
+          </div>
+        </div>
+
+        <button type="submit" class="account-btn-primary self-start mt-1">Save profile</button>
+      </form>
+    </section>
+
+    <!-- ============ EMAIL ============ -->
+    <section class="bg-sand-50 border border-sage-200/60 rounded-3xl p-5 sm:p-7">
+      <h2 class="font-display text-xl uppercase tracking-wide mb-1">Email address</h2>
+      <p class="text-xs text-slate-500/70 mb-5">Changing your email takes effect immediately, but you'll need to verify it with a code before you can log in with it again.</p>
+
+      <p class="text-sm font-semibold mb-5">
+        Current: <span id="currentEmailValue" class="text-sage-700">{{ user.email }}</span>
+      </p>
+
+      <!-- Unverified banner: shown when user.is_verified is False on
+           load (e.g. they changed email, then refreshed before
+           entering the code). account.js reads this from
+           data-is-verified on <body>. -->
+      <div id="unverifiedEmailBanner" class="hidden mb-5 rounded-2xl bg-sage-100 border border-sage-200/60 px-5 py-4 text-sm">
+        <p class="font-semibold text-sage-800">Your email isn't verified yet</p>
+        <p class="text-slate-500/70 mt-1">Enter the 6-digit code sent to your email to keep this address usable for logging in.</p>
+      </div>
+
+      <form id="requestEmailForm" class="flex flex-col gap-4">
+        <div>
+          <label for="newEmailInput" class="account-label">New email address</label>
+          <input id="newEmailInput" name="new_email" type="email" required class="account-input" />
+        </div>
+        <div>
+          <label for="emailChangePasswordInput" class="account-label">Current password</label>
+          <input id="emailChangePasswordInput" name="current_password" type="password" required
+                 autocomplete="current-password" class="account-input" />
+        </div>
+        <button type="submit" class="account-btn-primary self-start mt-1">Change email</button>
+      </form>
+
+      <form id="confirmEmailForm" class="hidden flex-col gap-4">
+        <div>
+          <label for="emailCodeInput" class="account-label">Verification code</label>
+          <input id="emailCodeInput" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}"
+                 maxlength="6" required class="account-input" placeholder="6-digit code" />
+        </div>
+        <button type="submit" class="account-btn-primary self-start">Confirm code</button>
+      </form>
+    </section>
+
+    <!-- ============ PASSWORD ============ -->
+    <section class="bg-sand-50 border border-sage-200/60 rounded-3xl p-5 sm:p-7">
+      <h2 class="font-display text-xl uppercase tracking-wide mb-1">Password</h2>
+      <p class="text-xs text-slate-500/70 mb-5">Use at least 8 characters.</p>
+
+      <form id="passwordForm" class="flex flex-col gap-4">
+        <div>
+          <label for="currentPasswordInput" class="account-label">Current password</label>
+          <input id="currentPasswordInput" name="current_password" type="password" required
+                 autocomplete="current-password" class="account-input" />
+        </div>
+        <div>
+          <label for="newPasswordInput" class="account-label">New password</label>
+          <input id="newPasswordInput" name="new_password" type="password" required minlength="8"
+                 autocomplete="new-password" class="account-input" />
+        </div>
+        <div>
+          <label for="confirmPasswordInput" class="account-label">Confirm new password</label>
+          <input id="confirmPasswordInput" name="confirm_password" type="password" required minlength="8"
+                 autocomplete="new-password" class="account-input" />
+        </div>
+        <button type="submit" class="account-btn-primary self-start mt-1">Update password</button>
+      </form>
+    </section>
+
+  </div>
+</main>
+
+{% include "partials/_footer.html" %}
+
+{% include "partials/_mobile_bar.html" %}
+
+<script src="/static/account.js"></script>
+</body>
+</html>
+

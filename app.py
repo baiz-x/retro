@@ -13,6 +13,8 @@ from sqlalchemy import text
 # Hasan's instruction to pull needed functions from product_service.py
 # rather than duplicate the query here.
 from services.product_service import get_product_by_slug_service, build_product_json_ld, build_product_view_context, build_gallery_images, build_stock_note, build_color_pills, build_size_pills, build_identity_pills, is_out_of_stock, resolve_product_availability, request_base_url
+from models import User
+from functools import wraps
 
 # Load env
 load_dotenv()
@@ -28,7 +30,7 @@ from routes.admin_route import admin_bp
 from routes.product_route import product_bp
 from routes.cart_route import cart_bp
 from routes.order_route import order_bp
-from routes.auth_routes import auth_bp
+from routes.auth_route import auth_bp
 
 app.register_blueprint(admin_bp)
 app.register_blueprint(product_bp)
@@ -37,6 +39,22 @@ app.register_blueprint(order_bp)
 app.register_blueprint(auth_bp)
 
 # ---------- Routes ----------
+
+def login_required(view_func):
+    """
+    Guards page routes that require a logged-in user (currently just
+    /account below). Redirects to /login rather than returning JSON,
+    since this decorates HTML page routes, not the API blueprint —
+    auth_routes.py has its own separate api_login_required for that.
+    """
+    @wraps(view_func)
+    def wrapped(*args, **kwargs):
+        if not session.get("user_id"):
+            return redirect(url_for("login_page", next=request.path))
+        return view_func(*args, **kwargs)
+    return wrapped
+
+
 @app.route("/")
 def home():
     return render_template("index.html")
@@ -79,7 +97,8 @@ def cart():
 
 @app.route("/checkout")
 def checkout():
-    return render_template("checkout.html")
+    is_loggedin = bool(session.get("user_id"))
+    return render_template("checkout.html", is_loggedin=is_loggedin)
 
 @app.route("/login")
 def login_page():
@@ -92,6 +111,18 @@ def signup_page():
     if session.get("user_id"):
         return redirect(url_for("home"))
     return render_template("signup.html")
+
+@app.route("/account")
+@login_required
+def account_page():
+    # login_required already guarantees session["user_id"] is set, but
+    # not that the row still exists (e.g. deleted between requests) —
+    # same stale-session handling as auth_routes.py's /auth/me.
+    user = User.query.get(session["user_id"])
+    if not user:
+        session.pop("user_id", None)
+        return redirect(url_for("login_page"))
+    return render_template("account.html", user=user)
 
 @app.route("/admin-form")
 def admin_form():
@@ -185,4 +216,6 @@ with app.app_context():
 # ---------- Main ----------
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
+
+
 

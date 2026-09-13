@@ -12,50 +12,26 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-
 <link rel="stylesheet" href="/static/index.css">
 <link rel="stylesheet" href="/static/cart.css">
 </head>
 
 <body class="bg-cream-50 text-slate-800 antialiased">
 
+{% include "partials/_icon_sprite.html" %}
+
 <!-- ============ TOP ANNOUNCEMENT BAR — same as index.html/product.html ============ -->
 <div class="bg-sage-300 text-sage-950 text-center text-[11px] sm:text-xs font-semibold tracking-wide py-2 px-4">
   Free delivery on all prepaid orders
 </div>
 
-<!-- ============ HEADER / NAV — real RetroFit BD nav, matching index.html/product.html.
-     Category pills swapped for a back-to-shop link (a cart page doesn't need
-     the full category nav). ============ -->
-<header class="sticky top-0 z-40 pt-3 pb-2 px-3 sm:px-4">
-  <div class="max-w-6xl mx-auto">
-    <div class="flex items-center justify-between h-[60px] px-3 sm:px-4 rounded-full bg-sand-50 text-sage-950 shadow-lg shadow-sage-950/20 border border-sage-200/60">
-      <a href="/products" class="hidden lg:inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-sage-700 hover:bg-sage-100 hover:text-sage-950 transition-colors text-[12px] font-semibold uppercase tracking-wide">
-        <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
-        Continue Shopping
-      </a>
-
-      <a href="/" class="flex items-center gap-2 absolute left-1/2 -translate-x-1/2 lg:static lg:translate-x-0" aria-label="RetroFit BD home">
-        <img src="/static/img/retrofit-bd-logo.webp" alt="RetroFit BD logo" width="28" height="28" class="shrink-0 object-contain" />
-        <span class="font-display text-lg sm:text-xl tracking-wider text-sage-950 whitespace-nowrap">RETROFIT BD</span>
-      </a>
-
-      <div class="flex items-center gap-1">
-        <span id="cartCountHeader" class="hidden sm:inline text-[11px] font-bold uppercase tracking-widest text-slate-500/70 mr-1">0 Items</span>
-        <a href="/account" aria-label="Your account" class="p-2 text-sage-800 hover:text-sage-500 transition-colors">
-          <i data-lucide="user" class="w-5 h-5"></i>
-        </a>
-      </div>
-    </div>
-  </div>
-</header>
+{% include "partials/_navbar.html" %}
 
 <!-- Extra bottom padding reserves room for the pinned action bar (mobile:
      also clears the fixed bottom nav) so the last card is never hidden
      behind either fixed element. -->
 <main class="max-w-4xl mx-auto px-4 sm:px-6 pt-6 pb-40 sm:pb-32">
-  <h1 class="font-display text-3xl sm:text-4xl text-slate-800 uppercase tracking-wide mb-7">Your Bag</h1>
+  <h1 class="font-display text-3xl sm:text-4xl text-slate-800 uppercase tracking-wide mb-8">Your Bag</h1>
 
   <!-- ============ LOADING SKELETON ============ -->
   <div id="cartLoading" class="space-y-3">
@@ -63,14 +39,18 @@
     <div class="h-24 bg-sand-100 rounded-[1.5rem] w-full animate-pulse"></div>
   </div>
 
-  <!-- ============ EMPTY STATE ============ -->
+  <!-- ============ EMPTY STATE ============
+       cart-empty (cart.css) now carries its own generous, 8px-grid
+       padding (2rem/32px vertical, 1.5rem/24px horizontal) so this
+       state doesn't look cramped whether the cart is loading, empty,
+       or was just cleared. ============ -->
   <div id="emptyState" class="cart-empty hidden">
-    <div class="w-16 h-16 rounded-full bg-sand-200/60 flex items-center justify-center mx-auto mb-5">
-      <i data-lucide="shopping-bag" class="w-7 h-7 text-sage-500"></i>
+    <div class="w-20 h-20 rounded-full bg-sand-200/60 flex items-center justify-center mx-auto mb-8">
+      <i data-lucide="shopping-bag" class="w-8 h-8 text-sage-500"></i>
     </div>
-    <h2 class="font-display text-2xl text-slate-800 uppercase tracking-wide mb-2">Your bag is empty</h2>
-    <p class="text-slate-500/70 mb-7 text-sm">Looks like you haven't reserved any jerseys yet.</p>
-    <a href="/products" class="inline-block bg-sage-400 text-cream-50 font-bold uppercase text-xs tracking-widest px-8 py-3.5 rounded-full hover:bg-sage-500 transition-colors">Start Shopping</a>
+    <h2 class="font-display text-2xl text-slate-800 uppercase tracking-wide mb-4">Your bag is empty</h2>
+    <p class="text-slate-500/70 mb-8 text-sm">Looks like you haven't reserved any jerseys yet.</p>
+    <a href="/products" class="inline-block bg-sage-400 text-cream-50 font-bold uppercase text-xs tracking-widest px-8 py-4 rounded-full hover:bg-sage-500 transition-colors">Start Shopping</a>
   </div>
 
   <!-- ============ CART CONTENTS ============ -->
@@ -90,13 +70,13 @@
      entirely while the cart is loading or empty — shown only once
      cartContents is populated (see cart.js's renderCart). ============ -->
 <div id="cartActionBar" class="cart-action-bar hidden">
-  <div class="max-w-4xl mx-auto px-4 sm:px-6 py-4">
-    <div class="flex items-center justify-between mb-1">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 py-6">
+    <div class="flex items-center justify-between mb-2">
       <span class="text-[10px] uppercase tracking-widest font-bold text-slate-500/70">Items Total</span>
       <span id="cartGrandTotal" class="font-display text-2xl sm:text-3xl text-slate-800 leading-none">৳0</span>
     </div>
-    <p class="text-xs text-slate-500/60 mb-3.5">Shipping is calculated at checkout based on your delivery zone.</p>
-    <div class="flex items-center gap-3">
+    <p class="text-xs text-slate-500/60 mb-4">Shipping is calculated at checkout based on your delivery zone.</p>
+    <div class="flex items-center gap-4">
       <button id="clearBtn" class="cart-action-clear-btn" aria-label="Clear bag">
         <i data-lucide="trash-2" class="w-4 h-4"></i>
         <span class="hidden sm:inline">Clear Bag</span>
@@ -109,70 +89,12 @@
 </div>
 
 <!-- ============ FOOTER — same markup as index.html/product.html ============ -->
-<footer class="bg-slate-800 border-t border-slate-700 pt-14 pb-28 lg:pb-10">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6">
-    <div class="grid sm:grid-cols-3 gap-10 pb-10 border-b border-slate-700">
-      <div>
-        <a href="/" class="flex items-center gap-2 mb-3">
-          <img src="/static/retrofit-bd-logo.webp" alt="RetroFit BD logo" width="28" height="28" class="object-contain" />
-          <span class="font-display text-lg tracking-wider text-cream-50">RETROFIT BD</span>
-        </a>
-        <p class="text-sm text-cream-50/60 max-w-xs leading-relaxed">Bangladesh's go-to shop for premium club and national team football jerseys, retro drops, and matchday gear — delivering to Dhaka and nationwide.</p>
-      </div>
+{% include "partials/_footer.html" %}
 
-      <div>
-        <h4 class="text-xs font-bold uppercase tracking-widest text-sage-300 mb-4">Shop</h4>
-        <ul class="space-y-2.5 text-sm text-cream-50/70">
-          <li><a href="/products" class="hover:text-cream-50 transition-colors">All Products</a></li>
-          <li><a href="/products?category=26+and+27+Kits" class="hover:text-cream-50 transition-colors">New Season 26/27</a></li>
-          <li><a href="/products?category=Retro+Jerseys" class="hover:text-cream-50 transition-colors">Retro Jerseys</a></li>
-          <li><a href="/products?category=Accessories" class="hover:text-cream-50 transition-colors">Accessories</a></li>
-        </ul>
-      </div>
-
-      <div>
-        <h4 class="text-xs font-bold uppercase tracking-widest text-sage-300 mb-4">Support</h4>
-        <ul class="space-y-2.5 text-sm text-cream-50/70">
-          <li><a href="#" class="hover:text-cream-50 transition-colors">Track Your Order</a></li>
-          <li><a href="#" class="hover:text-cream-50 transition-colors">Shipping Policy</a></li>
-          <li><a href="#" class="hover:text-cream-50 transition-colors">Contact Us</a></li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 text-xs text-cream-50/50">
-      <p>© 2026 RetroFit BD. All rights reserved. Football jerseys delivered across Bangladesh.</p>
-      <div class="flex items-center gap-5">
-        <a href="#" class="hover:text-cream-50 transition-colors">Privacy Policy</a>
-        <a href="#" class="hover:text-cream-50 transition-colors">Terms of Service</a>
-        <a href="#" class="hover:text-cream-50 transition-colors">Refund Policy</a>
-      </div>
-    </div>
-  </div>
-</footer>
-
-<!-- ============ MOBILE STICKY BAR — same as index.html/product.html ============ -->
-<div class="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-cream-50/95 backdrop-blur border-t border-sand-200 px-4 py-2.5 flex items-center justify-around">
-  <a href="/" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1">
-    <i data-lucide="home" class="w-5 h-5"></i>
-    <span class="text-[10px] font-medium">Home</span>
-  </a>
-  <a href="/products" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1">
-    <i data-lucide="shirt" class="w-5 h-5"></i>
-    <span class="text-[10px] font-medium">Shop</span>
-  </a>
-  <a href="/products" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1">
-    <i data-lucide="search" class="w-5 h-5"></i>
-    <span class="text-[10px] font-medium">Search</span>
-  </a>
-  <span class="flex flex-col items-center gap-1 text-sage-500 px-3 py-1 relative" aria-current="page">
-    <i data-lucide="shopping-bag" class="w-5 h-5"></i>
-    <span id="cartCountMobile" class="cart-count-badge absolute -top-0.5 right-1 bg-clay text-sand-50 text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">0</span>
-    <span class="text-[10px] font-medium">Bag</span>
-  </span>
-</div>
+{% include "partials/_mobile_bar.html" %}
 
 <script src="/static/cart.js"></script>
 </body>
 </html>
+
 

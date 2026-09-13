@@ -68,6 +68,16 @@ input { font: inherit; }
 img { display: block; max-width: 100%; }
 svg { display: block; }
 
+/* ---------- Cart count badge (shared: mobile bar + any header use) ----------
+   Anchored to the icon's top-right CORNER, not the vertical middle —
+   the old per-page "-top-0.5 right-1" utility combo sat mid-icon on
+   the right edge. Parent needs position:relative (the mobile bar's
+   .cart-count-badge wrapper span already has this via `relative`). */
+.cart-count-badge {
+  top: -4px;
+  right: -4px;
+}
+
 .font-display { font-family: var(--font-display); letter-spacing: 0.01em; }
 
 /* ---------- Utilities used as behavioural hooks ---------- */
@@ -332,6 +342,7 @@ a:focus-visible, button:focus-visible, input:focus-visible {
 .pb-16 { padding-bottom: 4rem; }
 .pb-20 { padding-bottom: 5rem; }
 .pb-28 { padding-bottom: 7rem; }
+.pb-32 { padding-bottom: 8rem; }
 .pl-9 { padding-left: 2.25rem; }
 .pl-11 { padding-left: 2.75rem; }
 .pr-4 { padding-right: 1rem; }
@@ -421,6 +432,18 @@ a:focus-visible, button:focus-visible, input:focus-visible {
 .text-\[12px\] { font-size: 12px; }
 .text-\[13vw\] { font-size: 13vw; }
 .text-xs { font-size: 0.75rem; line-height: 1rem; }
+
+/* Real, working versions of the text-[11px]/text-[12px] arbitrary-value
+   classes used across the site's markup (Login/Sign Up links, mobile
+   bar labels, etc.) — those bracket-syntax classes only work with a
+   real Tailwind build step, which this hand-authored CSS file isn't.
+   They were already in use before this change with no matching rule
+   here, so that text has always silently fallen back to inherited
+   sizing. Adding the two used by the navbar's Sign Up button; a full
+   audit of every other text-[Npx] usage sitewide is a separate,
+   larger cleanup outside what was asked for here. */
+.text-\[11px\] { font-size: 11px; line-height: 1rem; }
+.text-\[12px\] { font-size: 12px; line-height: 1rem; }
 .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
 .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
 .text-xl { font-size: 1.25rem; line-height: 1.75rem; }
@@ -533,6 +556,7 @@ a:focus-visible, button:focus-visible, input:focus-visible {
   .sm\:w-\[400px\] { width: 400px; }
   .sm\:aspect-\[4\/3\] { aspect-ratio: 4 / 3; }
   .sm\:px-4 { padding-left: 1rem; padding-right: 1rem; }
+  .sm\:text-\[12px\] { font-size: 12px; line-height: 1rem; }
   .sm\:px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
   .sm\:p-6 { padding: 1.5rem; }
   .sm\:p-7 { padding: 1.75rem; }
@@ -572,5 +596,7 @@ a:focus-visible, button:focus-visible, input:focus-visible {
   .lg\:static { position: static; }
   .lg\:translate-x-0 { transform: translateX(0); }
   .lg\:pb-10 { padding-bottom: 2.5rem; }
+  .lg\:pb-0 { padding-bottom: 0; }
 }
+
 

@@ -13,10 +13,27 @@ const cartLoading = document.getElementById('cartLoading');
 const emptyState = document.getElementById('emptyState');
 const cartContents = document.getElementById('cartContents');
 const cartLines = document.getElementById('cartLines');
-const cartCountHeader = document.getElementById('cartCountHeader');
 const cartGrandTotal = document.getElementById('cartGrandTotal');
 const cartActionBar = document.getElementById('cartActionBar');
 const clearBtn = document.getElementById('clearBtn');
+
+/* ---------------- Icon hydration (local inline sprite, no external
+   library) — matches index.js's approach now that this page no
+   longer loads the lucide CDN script. Replaces any data-lucide
+   markup with <use> refs into the inline sprite from
+   partials/_icon_sprite.html. Safe to call repeatedly/idempotent. */
+function hydrateIcons(root = document) {
+  root.querySelectorAll('i[data-lucide]').forEach(el => {
+    const name = el.getAttribute('data-lucide');
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    if (el.className) svg.setAttribute('class', el.className);
+    svg.setAttribute('aria-hidden', 'true');
+    const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+    use.setAttribute('href', `#icon-${name}`);
+    svg.appendChild(use);
+    el.replaceWith(svg);
+  });
+}
 
 function formatTaka(amount) {
   return `৳${Number(amount).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
@@ -60,7 +77,7 @@ function renderLine(item) {
         ${item.image ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.product_name || '')}" />` : ''}
       </div>
       <div class="flex-1 min-w-0">
-        <div class="flex items-start justify-between gap-3">
+        <div class="flex items-start justify-between gap-4">
           <div class="min-w-0">
             <h3 class="font-bold text-sm text-slate-800 truncate">${escapeHtml(item.product_name || 'Product')}</h3>
             ${renderLineMeta(item)}
@@ -69,7 +86,7 @@ function renderLine(item) {
             <i data-lucide="x" class="w-4 h-4"></i>
           </button>
         </div>
-        <div class="flex items-end justify-between mt-3">
+        <div class="flex items-end justify-between mt-4">
           <div class="cart-line-qty-stepper">
             <button class="cart-line-qty-btn" data-action="decrement" data-cart-item-id="${item.id}" aria-label="Decrease quantity">
               <i data-lucide="minus" class="w-3.5 h-3.5"></i>
@@ -90,14 +107,18 @@ function renderCart(data) {
   const items = data.items || [];
   cartLoading.classList.add('hidden');
 
-  cartCountHeader.textContent = `${data.total_items || 0} Item${data.total_items === 1 ? '' : 's'}`;
+  // The old "N Items" header text lived in a #cartCountHeader span
+  // that only existed in this page's bespoke header. The shared
+  // navbar (partials/_navbar.html) doesn't have that span — the
+  // mobile bottom bar's .cart-count-badge is the one visible cart
+  // indicator now, same as every other page.
   document.querySelectorAll('.cart-count-badge').forEach(el => { el.textContent = data.total_items || 0; });
 
   if (items.length === 0) {
     emptyState.classList.remove('hidden');
     cartContents.classList.add('hidden');
     cartActionBar.classList.add('hidden');
-    lucide.createIcons();
+    hydrateIcons();
     return;
   }
 
@@ -108,7 +129,7 @@ function renderCart(data) {
   cartLines.innerHTML = items.map(renderLine).join('');
   cartGrandTotal.textContent = formatTaka(data.total_price || 0);
 
-  lucide.createIcons();
+  hydrateIcons();
 }
 
 async function loadCart() {
@@ -239,6 +260,34 @@ clearBtn.addEventListener('click', () => {
   if (confirm('Remove everything from your bag?')) clearCart();
 });
 
+/* ---------------- Mobile menu ----------------
+   New on this page — cart.html previously had no hamburger button at
+   all (bespoke bare header). The shared navbar (partials/_navbar.html
+   + partials/_mobile_menu.html) now includes one, same as every other
+   page, so it needs the same open/close wiring index.js/product.js
+   already have. */
+const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+const mobileMenu = document.getElementById('mobileMenu');
+mobileMenuBtn.addEventListener('click', () => {
+  const isOpen = mobileMenu.classList.toggle('open');
+  mobileMenuBtn.setAttribute('aria-expanded', isOpen);
+  mobileMenuBtn.innerHTML = isOpen ? '<i data-lucide="x" class="w-5 h-5"></i>' : '<i data-lucide="menu" class="w-5 h-5"></i>';
+  hydrateIcons();
+});
+
+/* ---------------- Theme toggle (visual, capsule navbar) ----------------
+   Also new on this page for the same reason as the mobile menu above. */
+const themeToggleBtn = document.getElementById('themeToggleBtn');
+let isDarkIcon = true;
+themeToggleBtn.addEventListener('click', () => {
+  isDarkIcon = !isDarkIcon;
+  themeToggleBtn.innerHTML = isDarkIcon
+    ? '<i data-lucide="moon" class="w-[18px] h-[18px]"></i>'
+    : '<i data-lucide="sun" class="w-[18px] h-[18px]"></i>';
+  hydrateIcons();
+});
+
 loadCart();
-lucide.createIcons();
+hydrateIcons();
+
 
