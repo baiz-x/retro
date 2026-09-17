@@ -27,6 +27,29 @@ function hydrateIcons(root = document) {
   });
 }
 
+/* ---------------- CSRF-aware fetch wrapper (matches account.js's
+   convention) — only needed here for POST /auth/logout via the
+   shared mobile-menu button. */
+const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+async function postJSON(url, body) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': CSRF_TOKEN,
+    },
+    body: JSON.stringify(body),
+  });
+  let payload;
+  try {
+    payload = await res.json();
+  } catch {
+    payload = { status: 'error', message: 'Unexpected server response' };
+  }
+  return { ok: res.ok, payload };
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   hydrateIcons();
 
@@ -394,6 +417,20 @@ document.addEventListener('DOMContentLoaded', () => {
     hydrateIcons();
   });
 
+  // ================= LOGOUT (shared mobile menu) =================
+  const logoutBtnMobile = document.getElementById('logoutBtnMobile');
+  if (logoutBtnMobile) {
+    logoutBtnMobile.addEventListener('click', async () => {
+      logoutBtnMobile.disabled = true;
+      const { ok } = await postJSON('/auth/logout', {});
+      if (ok) {
+        window.location.href = '/';
+      } else {
+        logoutBtnMobile.disabled = false;
+      }
+    });
+  }
+
   // ================= THEME TOGGLE (visual, capsule navbar) =================
   const themeToggleBtn = document.getElementById('themeToggleBtn');
   let isDarkIcon = true;
@@ -415,6 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchProducts();
   });
 });
+
 
 
 

@@ -96,6 +96,26 @@ async function postJSON(url, body) {
   return { ok: res.ok, payload };
 }
 
+/* ---------------- Logout (shared navbar chrome + page button) ----------------
+   Wires both the page's own #logoutBtn (Account section below) and the
+   shared mobile-menu #logoutBtnMobile (present on every page via
+   _mobile_menu.html). Route is POST /auth/logout — see auth_route.py. */
+function wireLogout(btn) {
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    const { ok } = await postJSON('/auth/logout', {});
+    if (ok) {
+      window.location.href = '/';
+    } else {
+      btn.disabled = false;
+      showBanner('Something went wrong logging out. Please try again.', 'error');
+    }
+  });
+}
+wireLogout(document.getElementById('logoutBtn'));
+wireLogout(document.getElementById('logoutBtnMobile'));
+
 /* ---------------- Status banner ---------------- */
 const statusBanner = document.getElementById('statusBanner');
 let bannerTimeout = null;
@@ -213,4 +233,5 @@ passwordForm.addEventListener('submit', withSubmitLock(passwordForm, async () =>
   showBanner(ok ? 'Password updated.' : (payload.message || 'Could not update password.'), ok ? 'success' : 'error');
   if (ok) passwordForm.reset();
 }));
+
 

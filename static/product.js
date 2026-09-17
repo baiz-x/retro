@@ -726,6 +726,24 @@ mobileMenuBtn.addEventListener('click', () => {
   hydrateIcons();
 });
 
+/* ---------------- Logout (shared mobile menu button) ----------------
+   #logoutBtnMobile lives in _mobile_menu.html, included on every page.
+   Route is POST /auth/logout — see auth_route.py. */
+const logoutBtnMobile = document.getElementById('logoutBtnMobile');
+if (logoutBtnMobile) {
+  logoutBtnMobile.addEventListener('click', async () => {
+    logoutBtnMobile.disabled = true;
+    try {
+      const res = await csrfFetch('/auth/logout', { method: 'POST' });
+      if (res.ok) {
+        window.location.href = '/';
+        return;
+      }
+    } catch {}
+    logoutBtnMobile.disabled = false;
+  });
+}
+
 /* ---------------- Theme toggle (visual, capsule navbar) ---------------- */
 const themeToggleBtn = document.getElementById('themeToggleBtn');
 let isDarkIcon = true;
@@ -750,5 +768,6 @@ renderAccordionFaq();
 loadDiscovery();
 refreshCartCountBadge();
 hydrateIcons();
+
 
 

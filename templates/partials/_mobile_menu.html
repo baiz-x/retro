@@ -19,10 +19,17 @@
       </span>
       My Account
     </a>
+    <button id="logoutBtnMobile" type="button" class="flex items-center gap-2.5 px-3 py-3 rounded-2xl text-clay hover:bg-sage-100 text-left">
+      <span class="w-7 h-7 shrink-0 flex items-center justify-center rounded-full bg-sage-100 text-clay">
+        <svg class="w-[15px] h-[15px]" aria-hidden="true"><use href="#icon-log-out"></use></svg>
+      </span>
+      Log Out
+    </button>
     {% else %}
     <a href="/login" class="px-3 py-3 rounded-2xl text-sage-800 hover:bg-sage-100">Login</a>
     <a href="/signup" class="mx-3 mt-1 mb-1 text-center bg-sage-400 text-cream-50 rounded-full py-3 hover:bg-sage-500 transition-colors">Sign Up</a>
     {% endif %}
   </nav>
 </div>
+
 

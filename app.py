@@ -55,6 +55,19 @@ def login_required(view_func):
     return wrapped
 
 
+@app.context_processor
+def inject_is_logged_in():
+    """
+    Makes is_logged_in available in every template automatically —
+    the navbar/mobile-menu partials (_navbar.html, _mobile_menu.html)
+    check this on every page. Previously this was only passed manually
+    on /checkout (and misspelled there as is_loggedin, one word), so
+    every other route rendered with is_logged_in undefined -> falsy in
+    Jinja -> navbar always showed Login/Signup even for signed-in users.
+    """
+    return {"is_logged_in": bool(session.get("user_id"))}
+
+
 @app.route("/")
 def home():
     return render_template("index.html")
@@ -97,8 +110,7 @@ def cart():
 
 @app.route("/checkout")
 def checkout():
-    is_loggedin = bool(session.get("user_id"))
-    return render_template("checkout.html", is_loggedin=is_loggedin)
+    return render_template("checkout.html")
 
 @app.route("/login")
 def login_page():
@@ -216,6 +228,7 @@ with app.app_context():
 # ---------- Main ----------
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
+
 
 
 

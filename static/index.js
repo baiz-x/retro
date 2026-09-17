@@ -13,6 +13,14 @@ function hydrateIcons(root = document) {
     el.replaceWith(svg);
   });
 }
+
+/* Same CSRF pattern established in product.js/checkout.js/cart.js — only
+   needed here for POST /auth/logout via the shared mobile-menu button. */
+function csrfFetch(url, options = {}) {
+  const token = document.querySelector('meta[name="csrf-token"]').content;
+  options.headers = { ...(options.headers || {}), 'X-CSRFToken': token };
+  return fetch(url, options);
+}
 hydrateIcons();
 
 /* ---------------- Product rendering (card markup unchanged) ---------------- */
@@ -180,6 +188,24 @@ mobileMenuBtn.addEventListener('click', () => {
   hydrateIcons();
 });
 
+/* ---------------- Logout (shared mobile menu button) ----------------
+   #logoutBtnMobile lives in _mobile_menu.html, included on every page.
+   Route is POST /auth/logout — see auth_route.py. */
+const logoutBtnMobile = document.getElementById('logoutBtnMobile');
+if (logoutBtnMobile) {
+  logoutBtnMobile.addEventListener('click', async () => {
+    logoutBtnMobile.disabled = true;
+    try {
+      const res = await csrfFetch('/auth/logout', { method: 'POST' });
+      if (res.ok) {
+        window.location.href = '/';
+        return;
+      }
+    } catch {}
+    logoutBtnMobile.disabled = false;
+  });
+}
+
 /* ---------------- Theme toggle (visual, capsule navbar) ---------------- */
 const themeToggleBtn = document.getElementById('themeToggleBtn');
 let isDarkIcon = true;
@@ -281,4 +307,5 @@ faqList.addEventListener('click', e => {
     toggle.setAttribute('aria-expanded', 'true');
   }
 });
+
 
