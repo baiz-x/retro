@@ -63,10 +63,15 @@
       </div>
     </div>
 
-    <!-- ============ CARD 2 — SHIPPING ZONE ============ -->
+    <!-- ============ CARD 2 — SHIPPING ZONE ============
+         Rebuilt to use .payment-method-row's 3-column grid (stacks
+         full-width on mobile, opens to 3 equal columns at 768px+)
+         instead of .select-card-row, which is hardcoded to 2 columns
+         at sm: and would leave sub_city as an orphaned 3rd card on a
+         2-column grid. -->
     <div class="checkout-card bg-cream-50 border border-sand-200 shadow-sm">
       <h2 class="text-[11px] font-bold uppercase tracking-widest text-slate-500/70 mb-4">1. Delivery Zone</h2>
-      <div class="select-card-row">
+      <div class="payment-method-row">
         <label class="select-card" data-zone-card="inside_dhaka">
           <input type="radio" name="shipping_zone" value="inside_dhaka" checked />
           <div>
@@ -74,11 +79,51 @@
             <p class="select-card-sub">৳70 · 2–3 business days</p>
           </div>
         </label>
+        <label class="select-card" data-zone-card="sub_city">
+          <input type="radio" name="shipping_zone" value="sub_city" />
+          <div>
+            <span class="select-card-title">Sub City</span>
+            <p class="select-card-sub">৳70 · 2–4 business days</p>
+          </div>
+        </label>
         <label class="select-card" data-zone-card="outside_dhaka">
           <input type="radio" name="shipping_zone" value="outside_dhaka" />
           <div>
             <span class="select-card-title">Outside Dhaka</span>
             <p class="select-card-sub">৳140 · 3–5 business days</p>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <!-- ============ CARD 2b — DELIVERY PAYMENT TYPE ============
+         New: how the delivery charge above relates to the total owed.
+         Same .select-card visual language as the zone/method cards
+         above, 3 compact options in one row (payment-method-row grid,
+         same as Card 3 below). -->
+    <div class="checkout-card bg-cream-50 border border-sand-200 shadow-sm">
+      <h2 class="text-[11px] font-bold uppercase tracking-widest text-slate-500/70 mb-1">2. Delivery Charge</h2>
+      <p class="text-xs text-slate-500/60 mb-4" id="paymentTypeHint">Delivery fee is added to your total, payable on arrival.</p>
+      <div class="payment-method-row">
+        <label class="select-card" data-ptype-card="postpaid">
+          <input type="radio" name="payment_type" value="postpaid" checked />
+          <div>
+            <span class="select-card-title">Pay on Delivery</span>
+            <p class="select-card-sub">Delivery fee added to total</p>
+          </div>
+        </label>
+        <label class="select-card" data-ptype-card="prepaid">
+          <input type="radio" name="payment_type" value="prepaid" />
+          <div>
+            <span class="select-card-title">Prepaid</span>
+            <p class="select-card-sub">Delivery already settled</p>
+          </div>
+        </label>
+        <label class="select-card" data-ptype-card="included">
+          <input type="radio" name="payment_type" value="included" />
+          <div>
+            <span class="select-card-title">Included</span>
+            <p class="select-card-sub">Folded into item total</p>
           </div>
         </label>
       </div>
@@ -93,7 +138,7 @@
          its own icon so it reads as a distinct payment option, not
          a cropped grid cell. -->
     <div class="checkout-card bg-cream-50 border border-sand-200 shadow-sm">
-      <h2 class="text-[11px] font-bold uppercase tracking-widest text-slate-500/70 mb-4">2. Payment Method</h2>
+      <h2 class="text-[11px] font-bold uppercase tracking-widest text-slate-500/70 mb-4">3. Payment Method</h2>
       <div class="payment-method-row">
         <label class="select-card" data-method-card="bkash">
           <input type="radio" name="payment_method" value="bkash" checked />
@@ -172,7 +217,7 @@
 
     <!-- ============ CARD 4 — DELIVERY DETAILS ============ -->
     <div class="checkout-card bg-cream-50 border border-sand-200 shadow-sm">
-      <h2 class="text-[11px] font-bold uppercase tracking-widest text-slate-500/70 mb-4">3. Delivery Details</h2>
+      <h2 class="text-[11px] font-bold uppercase tracking-widest text-slate-500/70 mb-4">4. Delivery Details</h2>
       <div class="space-y-4">
         <label class="block">
           <span class="checkout-label">Full Name</span>
@@ -216,6 +261,7 @@
 <script src="/static/checkout.js"></script>
 </body>
 </html>
+
 
 
 

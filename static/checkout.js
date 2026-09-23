@@ -37,7 +37,7 @@ const paymentNumberLabel = document.getElementById('paymentNumberLabel');
 const phoneInput = document.getElementById('phone');
 const phoneError = document.getElementById('phoneError');
 
-const SHIPPING_FEES = { inside_dhaka: 70, outside_dhaka: 140 };
+const SHIPPING_FEES = { inside_dhaka: 70, outside_dhaka: 140, sub_city: 70 };
 let currentSubtotal = 0;
 
 function formatTaka(amount) {
@@ -102,7 +102,22 @@ async function loadOrderSummary() {
 function updateGrandTotal() {
   const zone = document.querySelector('input[name="shipping_zone"]:checked').value;
   const shippingFee = SHIPPING_FEES[zone] || 0;
-  orderGrandTotalEl.textContent = formatTaka(currentSubtotal + shippingFee);
+  const paymentType = document.querySelector('input[name="payment_type"]:checked').value;
+
+  // Mirrors order_service.recompute_total() exactly — same 3 branches,
+  // so the number shown here always matches what the server will
+  // actually charge. Keep these two in sync if the formula ever
+  // changes on either side.
+  let total;
+  if (paymentType === 'postpaid') {
+    total = currentSubtotal + shippingFee;
+  } else if (paymentType === 'included') {
+    total = currentSubtotal - shippingFee;
+  } else {
+    total = currentSubtotal; // prepaid
+  }
+
+  orderGrandTotalEl.textContent = formatTaka(total);
   return shippingFee;
 }
 
@@ -115,6 +130,23 @@ document.querySelectorAll('input[name="shipping_zone"]').forEach(input => {
   });
 });
 document.querySelector('input[name="shipping_zone"]:checked').closest('[data-zone-card]').classList.add('active');
+
+/* ---------------- Delivery payment type selection ---------------- */
+const paymentTypeHint = document.getElementById('paymentTypeHint');
+const PAYMENT_TYPE_HINTS = {
+  postpaid: 'Delivery fee is added to your total, payable on arrival.',
+  prepaid: "Delivery fee isn't added — you've settled it separately.",
+  included: 'Delivery fee is folded into your item total already.',
+};
+document.querySelectorAll('input[name="payment_type"]').forEach(input => {
+  input.addEventListener('change', () => {
+    document.querySelectorAll('[data-ptype-card]').forEach(card => card.classList.remove('active'));
+    input.closest('[data-ptype-card]').classList.add('active');
+    paymentTypeHint.textContent = PAYMENT_TYPE_HINTS[input.value] || '';
+    updateGrandTotal();
+  });
+});
+document.querySelector('input[name="payment_type"]:checked').closest('[data-ptype-card]').classList.add('active');
 
 /* ---------------- Payment method selection ---------------- */
 function setActivePaymentMethod(method) {
@@ -307,3 +339,4 @@ fetch(`${API_BASE}/cart`)
 
 loadOrderSummary();
 hydrateIcons();
+

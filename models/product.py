@@ -184,6 +184,15 @@ class Product(db.Model):
     order_items = db.relationship("OrderItem", back_populates="product")
     cart_items = db.relationship("CartItem", back_populates="product")
 
+    # 1:1 with Wholesale — a row is auto-created for every product via
+    # the after_insert event registered in models/__init__.py (see
+    # wholesale.py). uselist=False makes this a scalar (product.wholesale,
+    # not product.wholesale[0]). NEVER referenced from to_dict() below —
+    # that's the whole point: wholesale cost data must never reach the
+    # public storefront JSON. It's only read via services/wholesale_service.py
+    # behind @admin_required routes.
+    wholesale = db.relationship("Wholesale", back_populates="product", uselist=False)
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -214,7 +223,4 @@ class Product(db.Model):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
-
-
-
 

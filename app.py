@@ -31,12 +31,20 @@ from routes.product_route import product_bp
 from routes.cart_route import cart_bp
 from routes.order_route import order_bp
 from routes.auth_route import auth_bp
+from routes.wholesale_route import wholesale_bp
+from routes.expense_route import expense_bp
+from routes.guest_order_link_route import guest_link_bp
+from routes.fulfillment_route import fulfillment_bp
 
 app.register_blueprint(admin_bp)
 app.register_blueprint(product_bp)
 app.register_blueprint(cart_bp)
 app.register_blueprint(order_bp)
 app.register_blueprint(auth_bp)
+app.register_blueprint(wholesale_bp)
+app.register_blueprint(expense_bp)
+app.register_blueprint(guest_link_bp)
+app.register_blueprint(fulfillment_bp)
 
 # ---------- Routes ----------
 
@@ -136,6 +144,23 @@ def account_page():
         return redirect(url_for("login_page"))
     return render_template("account.html", user=user)
 
+@app.route("/orders")
+@login_required
+def orders_page():
+    """
+    Customer-facing order history/tracking page (Daraz/Amazon-style —
+    per Hasan's request), themed to match index.css/index.html.
+    Logged-in users only, same guard as /account, since guest orders
+    have no account to look history up against (confirmed scope). The
+    page itself fetches from GET /api/account/orders on load — see
+    templates/orders.html + static/orders.js.
+    """
+    user = User.query.get(session["user_id"])
+    if not user:
+        session.pop("user_id", None)
+        return redirect(url_for("login_page"))
+    return render_template("orders.html", user=user)
+
 @app.route("/admin-form")
 def admin_form():
     return render_template("admin_form.html")
@@ -228,7 +253,3 @@ with app.app_context():
 # ---------- Main ----------
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
-
-
-
-

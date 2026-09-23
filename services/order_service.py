@@ -1,4 +1,4 @@
-import uuid
+import secrets
 from datetime import datetime
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
@@ -7,13 +7,91 @@ from models import db, CartItem, Product, Order, OrderItem
 # Authoritative shipping fee per zone. Stored on the Order row at
 # creation time (Order.shipping_fee) rather than recomputed later, so
 # a future change here never alters the amount already charged on a
-# past order.
+# past order. Three zones (confirmed): inside_dhaka, outside_dhaka,
+# sub_city — sub_city added alongside the original two, same ৳70 as
+# inside_dhaka but kept as a distinct zone value (not merged into
+# inside_dhaka) since they're conceptually different delivery areas
+# that happen to share a price today.
 SHIPPING_FEES = {
     "inside_dhaka": 70.0,
     "outside_dhaka": 140.0,
+    "sub_city": 70.0,
 }
 
 VALID_PAYMENT_METHODS = {"bkash", "nagad", "cod"}
+
+# See models/order.py's payment_type column docstring for the full
+# meaning of each value — this set is just the validation gate.
+VALID_PAYMENT_TYPES = {"prepaid", "postpaid", "included"}
+
+# 33 characters: digits 1-9 (9) + A-Z minus I and O (24) — I/O excluded
+# per Hasan's confirmed spec to avoid customer confusion with 1/0.
+# 33 x 32 x 31 x 30 ≈ 982,080 possible 4-character codes with no
+# repeated character within one code.
+ORDER_ID_CHARSET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+ORDER_ID_LENGTH = 4
+ORDER_ID_MAX_ATTEMPTS = 10
+
+
+def generate_order_id():
+    """
+    Generates a random 4-character order ID (e.g. "HU2G") from
+    ORDER_ID_CHARSET with no repeated character within the code, and
+    guarantees it doesn't already exist in the orders table.
+
+    Uses `secrets.SystemRandom().sample` rather than `random` — not for
+    security here (this isn't a secret/token), but because `sample`
+    without replacement is exactly "no repeated character" for free,
+    and secrets' CSPRNG-backed source means the sequence is truly
+    unpredictable (confirmed requirement: competitors can't guess
+    order volume from watching codes over time).
+
+    Retries up to ORDER_ID_MAX_ATTEMPTS times on a collision (checked
+    against the DB each time) before raising — with ~982,080 possible
+    codes, a collision is already rare at low thousands of orders, so
+    10 straight collisions in a row would indicate something is
+    actually wrong (e.g. the charset/DB check is broken) rather than
+    ordinary bad luck, which is exactly when Hasan confirmed he wants
+    this to fail loudly instead of silently.
+    """
+    rng = secrets.SystemRandom()
+    for _ in range(ORDER_ID_MAX_ATTEMPTS):
+        candidate = "".join(rng.sample(ORDER_ID_CHARSET, ORDER_ID_LENGTH))
+        exists = db.session.query(
+            Order.query.filter_by(order_id=candidate).exists()
+        ).scalar()
+        if not exists:
+            return candidate
+    raise RuntimeError(
+        f"Could not generate a unique order ID after {ORDER_ID_MAX_ATTEMPTS} attempts"
+    )
+
+
+def recompute_total(subtotal, shipping_fee, payment_type):
+    """
+    The single source of truth for Order.total — called both at
+    checkout (create_order_from_cart) and whenever the admin edits
+    shipping_fee/payment_type afterward (update_order_delivery), so
+    the two paths can never compute total differently from each other.
+
+    Formula (confirmed):
+      postpaid  -> total = subtotal + shipping_fee
+      prepaid   -> total = subtotal
+      included  -> total = subtotal - shipping_fee
+    """
+    shipping_fee = shipping_fee or 0.0
+    if payment_type == "postpaid":
+        return subtotal + shipping_fee
+    if payment_type == "included":
+        return subtotal - shipping_fee
+    # "prepaid" (and defensively, anything else post-validation)
+    return subtotal
+
+
+def validate_payment_type(payment_type):
+    if payment_type not in VALID_PAYMENT_TYPES:
+        return False, f"Invalid payment type '{payment_type}'. Must be one of: {', '.join(VALID_PAYMENT_TYPES)}"
+    return True, None
 
 
 def fetch_cart_items(user_id=None, guest_id=None):
@@ -154,11 +232,17 @@ def create_order_from_cart(user_id, guest_id, customer_data, cart_item_id=None):
         payment_method = customer_data.get('payment_method')
         payment_number = customer_data.get('payment_number')
         transaction_id = customer_data.get('transaction_id')
+        payment_type = customer_data.get('payment_type', 'postpaid')
 
         is_valid_zone, zone_err = validate_shipping_zone(shipping_zone)
         if not is_valid_zone:
             current_app.logger.warning(f"Order failed: {zone_err}")
             return None, zone_err
+
+        is_valid_ptype, ptype_err = validate_payment_type(payment_type)
+        if not is_valid_ptype:
+            current_app.logger.warning(f"Order failed: {ptype_err}")
+            return None, ptype_err
 
         shipping_fee = SHIPPING_FEES[shipping_zone]
 
@@ -195,10 +279,10 @@ def create_order_from_cart(user_id, guest_id, customer_data, cart_item_id=None):
             return None, stock_err
 
         subtotal = sum(item.price * item.quantity for item in cart_items)
-        total_price = subtotal + shipping_fee
+        total_price = recompute_total(subtotal, shipping_fee, payment_type)
 
         new_order = Order(
-            order_id=str(uuid.uuid4()),
+            order_id=generate_order_id(),
             user_id=user_id,
             customer_name=customer_data['customer_name'],
             phone=customer_data['phone'],
@@ -207,6 +291,7 @@ def create_order_from_cart(user_id, guest_id, customer_data, cart_item_id=None):
             social_handle=customer_data.get('social_handle'),
             shipping_zone=shipping_zone,
             shipping_fee=shipping_fee,
+            payment_type=payment_type,
             payment_method=payment_method,
             payment_number=payment_number,
             transaction_id=transaction_id,
@@ -258,11 +343,169 @@ def create_order_from_cart(user_id, guest_id, customer_data, cart_item_id=None):
 def get_all_orders():
     return Order.query.order_by(Order.created_at.desc()).all()
 
+
+def _digits_only(s):
+    """Strips everything but digits, e.g. '+880 1876-389827' -> '01876389827'."""
+    return "".join(ch for ch in (s or "") if ch.isdigit())
+
+
+def search_orders(query, status=None):
+    """
+    Powers the Orders tab's single search box (Hasan's confirmed spec):
+      - order_id:      substring match (case-insensitive), e.g. typing
+                        part of the UUID finds it
+      - customer_name: substring match (case-insensitive) — NOT unique,
+                        multiple customers can share a name
+      - phone:         digit-sequence match anywhere in the stored
+                        number, e.g. typing "6389" matches a phone that
+                        CONTAINS 6389 anywhere ("01876389827"). Results
+                        are ranked so a SUFFIX match (query is the
+                        tail-end of the number, the realistic case when
+                        someone reads the last few digits off a
+                        delivery label) sorts above a match anywhere
+                        else in the number — confirmed: simple two-tier
+                        ranking, not a full position-weighted score.
+
+    status: optional — when given, narrows to orders in that status
+    BEFORE searching, so the two filters combine (per Hasan's confirmed
+    "search 6389 within only Transit orders" example).
+
+    query='' (empty/whitespace) returns get_all_orders()'s ordering
+    under the given status, unchanged — this is what the dashboard
+    calls when the search box is cleared.
+    """
+    base = Order.query
+    if status:
+        base = base.filter(Order.status == status)
+
+    query = (query or "").strip()
+    if not query:
+        return base.order_by(Order.created_at.desc()).all()
+
+    query_digits = _digits_only(query)
+    like_pattern = f"%{query}%"
+
+    if query_digits:
+        # Phone matching needs Python-side digit comparison (stored
+        # numbers may contain spaces/dashes/+880 formatting that a SQL
+        # LIKE on the raw column would miss) — so for a digit query we
+        # fetch order_id/name/phone candidates in one query, then rank
+        # in Python. Order volume here is small (boutique store, not
+        # call-center scale), so this is simpler and more predictable
+        # than a DB-side trigram/regex approach.
+        candidates = base.filter(
+            db.or_(
+                Order.order_id.ilike(like_pattern),
+                Order.customer_name.ilike(like_pattern),
+                Order.phone.isnot(None),
+            )
+        ).all()
+
+        def rank(order):
+            phone_digits = _digits_only(order.phone)
+            order_id_hit = query.lower() in (order.order_id or "").lower()
+            name_hit = query.lower() in (order.customer_name or "").lower()
+
+            if phone_digits and phone_digits.endswith(query_digits):
+                return 0  # suffix match — highest priority
+            if phone_digits and query_digits in phone_digits:
+                return 1  # matches somewhere inside the number
+            if order_id_hit or name_hit:
+                return 2  # fell back to order_id/name text match
+            return 3  # only matched the OR'd isnot(None) clause — drop it
+
+        ranked = [(rank(o), o) for o in candidates]
+        ranked = [(t, o) for t, o in ranked if t < 3]
+        ranked.sort(key=lambda pair: (pair[0], -(pair[1].created_at.timestamp() if pair[1].created_at else 0)))
+        return [o for _, o in ranked]
+
+    # Non-digit query (name or partial order_id, e.g. "Karim" or a UUID
+    # fragment) — plain substring match, newest first.
+    return base.filter(
+        db.or_(
+            Order.order_id.ilike(like_pattern),
+            Order.customer_name.ilike(like_pattern),
+        )
+    ).order_by(Order.created_at.desc()).all()
+
+
+def update_order_delivery(order_id, shipping_fee=None, payment_type=None):
+    """
+    Admin-only edit of delivery_charge (shipping_fee) and/or
+    payment_type on an EXISTING order — e.g. correcting a fee, or
+    switching to "included" after collecting extra advance. Always
+    recomputes total via recompute_total() so it can never drift from
+    the checkout-time formula.
+
+    order_id here is the database primary key, same convention as
+    update_order_status()/update_order_tracking_link(). Either
+    argument can be omitted (None) to leave that field unchanged.
+    """
+    try:
+        order = Order.query.get(order_id)
+        if not order:
+            return None, "Order not found"
+
+        if shipping_fee is not None:
+            try:
+                order.shipping_fee = float(shipping_fee)
+            except (ValueError, TypeError):
+                return None, "shipping_fee must be a number"
+
+        if payment_type is not None:
+            is_valid, err = validate_payment_type(payment_type)
+            if not is_valid:
+                return None, err
+            order.payment_type = payment_type
+
+        order.total = recompute_total(order.subtotal, order.shipping_fee, order.payment_type)
+        db.session.commit()
+        return order, None
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.error(f"Order Delivery Update Error: {str(e)}")
+        raise
+
+
+def update_order_tracking_link(order_id, tracking_link):
+    """
+    order_id here is the database primary key, same convention as
+    update_order_status(). tracking_link may be '' / None to clear it
+    (admin removing a mistaken/stale link) — no validation on shape,
+    since Hasan confirmed this is a plain manual text field, not tied
+    to any courier API.
+    """
+    try:
+        order = Order.query.get(order_id)
+        if not order:
+            return None, "Order not found"
+        order.tracking_link = tracking_link or None
+        db.session.commit()
+        return order, None
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.error(f"Tracking Link Update Error: {str(e)}")
+        raise
+
+
+def get_orders_for_user(user_id):
+    """
+    Powers the customer-facing order history page (logged-in users
+    only, per Hasan's confirmed scope — guest orders have no lookup).
+    """
+    return Order.query.filter_by(user_id=user_id).order_by(Order.created_at.desc()).all()
+
 def update_order_status(order_id, new_status):
     """
     order_id here is the database primary key (Order.query.get() looks
     up by PK) — not the public-facing Order.order_id string, despite
     the parameter name matching that field.
+
+    Pipeline (confirmed): Pending -> Packaged -> Picked -> Transit ->
+    Delivered, with Failed reachable from any state — see
+    models/order.py's OrderStatus enum. Not enforced as a strict state
+    machine here (any value in OrderStatus.values() is accepted
+    regardless of current status), same as the original 4-state design.
     """
     from models import OrderStatus  # local import avoids a circular import at module load time
 
@@ -280,4 +523,5 @@ def update_order_status(order_id, new_status):
         db.session.rollback()
         current_app.logger.error(f"Status Update Error: {str(e)}")
         raise
+
 

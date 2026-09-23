@@ -154,7 +154,10 @@ function closeSearch() {
   document.body.style.overflow = '';
 }
 document.getElementById('searchBtn').addEventListener('click', openSearch);
-document.getElementById('mobileSearchBtn').addEventListener('click', openSearch);
+// mobileSearchBtn removed from _mobile_bar.html (replaced with an
+// Orders link, per Hasan's request) — the top navbar's #searchBtn
+// above still opens the same search overlay, so search itself isn't
+// lost, just no longer duplicated in the bottom bar.
 document.getElementById('searchCloseBtn').addEventListener('click', closeSearch);
 searchOverlay.addEventListener('click', e => { if (e.target === searchOverlay) closeSearch(); });
 document.addEventListener('keydown', e => {
@@ -307,5 +310,6 @@ faqList.addEventListener('click', e => {
     toggle.setAttribute('aria-expanded', 'true');
   }
 });
+
 
 

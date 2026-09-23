@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Confirm Your Order | RetroFit BD</title>
+<meta name="robots" content="noindex, nofollow" />
+<meta name="csrf-token" content="{{ csrf_token() }}" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="/static/index.css">
+<link rel="stylesheet" href="/static/cart.css">
+</head>
+
+<body class="bg-cream-50 text-slate-800 antialiased">
+
+{% include "partials/_icon_sprite.html" %}
+{% include "partials/_navbar.html" %}
+
+<main class="max-w-lg mx-auto px-4 sm:px-6 py-10 sm:py-14 pb-28">
+
+  {% if error %}
+  <!-- ============ DEAD LINK STATE ============
+       Shown for an invalid/used/expired token — same shape whichever
+       reason applies (validate_link in guest_order_link_service.py
+       decides the exact message), so the guest always sees a normal-
+       looking page instead of a raw 404/500. -->
+  <div class="checkout-card bg-cream-50 border border-sand-200 shadow-sm text-center py-12">
+    <svg class="w-10 h-10 mx-auto mb-4 text-slate-500/40" aria-hidden="true"><use href="#icon-x"></use></svg>
+    <h1 class="font-display text-2xl uppercase tracking-wide mb-2">Link Unavailable</h1>
+    <p class="text-sm text-slate-500/70">{{ error }}</p>
+    <p class="text-xs text-slate-500/50 mt-4">Please contact us directly to place your order.</p>
+  </div>
+
+  {% else %}
+  <!-- ============ ORDER FORM ============ -->
+  <h1 class="font-display text-3xl sm:text-4xl uppercase tracking-wide mb-1">Confirm Your Order</h1>
+  <p class="text-sm text-slate-500/80 mb-8">Fill in your details below to place your order.</p>
+
+  <!-- Product summary — fixed by admin, not editable here -->
+  <div class="checkout-card bg-cream-50 border border-sand-200 shadow-sm mb-6 flex items-center gap-4">
+    <img src="{{ link.product.image or '' }}" alt="" class="w-16 h-16 rounded-lg object-cover bg-sand-100 shrink-0">
+    <div class="min-w-0">
+      <p class="font-bold text-sm text-slate-800 truncate">{{ link.product.name }}</p>
+      <p class="text-xs text-slate-500/70">৳{{ "%.2f"|format(link.product.price) }}</p>
+    </div>
+  </div>
+
+  <form id="guestOrderForm" class="space-y-6" data-token="{{ link.token }}">
+    <div class="checkout-card bg-cream-50 border border-sand-200 shadow-sm space-y-4">
+      <label class="block">
+        <span class="checkout-label">Full Name</span>
+        <input type="text" id="customer_name" name="customer_name" class="checkout-input" placeholder="Enter your full name" required />
+      </label>
+      <label class="block">
+        <span class="checkout-label">Phone Number</span>
+        <input type="tel" id="phone" name="phone" class="checkout-input" placeholder="01XXXXXXXXX" required />
+      </label>
+      <label class="block">
+        <span class="checkout-label">Location</span>
+        <input type="text" id="address" name="address" class="checkout-input" placeholder="House, Road, Area" required />
+      </label>
+      <label class="block">
+        <span class="checkout-label">Thana</span>
+        <input type="text" id="thana" name="thana" class="checkout-input" placeholder="e.g. Mirpur" required />
+      </label>
+
+      {% if sizes %}
+      <label class="block">
+        <span class="checkout-label">Size</span>
+        <select id="size" name="size" class="checkout-input" required>
+          <option value="" disabled selected>Select your size</option>
+          {% for s in sizes %}
+          <option value="{{ s }}">{{ s }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      {% else %}
+      <input type="hidden" id="size" name="size" value="N/A">
+      {% endif %}
+    </div>
+
+    <button type="submit" id="guestSubmitBtn" class="w-full bg-navy text-gold font-bold uppercase tracking-widest text-sm py-4 rounded-full">
+      Confirm Order
+    </button>
+    <p id="guestFormError" class="hidden text-center text-xs text-red-600"></p>
+  </form>
+
+  <!-- ============ SUCCESS STATE (shown after submit, hidden initially) ============ -->
+  <div id="guestSuccessState" class="hidden checkout-card bg-cream-50 border border-sand-200 shadow-sm text-center py-12">
+    <svg class="w-10 h-10 mx-auto mb-4 text-sage-500" aria-hidden="true"><use href="#icon-package-check"></use></svg>
+    <h2 class="font-display text-2xl uppercase tracking-wide mb-2">Order Confirmed</h2>
+    <p class="text-sm text-slate-500/70">Order ID: <strong id="guestOrderIdDisplay"></strong></p>
+    <p class="text-xs text-slate-500/50 mt-4">We'll be in touch soon. Thank you!</p>
+  </div>
+  {% endif %}
+
+</main>
+
+{% include "partials/_footer.html" %}
+
+<script src="/static/guest_order_form.js"></script>
+
+</body>
+</html>
+
