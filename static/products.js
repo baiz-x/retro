@@ -399,9 +399,12 @@ document.addEventListener('DOMContentLoaded', () => {
     searchOverlay.classList.remove('open');
     document.body.style.overflow = '';
   }
-  document.getElementById('searchBtn').addEventListener('click', openSearch);
-  document.getElementById('mobileSearchBtn').addEventListener('click', openSearch);
-  document.getElementById('searchCloseBtn').addEventListener('click', closeSearch);
+  ['searchBtn', 'mobileSearchBtn'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.addEventListener('click', openSearch);
+  });
+  const searchCloseBtn = document.getElementById('searchCloseBtn');
+  if (searchCloseBtn) searchCloseBtn.addEventListener('click', closeSearch);
   searchOverlay.addEventListener('click', e => { if (e.target === searchOverlay) closeSearch(); });
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') { closeSearch(); closeCart(); closeFilters(); }
@@ -410,7 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ================= MOBILE MENU =================
   const mobileMenuBtn = document.getElementById('mobileMenuBtn');
   const mobileMenu = document.getElementById('mobileMenu');
-  mobileMenuBtn.addEventListener('click', () => {
+  if (mobileMenuBtn && mobileMenu) mobileMenuBtn.addEventListener('click', () => {
     const isOpen = mobileMenu.classList.toggle('open');
     mobileMenuBtn.setAttribute('aria-expanded', isOpen);
     mobileMenuBtn.innerHTML = isOpen ? '<i data-lucide="x" class="w-5 h-5"></i>' : '<i data-lucide="menu" class="w-5 h-5"></i>';
@@ -434,7 +437,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ================= THEME TOGGLE (visual, capsule navbar) =================
   const themeToggleBtn = document.getElementById('themeToggleBtn');
   let isDarkIcon = true;
-  themeToggleBtn.addEventListener('click', () => {
+  if (themeToggleBtn) themeToggleBtn.addEventListener('click', () => {
     isDarkIcon = !isDarkIcon;
     themeToggleBtn.innerHTML = isDarkIcon
       ? '<i data-lucide="moon" class="w-[18px] h-[18px]"></i>'
@@ -452,6 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchProducts();
   });
 });
+
 
 
 
