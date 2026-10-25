@@ -236,9 +236,19 @@ def adjust_stock_route(product_id):
                 delta = product.stock
         elif 'delta' in data:
             try:
-                delta = int(data['delta'])
+                requested_delta = int(data['delta'])
             except (TypeError, ValueError):
                 return jsonify({'status': 'error', 'message': "'delta' must be an integer"}), 400
+            # reduce_variant_stock always SUBTRACTS its third argument
+            # (see order_service.reduce_stock_logic, which calls it with
+            # a positive item.quantity to deduct stock on order
+            # placement — that's its real, correct contract). The
+            # dashboard's +/- buttons send delta as "how much to add"
+            # (+1) or "how much to remove" (-1), so it has to be negated
+            # here before being handed to a subtract-only function, or
+            # the two directions come out backwards (confirmed bug —
+            # clicking + was decreasing stock and - was increasing it).
+            delta = -requested_delta
         else:
             return jsonify({'status': 'error', 'message': "Provide 'delta' or 'set_out_of_stock'"}), 400
 

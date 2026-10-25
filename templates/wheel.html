@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Spin The Wheel — RetroFit BD</title>
+<meta name="theme-color" content="#657d69" />
+<meta name="csrf-token" content="{{ csrf_token() }}" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="/static/index.css">
+<link rel="stylesheet" href="/static/cart.css">
+
+<style>
+  /* Wheel-specific presentation — kept local to this page rather than
+     added to the shared stylesheet, since nothing else uses it. */
+  .wheel-stage {
+    position: relative;
+    width: min(320px, 82vw);
+    aspect-ratio: 1;
+    margin: 0 auto;
+  }
+  .wheel-stage svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    filter: drop-shadow(0 10px 24px rgba(51,48,43,0.18));
+  }
+  .wheel-pointer {
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 14px solid transparent;
+    border-right: 14px solid transparent;
+    border-top: 24px solid #33302b;
+    z-index: 5;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.25));
+  }
+  .wheel-hub {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 22%; height: 22%;
+    border-radius: 999px;
+    background: #33302b;
+    border: 4px solid #f7f3ec;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .wheel-hub svg { width: 40%; height: 40%; }
+  @keyframes wheel-glow-pulse {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 0.7; }
+  }
+  .wheel-stage::before {
+    content: "";
+    position: absolute;
+    inset: -14px;
+    border-radius: 999px;
+    background: radial-gradient(circle, rgba(143,174,139,0.35), transparent 70%);
+    animation: wheel-glow-pulse 2.5s ease-in-out infinite;
+    z-index: -1;
+  }
+  @keyframes result-pop-in {
+    0% { opacity: 0; transform: scale(0.85) translateY(6px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .result-pop { animation: result-pop-in 0.4s cubic-bezier(0.2, 0.8, 0.3, 1.2); }
+</style>
+</head>
+
+<body class="bg-cream-50 text-slate-800 antialiased">
+
+{% include "partials/_icon_sprite.html" %}
+
+<div class="bg-sage-300 text-sage-950 text-center text-[11px] sm:text-xs font-semibold tracking-wide py-2 px-4">
+  Free delivery on all prepaid orders
+</div>
+
+{% include "partials/_navbar.html" %}
+
+<main class="max-w-md mx-auto px-4 sm:px-6 pt-8 sm:pt-10 pb-24 lg:pb-12">
+  <div class="text-center mb-6">
+    <p class="text-[11px] font-bold uppercase tracking-[0.2em] text-sage-600 mb-2">Limited Drop</p>
+    <h1 class="font-display text-4xl sm:text-5xl text-slate-800 uppercase tracking-wide leading-none mb-3">Spin To Win</h1>
+    <p class="text-slate-500/70 text-sm max-w-xs mx-auto">Got a wheel code? Drop it in and take your one shot at a real discount.</p>
+  </div>
+
+  <!-- CODE ENTRY -->
+  <div id="wheelEntryCard" class="checkout-card bg-cream-50 border border-sand-200 shadow-sm mb-6 transition-opacity">
+    <label class="text-[11px] font-bold uppercase tracking-widest text-slate-500/70 block mb-2">Wheel Code</label>
+    <div class="flex gap-2">
+      <input type="text" id="wheelCodeInput" class="checkout-input flex-1 uppercase tracking-wider" placeholder="WHEEL-XXXX" autocomplete="off" />
+      <button type="button" id="wheelLoadBtn" class="shrink-0 bg-slate-800 text-cream-50 font-bold uppercase text-xs tracking-widest px-5 rounded-full hover:bg-slate-700 active:scale-95 transition">Go</button>
+    </div>
+    <p id="wheelEntryMessage" class="text-xs mt-2 hidden"></p>
+  </div>
+
+  <!-- WHEEL CARD -->
+  <div id="wheelCard" class="hidden">
+    <div class="wheel-stage mb-6">
+      <div class="wheel-pointer"></div>
+      <div id="wheelCanvas"></div>
+      <div class="wheel-hub">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#f7f3ec" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9 16.5 13.5 18.5 21 12 16.5 5.5 21 7.5 13.5 2 9 9 9 12 2"></polygon></svg>
+      </div>
+    </div>
+
+    <div id="wheelResultCard" class="hidden result-pop checkout-card bg-cream-50 border border-sand-200 shadow-sm text-center mb-4">
+      <p id="wheelResultHeadline" class="font-display text-2xl uppercase tracking-wide text-slate-800 mb-1"></p>
+      <p id="wheelResultSub" class="text-sm text-slate-500/70"></p>
+    </div>
+
+    <button type="button" id="wheelSpinBtn" class="w-full bg-sage-400 text-cream-50 font-bold uppercase text-sm tracking-widest py-4 rounded-full hover:bg-sage-500 active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 shadow-lg shadow-sage-400/30">
+      Spin The Wheel
+    </button>
+  </div>
+
+  <div id="wheelLoginNotice" class="hidden text-center text-sm text-slate-500/70 mt-6 checkout-card bg-cream-50 border border-sand-200">
+    Please <a href="/login?next=/wheel" class="font-bold underline text-slate-800">log in</a> to spin the wheel.
+  </div>
+</main>
+
+{% include "partials/_footer.html" %}
+
+{% include "partials/_mobile_bar.html" %}
+
+<script src="/static/wheel.js"></script>
+</body>
+</html>
+

@@ -37,6 +37,22 @@ const paymentNumberLabel = document.getElementById('paymentNumberLabel');
 const phoneInput = document.getElementById('phone');
 const phoneError = document.getElementById('phoneError');
 
+// Promo/wheel elements looked up here (alongside every other top-level
+// element const) rather than down near their own section, so
+// previewPromo() below can safely reference them however early it's
+// first called — no reliance on the await-yield timing of
+// loadOrderSummary() happening to run the rest of the script first.
+const promoCodeInput = document.getElementById('promo_code_input');
+const applyPromoBtn = document.getElementById('applyPromoBtn');
+const promoMessageEl = document.getElementById('promoMessage');
+const promoDiscountRow = document.getElementById('promoDiscountRow');
+const promoDiscountAmountEl = document.getElementById('promoDiscountAmount');
+const wheelPopupOverlay = document.getElementById('wheelPopupOverlay');
+const wheelPopupCanvas = document.getElementById('wheelPopupCanvas');
+const wheelPopupResult = document.getElementById('wheelPopupResult');
+const wheelPopupSpinBtn = document.getElementById('wheelPopupSpinBtn');
+const wheelPopupCloseBtn = document.getElementById('wheelPopupCloseBtn');
+
 const SHIPPING_FEES = { inside_dhaka: 70, outside_dhaka: 140, sub_city: 70 };
 let currentSubtotal = 0;
 
@@ -93,6 +109,11 @@ async function loadOrderSummary() {
 
     orderSubtotalEl.textContent = formatTaka(total_price);
     updateGrandTotal();
+
+    // Tier discounts (if any apply to items in the cart) need no code
+    // typed — check for one now that items are loaded. See "PROMO
+    // CODE" section below for previewPromo's definition.
+    previewPromo(null);
   } catch (err) {
     console.error('Failed to load cart summary:', err);
     window.location.href = '/cart';
@@ -339,4 +360,278 @@ fetch(`${API_BASE}/cart`)
 
 loadOrderSummary();
 hydrateIcons();
+
+
+
+/* ================= PROMO CODE ================= */
+// Talks to POST /api/promo/preview (routes/promo_route.py). Pure
+// read — never writes anything, so it's safe to call as often as
+// needed. The typed code is also carried in the hidden-by-name
+// #promo_code_input (name="promo_code") that FormData already picks
+// up on submit — see the "Card 1b" section of checkout.html — so no
+// change was needed to the submit handler itself.
+// (Element consts for this section live up top with the rest of the
+// page's element lookups — see const promoCodeInput etc. near line 45.)
+
+let appliedDiscountTotal = 0;
+
+function showPromoMessage(text, isError) {
+  promoMessageEl.textContent = text;
+  promoMessageEl.className = `text-xs mt-2 ${isError ? 'text-red-600' : 'text-sage-600'} font-semibold`;
+  promoMessageEl.classList.remove('hidden');
+}
+
+async function previewPromo(typedCode) {
+  try {
+    const res = await csrfFetch(`${API_BASE}/promo/preview`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ promo_code: typedCode || '' }),
+    });
+    const result = await res.json();
+
+    if (result.status !== 'success') {
+      appliedDiscountTotal = 0;
+      promoDiscountRow.classList.add('hidden');
+      if (typedCode) showPromoMessage(result.message || 'Invalid code.', true);
+      else promoMessageEl.classList.add('hidden');
+      // Even on error, refresh from the server's own subtotal (tier
+      // pricing may still apply automatically with no code).
+      currentSubtotal = result.data ? result.data.subtotal : currentSubtotal;
+      orderSubtotalEl.textContent = formatTaka(currentSubtotal);
+      updateGrandTotal();
+      return;
+    }
+
+    const { subtotal, discount_total, reason } = result.data;
+    currentSubtotal = subtotal;
+    appliedDiscountTotal = discount_total;
+
+    orderSubtotalEl.textContent = formatTaka(subtotal);
+    if (discount_total > 0) {
+      promoDiscountRow.classList.remove('hidden');
+      promoDiscountAmountEl.textContent = `−${formatTaka(discount_total)}`;
+    } else {
+      promoDiscountRow.classList.add('hidden');
+    }
+    if (reason) showPromoMessage(reason, false);
+    else promoMessageEl.classList.add('hidden');
+
+    updateGrandTotal();
+  } catch (err) {
+    console.error('Promo preview failed:', err);
+  }
+}
+
+if (applyPromoBtn) {
+  applyPromoBtn.addEventListener('click', () => {
+    const typed = promoCodeInput.value.trim();
+    if (!typed) return;
+
+    // A WHEEL code isn't a discount by itself — it opens the spin
+    // popup instead (mirrors promo_service.price_cart_items rejecting
+    // a wheel code as a direct discount).
+    if (typed.toUpperCase().startsWith('WHEEL-') || typed.toUpperCase().startsWith('WHEEL')) {
+      openWheelPopup(typed);
+      return;
+    }
+    previewPromo(typed);
+  });
+}
+
+// Re-check tier pricing (no code) once the cart summary has loaded —
+// wired directly into loadOrderSummary() above (see its final lines),
+// so it fires in the correct order relative to the page's own initial
+// loadOrderSummary() call.
+
+
+/* ================= WHEEL POPUP ================= */
+// Talks to GET /api/wheel/info and POST /api/wheel/spin. Login is
+// required server-side (api_login_required) — if the fetch comes back
+// 401, we tell the customer to log in rather than silently failing.
+// (Element consts live up top with the rest of the page's element
+// lookups — see const wheelPopupOverlay etc. near line 50.)
+
+let activeWheelCode = null;
+let checkoutWheelRotation = 0; // tracked across spins so rotation always adds forward
+
+/* Same palette as the standalone /wheel page (static/js/wheel.js) —
+   alternating warm/cool tones with per-slice text color for contrast,
+   rather than the old flat single-color-text-on-pastel look. */
+const CHECKOUT_WHEEL_PALETTE = [
+  { fill: '#8fae8b', text: '#f7f3ec' },
+  { fill: '#f4e7c9', text: '#33302b' },
+  { fill: '#6b8a86', text: '#f7f3ec' },
+  { fill: '#e3b98f', text: '#33302b' },
+  { fill: '#4f6b5c', text: '#f7f3ec' },
+  { fill: '#d9c2a8', text: '#33302b' },
+];
+
+function drawWheelSegments(container, segments) {
+  container.innerHTML = '';
+  const size = 260;
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
+  svg.id = 'wheelPopupSvg';
+  svg.style.transformOrigin = '50% 50%';
+  svg.style.transition = 'none';
+  svg.style.transform = `rotate(${checkoutWheelRotation}deg)`;
+
+  const cx = size / 2, cy = size / 2, r = size / 2 - 6;
+  const totalWeight = segments.reduce((s, seg) => s + Math.max(seg.weight, 0), 0) || 1;
+  let angleStart = -90; // 12 o'clock, under the pointer
+
+  segments.forEach((seg, i) => {
+    const sliceAngle = (Math.max(seg.weight, 0) / totalWeight) * 360;
+    const angleEnd = angleStart + sliceAngle;
+    const large = sliceAngle > 180 ? 1 : 0;
+    const colors = CHECKOUT_WHEEL_PALETTE[i % CHECKOUT_WHEEL_PALETTE.length];
+
+    const x1 = cx + r * Math.cos((Math.PI * angleStart) / 180);
+    const y1 = cy + r * Math.sin((Math.PI * angleStart) / 180);
+    const x2 = cx + r * Math.cos((Math.PI * angleEnd) / 180);
+    const y2 = cy + r * Math.sin((Math.PI * angleEnd) / 180);
+    const path = document.createElementNS(svgNS, 'path');
+    path.setAttribute('d', `M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} Z`);
+    path.setAttribute('fill', colors.fill);
+    path.setAttribute('stroke', '#f7f3ec');
+    path.setAttribute('stroke-width', '3');
+    svg.appendChild(path);
+
+    const midAngle = (angleStart + angleEnd) / 2;
+    const labelR = r * 0.62;
+    const lx = cx + labelR * Math.cos((Math.PI * midAngle) / 180);
+    const ly = cy + labelR * Math.sin((Math.PI * midAngle) / 180);
+    const text = document.createElementNS(svgNS, 'text');
+    text.setAttribute('x', lx);
+    text.setAttribute('y', ly);
+    text.setAttribute('font-size', sliceAngle < 35 ? '9' : '11');
+    text.setAttribute('font-weight', '800');
+    text.setAttribute('fill', colors.text);
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('dominant-baseline', 'middle');
+    text.setAttribute('transform', `rotate(${midAngle + 90}, ${lx}, ${ly})`);
+    text.textContent = seg.label;
+    svg.appendChild(text);
+
+    angleStart = angleEnd;
+  });
+
+  container.appendChild(svg);
+}
+
+async function openWheelPopup(rawCode) {
+  activeWheelCode = rawCode;
+  checkoutWheelRotation = 0;
+  wheelPopupResult.classList.add('hidden');
+  wheelPopupSpinBtn.disabled = false;
+  wheelPopupSpinBtn.classList.remove('hidden');
+  wheelPopupSpinBtn.textContent = 'Spin';
+  wheelPopupOverlay.classList.remove('hidden');
+
+  try {
+    const res = await fetch(`${API_BASE}/wheel/info?code=${encodeURIComponent(rawCode)}`);
+    if (res.status === 401) {
+      wheelPopupCanvas.innerHTML = '';
+      wheelPopupResult.textContent = 'Please log in to spin this wheel.';
+      wheelPopupResult.classList.remove('hidden');
+      wheelPopupSpinBtn.classList.add('hidden');
+      return;
+    }
+    const result = await res.json();
+    if (result.status !== 'success') {
+      wheelPopupCanvas.innerHTML = '';
+      wheelPopupResult.textContent = result.message || 'Invalid wheel code.';
+      wheelPopupResult.classList.remove('hidden');
+      wheelPopupSpinBtn.classList.add('hidden');
+      return;
+    }
+
+    const { segments, is_live, error, already_spun } = result.data;
+    if (!is_live) {
+      wheelPopupCanvas.innerHTML = '';
+      wheelPopupResult.textContent = error || 'This wheel is not available.';
+      wheelPopupResult.classList.remove('hidden');
+      wheelPopupSpinBtn.classList.add('hidden');
+      return;
+    }
+    if (!segments || segments.length === 0) {
+      wheelPopupCanvas.innerHTML = '';
+      wheelPopupResult.textContent = 'This wheel has no prizes set up yet.';
+      wheelPopupResult.classList.remove('hidden');
+      wheelPopupSpinBtn.classList.add('hidden');
+      return;
+    }
+    if (already_spun) {
+      wheelPopupResult.textContent = "You've already spun this wheel.";
+      wheelPopupResult.classList.remove('hidden');
+      wheelPopupSpinBtn.classList.add('hidden');
+    }
+    drawWheelSegments(wheelPopupCanvas, segments);
+  } catch (err) {
+    console.error('Wheel info failed:', err);
+  }
+}
+
+function closeWheelPopup() {
+  wheelPopupOverlay.classList.add('hidden');
+}
+
+if (wheelPopupCloseBtn) wheelPopupCloseBtn.addEventListener('click', closeWheelPopup);
+
+if (wheelPopupSpinBtn) {
+  wheelPopupSpinBtn.addEventListener('click', async () => {
+    if (!activeWheelCode) return;
+    wheelPopupSpinBtn.disabled = true;
+    wheelPopupSpinBtn.textContent = 'Spinning...';
+
+    try {
+      const res = await csrfFetch(`${API_BASE}/wheel/spin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: activeWheelCode }),
+      });
+      const result = await res.json();
+
+      if (result.status !== 'success') {
+        wheelPopupResult.textContent = result.message || 'Something went wrong.';
+        wheelPopupResult.classList.remove('hidden');
+        wheelPopupSpinBtn.classList.add('hidden');
+        return;
+      }
+
+      const { label, prize_code } = result.data;
+      // Real spin physics: several full rotations plus a random final
+      // angle, eased with a curve that decelerates hard at the end —
+      // the OUTCOME itself was already decided server-side before
+      // this animation starts, this is purely visual feedback.
+      const svg = document.getElementById('wheelPopupSvg');
+      const spins = 5 + Math.random() * 2;
+      const finalOffset = Math.random() * 360;
+      checkoutWheelRotation += spins * 360 + finalOffset;
+      if (svg) {
+        svg.style.transition = 'transform 4.2s cubic-bezier(0.11, 0.79, 0.12, 1)';
+        void svg.getBoundingClientRect();
+        svg.style.transform = `rotate(${checkoutWheelRotation}deg)`;
+      }
+
+      setTimeout(() => {
+        wheelPopupSpinBtn.classList.add('hidden');
+        if (prize_code) {
+          wheelPopupResult.innerHTML = `🎉 You won ${escapeHtml(label)}!<br>Code: <strong>${escapeHtml(prize_code)}</strong> (valid 24h)`;
+          promoCodeInput.value = prize_code;
+        } else {
+          wheelPopupResult.textContent = `Result: ${label}. Better luck on the next drop!`;
+        }
+        wheelPopupResult.classList.remove('hidden');
+      }, 4300);
+    } catch (err) {
+      wheelPopupResult.textContent = 'Connection error. Please try again.';
+      wheelPopupResult.classList.remove('hidden');
+      wheelPopupSpinBtn.disabled = false;
+      wheelPopupSpinBtn.textContent = 'Spin';
+    }
+  });
+}
 

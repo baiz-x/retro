@@ -71,12 +71,21 @@ def checkout():
         if not is_valid:
             return jsonify({'status': 'error', 'message': error_message, 'out_of_stock': out_of_stock}), 400
 
+        # Optional: raw code typed into the checkout promo box (see
+        # checkout.js). Blank/absent is fine — tier promos still
+        # auto-apply inside create_order_from_cart with no code at all.
+        promo_code = (data.get('promo_code') or '').strip() or None
+
         # The service internally validates shipping zone + payment
         # method, copies selected_variants/customization from CartItem
-        # to OrderItem, and clears either the whole cart or just the
-        # one targeted line (when cart_item_id is given) as part of
-        # the same transaction.
-        order, error = create_order_from_cart(user_id, guest_id, data, cart_item_id=cart_item_id)
+        # to OrderItem, prices every line via promo_service (tier
+        # auto-apply, or the typed promo_code replacing it — see
+        # services/promo_service.py), and clears either the whole cart
+        # or just the one targeted line (when cart_item_id is given) as
+        # part of the same transaction.
+        order, error = create_order_from_cart(
+            user_id, guest_id, data, cart_item_id=cart_item_id, promo_code=promo_code
+        )
         if error:
             return jsonify({'status': 'error', 'message': error}), 400
 

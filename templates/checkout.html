@@ -63,6 +63,50 @@
       </div>
     </div>
 
+    <!-- ============ CARD 1b — PROMO CODE ============
+         Typing a code here REPLACES any auto-applied tier discount
+         for the whole cart (confirmed rule — see promo_service.py's
+         module docstring). Tier pricing, if any, is already folded
+         into the subtotal shown above with no code needed. A WHEEL
+         code typed here opens the spin popup instead of discounting
+         anything directly. -->
+    <div class="checkout-card bg-cream-50 border border-sand-200 shadow-sm">
+      <h2 class="text-[11px] font-bold uppercase tracking-widest text-slate-500/70 mb-4">Promo Code</h2>
+      <div class="flex gap-2">
+        <input type="text" id="promo_code_input" name="promo_code" class="checkout-input flex-1 uppercase" placeholder="Enter code" autocomplete="off" />
+        <button type="button" id="applyPromoBtn" class="shrink-0 bg-slate-800 text-cream-50 font-bold uppercase text-xs tracking-widest px-5 rounded-full hover:bg-slate-700 transition-colors">Apply</button>
+      </div>
+      <p id="promoMessage" class="text-xs mt-2 hidden"></p>
+      <div id="promoDiscountRow" class="summary-total-row mt-2 hidden">
+        <span class="text-sm text-sage-600 font-semibold">Discount</span>
+        <strong id="promoDiscountAmount" class="text-lg text-sage-600">−৳0</strong>
+      </div>
+    </div>
+
+    <!-- WHEEL POPUP — shown in place when a WHEEL-code is typed above,
+         instead of the discount row. Renders and spins the same way
+         as the standalone /wheel page — see the "WHEEL POPUP" section
+         near the bottom of checkout.js. -->
+    <style>
+      #wheelPopupStage { position: relative; width: min(260px, 70vw); aspect-ratio: 1; margin: 0 auto; }
+      #wheelPopupStage svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 8px 18px rgba(51,48,43,0.18)); }
+      #wheelPopupPointer { position: absolute; top: -5px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 11px solid transparent; border-right: 11px solid transparent; border-top: 19px solid #33302b; z-index: 5; }
+      #wheelPopupHub { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 20%; height: 20%; border-radius: 999px; background: #33302b; border: 3px solid #f7f3ec; z-index: 4; }
+    </style>
+    <div id="wheelPopupOverlay" class="hidden fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4">
+      <div class="bg-cream-50 rounded-2xl p-6 max-w-xs w-full text-center shadow-xl">
+        <h3 class="font-display text-2xl uppercase tracking-wide text-slate-800 mb-4">Spin To Win</h3>
+        <div id="wheelPopupStage" class="mb-4">
+          <div id="wheelPopupPointer"></div>
+          <div id="wheelPopupCanvas"></div>
+          <div id="wheelPopupHub"></div>
+        </div>
+        <p id="wheelPopupResult" class="text-sm font-semibold text-slate-800 mb-4 hidden"></p>
+        <button type="button" id="wheelPopupSpinBtn" class="w-full bg-sage-400 text-cream-50 font-bold uppercase text-xs tracking-widest py-3 rounded-full hover:bg-sage-500 active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed">Spin</button>
+        <button type="button" id="wheelPopupCloseBtn" class="w-full mt-2 text-xs text-slate-500 uppercase tracking-widest font-bold py-2">Close</button>
+      </div>
+    </div>
+
     <!-- ============ CARD 2 — SHIPPING ZONE ============
          Rebuilt to use .payment-method-row's 3-column grid (stacks
          full-width on mobile, opens to 3 equal columns at 768px+)
@@ -261,6 +305,7 @@
 <script src="/static/checkout.js"></script>
 </body>
 </html>
+
 
 
 

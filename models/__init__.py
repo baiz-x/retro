@@ -14,6 +14,7 @@ from .wholesale import Wholesale, create_wholesale_row_for_new_product
 from .expense import Expense
 from .guest_order_link import GuestOrderLink
 from .fulfillment_checkoff import FulfillmentCheckoff
+from .promo import Promo, PromoProduct, PromoRedemption, WheelSegment, WheelSpin
 
 # Registered here (not inside wholesale.py) so both Product and
 # Wholesale are already fully imported above — avoids a circular
@@ -25,5 +26,5 @@ from .fulfillment_checkoff import FulfillmentCheckoff
 event.listen(Product, "after_insert", create_wholesale_row_for_new_product)
 
 # Optional: create a list of all models (useful if you want to dynamically create tables)
-__all__ = ["Product", "Order", "OrderStatus", "OrderItem", "CartItem", "User", "Wholesale", "Expense", "GuestOrderLink", "FulfillmentCheckoff"]
+__all__ = ["Product", "Order", "OrderStatus", "OrderItem", "CartItem", "User", "Wholesale", "Expense", "GuestOrderLink", "FulfillmentCheckoff", "Promo", "PromoProduct", "PromoRedemption", "WheelSegment", "WheelSpin"]
 

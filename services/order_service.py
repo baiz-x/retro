@@ -3,6 +3,7 @@ from datetime import datetime
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 from models import db, CartItem, Product, Order, OrderItem
+from services import promo_service
 
 # Authoritative shipping fee per zone. Stored on the Order row at
 # creation time (Order.shipping_fee) rather than recomputed later, so
@@ -212,7 +213,7 @@ def reduce_stock_logic(cart_items):
             raise ValueError(f"Stock reduction failed for {product.name}: {message}")
 
 
-def create_order_from_cart(user_id, guest_id, customer_data, cart_item_id=None):
+def create_order_from_cart(user_id, guest_id, customer_data, cart_item_id=None, promo_code=None):
     """
     Creates an order from the caller's cart (identified by user_id XOR
     guest_id — exactly one is non-None, same convention as
@@ -226,6 +227,14 @@ def create_order_from_cart(user_id, guest_id, customer_data, cart_item_id=None):
     that one cart line instead of the caller's whole cart, and only
     that line is removed afterward — the rest of the cart is left
     untouched. Used for /checkout?item=<id> single-line checkout.
+
+    promo_code: optional, raw string typed by the customer at checkout.
+    When None/blank, tier promos still auto-apply (see promo_service.
+    price_cart_items) — that needs no code and works for guests too.
+    When present, it REPLACES tier pricing for the whole cart and is
+    validated + redeemed inside this same transaction, so a promo can
+    never desync from the order it discounted (see promo_service.
+    redeem_promo_in_txn, called just before commit below).
     """
     try:
         shipping_zone = customer_data.get('shipping_zone')
@@ -278,8 +287,26 @@ def create_order_from_cart(user_id, guest_id, customer_data, cart_item_id=None):
             current_app.logger.warning(f"Order failed stock check: {stock_err}")
             return None, stock_err
 
-        subtotal = sum(item.price * item.quantity for item in cart_items)
+        # ---- Promo pricing (see services/promo_service.py) ----
+        # price_cart_items NEVER touches CartItem.price — it returns a
+        # fresh list of per-line discounted unit prices computed from
+        # each product's own stored price, so an expired/edited promo
+        # can never leave a stale discount sitting in someone's cart.
+        # With no promo_code typed, this is also where tier promos
+        # auto-apply (works for guests — no login required for tier).
+        pricing = promo_service.price_cart_items(cart_items, typed_code=promo_code, user_id=user_id)
+        if promo_code and pricing["error"]:
+            current_app.logger.warning(f"Order failed: promo error: {pricing['error']}")
+            return None, pricing["error"]
+
+        # unit price per cart_item.id, so the OrderItem loop below can
+        # look discounted prices up by identity without re-deriving them.
+        priced_by_item_id = {line["cart_item"].id: line["unit_price"] for line in pricing["lines"]}
+
+        subtotal = sum(priced_by_item_id[item.id] * item.quantity for item in cart_items)
         total_price = recompute_total(subtotal, shipping_fee, payment_type)
+
+        applied_promo = pricing["applied_promo"]
 
         new_order = Order(
             order_id=generate_order_id(),
@@ -297,6 +324,8 @@ def create_order_from_cart(user_id, guest_id, customer_data, cart_item_id=None):
             transaction_id=transaction_id,
             subtotal=subtotal,
             total=total_price,
+            promo_code=applied_promo.code if applied_promo else None,
+            discount_amount=pricing["discount_total"],
             status='Pending'
         )
         db.session.add(new_order)
@@ -308,13 +337,32 @@ def create_order_from_cart(user_id, guest_id, customer_data, cart_item_id=None):
                 product_id=item.product_id,
                 product_name=item.product.name,
                 quantity=item.quantity,
-                price=item.price,
+                price=priced_by_item_id[item.id],
                 selected_variants=item.selected_variants,
                 # Jersey (or other) print request, copied as-is from the
                 # cart line — see models/cart_item.py.
                 customization=item.customization,
             )
             db.session.add(order_item)
+
+        # Redeem the typed promo INSIDE this same transaction, after
+        # every order row is staged but before commit — see
+        # promo_service.redeem_promo_in_txn's docstring for why this
+        # ordering is what makes "first click on order wins" hold up
+        # under two simultaneous checkouts (row lock + unique
+        # constraint, not a check-then-write race).
+        if applied_promo:
+            try:
+                promo_service.redeem_promo_in_txn(
+                    promo_id=applied_promo.id,
+                    user_id=user_id,
+                    order_id=new_order.id,
+                    discount_applied=pricing["discount_total"],
+                )
+            except ValueError as promo_err:
+                db.session.rollback()
+                current_app.logger.warning(f"Order failed: promo redemption: {promo_err}")
+                return None, str(promo_err)
 
         reduce_stock_logic(cart_items)
 

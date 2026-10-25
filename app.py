@@ -35,6 +35,7 @@ from routes.wholesale_route import wholesale_bp
 from routes.expense_route import expense_bp
 from routes.guest_order_link_route import guest_link_bp
 from routes.fulfillment_route import fulfillment_bp
+from routes.promo_route import promo_bp
 
 app.register_blueprint(admin_bp)
 app.register_blueprint(product_bp)
@@ -45,6 +46,7 @@ app.register_blueprint(wholesale_bp)
 app.register_blueprint(expense_bp)
 app.register_blueprint(guest_link_bp)
 app.register_blueprint(fulfillment_bp)
+app.register_blueprint(promo_bp)
 
 # ---------- Routes ----------
 
@@ -119,6 +121,14 @@ def cart():
 @app.route("/checkout")
 def checkout():
     return render_template("checkout.html")
+
+@app.route("/wheel")
+def wheel_page():
+    return render_template("wheel.html")
+
+@app.route("/airdrop")
+def airdrop_page():
+    return render_template("airdrop.html")
 
 @app.route("/login")
 def login_page():

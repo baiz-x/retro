@@ -57,8 +57,34 @@ document.addEventListener("DOMContentLoaded", () => {
     setupExpenseListeners();
     setupGuestLinkListeners();
     setupExpenseFromProductListeners();
+    setupPromoListeners();
+    setupAirdropListeners();
+    sizeBottomNavSpacer();
     refreshData();
 });
+
+/* Fix: the fixed bottom nav was hiding content in every tab because
+   the old fixed "pb-24" padding on <main> didn't match the nav's real
+   height (confirmed: the nav's "pb-safe" class has no matching CSS
+   rule anywhere, so it added no safe-area padding, and could be taller
+   on some phones than 24 * 4px = 96px anyway). This measures the
+   actual rendered nav and sizes the end-of-page spacer (see
+   #bottom-nav-spacer in dashboard.html, inside <main>, after every
+   tab section) to match exactly, so any tab can scroll its very last
+   line of content into full view above the nav. */
+function sizeBottomNavSpacer() {
+    const nav = document.querySelector('nav.fixed.bottom-0');
+    const spacer = document.getElementById('bottom-nav-spacer');
+    if (!nav || !spacer) return;
+    const BUFFER_PX = 16; // small breathing room past the nav's exact edge
+    spacer.style.height = `${nav.getBoundingClientRect().height + BUFFER_PX}px`;
+}
+
+// Mobile browser chrome (address bar show/hide) and orientation
+// changes both change the nav's rendered height (safe-area insets in
+// particular), so re-measure on both rather than only once at load.
+window.addEventListener('resize', sizeBottomNavSpacer);
+window.addEventListener('orientationchange', sizeBottomNavSpacer);
 
 // Reads the CSRF token from the hidden input rendered in the form
 // (name="csrf_token"). Used for JSON fetch() calls, which — unlike
@@ -202,6 +228,7 @@ function switchTab(tabId, btnElement) {
     if (tabId === 'wholesale') fetchWholesale();
     if (tabId === 'expenses') fetchExpenses();
     if (tabId === 'fulfill') fetchFulfillment();
+    if (tabId === 'campaigns') { fetchPromos(); fetchProductsForPicker(); }
 }
 
 /* ================= TOAST NOTIFICATIONS ================= */
@@ -707,11 +734,10 @@ function renderOrders() {
         const card = document.createElement('div');
         card.className = "dash-order-card bg-white rounded-xl border border-navy/10 shadow-sm overflow-hidden";
         card.innerHTML = `
-            <button type="button" class="dash-order-toggle w-full flex justify-between items-start p-5 text-left" data-order-id="${order.order_id}" aria-expanded="false">
+            <button type="button" class="dash-order-toggle w-full flex justify-between items-start p-3 text-left" data-order-id="${order.order_id}" aria-expanded="false">
                 <div>
-                    <h3 class="font-bold text-sm text-navy uppercase tracking-wider">${escapeHtml(order.customer_name)}</h3>
-                    <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">ID: ${order.order_id}</p>
-                    <p class="text-[10px] text-gray-500 font-black mt-1">৳${(order.total || 0).toFixed(2)}</p>
+                    <h3 class="font-bold text-sm text-navy uppercase tracking-wider leading-tight">${escapeHtml(order.customer_name)}</h3>
+                    <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-tight">ID: ${order.order_id} · ৳${(order.total || 0).toFixed(2)}</p>
                 </div>
                 <div class="flex items-center gap-2">
                     <span class="px-3 py-1 bg-navy text-gold text-[9px] font-bold rounded uppercase tracking-widest">${order.status}</span>
@@ -969,11 +995,11 @@ function renderWholesale() {
         const card = document.createElement('div');
         card.className = "wholesale-row-card bg-white rounded-xl border border-navy/10 shadow-sm overflow-hidden";
         card.innerHTML = `
-            <button type="button" class="wholesale-row-toggle w-full flex items-center gap-3 p-4 text-left" data-product-id="${row.product_id}" aria-expanded="false">
-                <img src="${escapeHtml(row.product_image || '')}" class="w-12 h-12 rounded-lg object-cover bg-gray-100 shrink-0" onerror="this.style.visibility='hidden'">
+            <button type="button" class="wholesale-row-toggle w-full flex items-center gap-3 p-3 text-left" data-product-id="${row.product_id}" aria-expanded="false">
+                <img src="${escapeHtml(row.product_image || '')}" class="w-10 h-10 rounded-lg object-cover bg-gray-100 shrink-0" onerror="this.style.visibility='hidden'">
                 <div class="min-w-0 flex-1">
-                    <h3 class="font-bold text-sm text-navy uppercase tracking-wider truncate">${escapeHtml(row.product_name || 'Untitled Product')}</h3>
-                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Product #${row.product_id} · Profit: <span class="text-navy">${row.profit != null ? '৳' + row.profit.toFixed(2) : '—'}</span></p>
+                    <h3 class="font-bold text-sm text-navy uppercase tracking-wider truncate leading-tight">${escapeHtml(row.product_name || 'Untitled Product')}</h3>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-tight">#${row.product_id} · Profit: <span class="text-navy">${row.profit != null ? '৳' + row.profit.toFixed(2) : '—'}</span></p>
                 </div>
                 <svg class="wholesale-row-chevron w-3.5 h-3.5 text-navy/40 shrink-0 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="9 6 15 12 9 18"></polyline></svg>
             </button>
@@ -1086,7 +1112,7 @@ function renderExpenses() {
         card.className = "bg-white p-4 rounded-xl border border-navy/10 shadow-sm flex items-center gap-3";
         card.innerHTML = `
             ${expense.receipt_image
-                ? `<img src="${escapeHtml(expense.receipt_image)}" class="w-12 h-12 rounded-lg object-cover bg-gray-100 shrink-0">`
+                ? `<img src="${escapeHtml(expense.receipt_image)}" data-receipt-view="${escapeHtml(expense.receipt_image)}" class="expense-receipt-thumb w-12 h-12 rounded-lg object-cover bg-gray-100 shrink-0 cursor-pointer" title="Tap to view full receipt">`
                 : `<div class="w-12 h-12 rounded-lg bg-gray-100 shrink-0 flex items-center justify-center text-gray-300"><i class="fa-solid fa-receipt"></i></div>`
             }
             <div class="flex-1 min-w-0">
@@ -1110,6 +1136,27 @@ function renderExpenses() {
     document.querySelectorAll('.expense-delete-btn').forEach(btn => {
         btn.addEventListener('click', (e) => deleteExpense(e.currentTarget.dataset.expenseId));
     });
+    // Fix: the 48px thumbnail previously had no way to view the
+    // full-size receipt — "I can upload it but I can't see it"
+    // (confirmed bug). Tapping it now opens a full-screen lightbox.
+    document.querySelectorAll('.expense-receipt-thumb').forEach(img => {
+        img.addEventListener('click', (e) => openReceiptLightbox(e.currentTarget.dataset.receiptView));
+    });
+}
+
+function openReceiptLightbox(imageUrl) {
+    if (!imageUrl) return;
+    let overlay = document.getElementById('receipt-lightbox-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'receipt-lightbox-overlay';
+        overlay.className = 'fixed inset-0 bg-black/80 z-[80] flex items-center justify-center p-4 cursor-pointer';
+        overlay.innerHTML = `<img id="receipt-lightbox-img" class="max-w-full max-h-full rounded-lg" src="">`;
+        overlay.addEventListener('click', () => overlay.classList.add('hidden'));
+        document.body.appendChild(overlay);
+    }
+    document.getElementById('receipt-lightbox-img').src = imageUrl;
+    overlay.classList.remove('hidden');
 }
 
 function openExpenseModal(expenseId) {
@@ -1119,6 +1166,8 @@ function openExpenseModal(expenseId) {
     const descInput = document.getElementById('expense-description');
     const amountInput = document.getElementById('expense-amount');
     const receiptInput = document.getElementById('expense-receipt');
+    const receiptPreview = document.getElementById('expense-receipt-preview');
+    const receiptPreviewImg = document.getElementById('expense-receipt-preview-img');
     if (!modal) return;
 
     if (expenseId) {
@@ -1128,12 +1177,22 @@ function openExpenseModal(expenseId) {
             dateInput.value = expense.date;
             descInput.value = expense.description;
             amountInput.value = expense.amount;
+            // Fix: editing an expense with an existing receipt showed
+            // no indication one was already uploaded (confirmed gap).
+            if (expense.receipt_image) {
+                receiptPreviewImg.src = expense.receipt_image;
+                receiptPreviewImg.onclick = () => openReceiptLightbox(expense.receipt_image);
+                receiptPreview.classList.remove('hidden');
+            } else {
+                receiptPreview.classList.add('hidden');
+            }
         }
     } else {
         idInput.value = '';
         dateInput.value = new Date().toISOString().slice(0, 10);
         descInput.value = '';
         amountInput.value = '';
+        receiptPreview.classList.add('hidden');
     }
     receiptInput.value = '';
     modal.classList.remove('hidden');
@@ -1247,11 +1306,11 @@ function renderFulfillment() {
         const card = document.createElement('div');
         card.className = "fulfill-product-card bg-white rounded-xl border border-navy/10 shadow-sm overflow-hidden";
         card.innerHTML = `
-            <button type="button" class="fulfill-product-toggle w-full flex items-center gap-3 p-4 text-left" data-product-id="${entry.product_id}" aria-expanded="false">
-                <img src="${escapeHtml(entry.product_image || '')}" class="w-12 h-12 rounded-lg object-cover bg-gray-100 shrink-0" onerror="this.style.visibility='hidden'">
+            <button type="button" class="fulfill-product-toggle w-full flex items-center gap-3 p-3 text-left" data-product-id="${entry.product_id}" aria-expanded="false">
+                <img src="${escapeHtml(entry.product_image || '')}" class="w-10 h-10 rounded-lg object-cover bg-gray-100 shrink-0" onerror="this.style.visibility='hidden'">
                 <div class="min-w-0 flex-1">
-                    <h3 class="font-bold text-sm text-navy uppercase tracking-wider truncate">${escapeHtml(entry.product_name || 'Untitled Product')}</h3>
-                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Sold ${entry.total_remaining}</p>
+                    <h3 class="font-bold text-sm text-navy uppercase tracking-wider truncate leading-tight">${escapeHtml(entry.product_name || 'Untitled Product')}</h3>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-tight">Sold ${entry.total_remaining}</p>
                 </div>
                 <svg class="fulfill-chevron w-3.5 h-3.5 text-navy/40 shrink-0 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="9 6 15 12 9 18"></polyline></svg>
             </button>
@@ -1596,5 +1655,397 @@ function setupExpenseFromProductListeners() {
             showToast(`Error: ${err.message}`, false);
         }
     });
+}
+
+
+
+/* ================= TAB 8: CAMPAIGNS ================= */
+// Talks to routes/promo_route.py. All pricing/validation logic lives
+// server-side in services/promo_service.py — this file only renders
+// state and posts what the admin picked in the form.
+
+let allPromos = [];
+let allProductsForPicker = [];
+let wheelSegmentCount = 0;
+
+async function fetchPromos() {
+    try {
+        const res = await fetch('/api/admin/promos');
+        const result = await res.json();
+        if (result.status === 'success') {
+            allPromos = result.data || [];
+            renderPromos();
+        }
+    } catch (err) {
+        console.error("Failed to fetch promos:", err);
+    }
+}
+
+async function fetchProductsForPicker() {
+    if (allProductsForPicker.length) return; // fetched once per page load is enough
+    try {
+        const res = await fetch('/api/admin/products/minimal');
+        const result = await res.json();
+        if (result.status === 'success') {
+            allProductsForPicker = result.data || [];
+        }
+    } catch (err) {
+        console.error("Failed to fetch products for picker:", err);
+    }
+}
+
+function promoTypeLabel(type) {
+    if (type === 'tier') return 'Tier';
+    if (type === 'percent') return 'Percent';
+    if (type === 'wheel') return 'Wheel';
+    return type;
+}
+
+function promoStatusBadge(promo) {
+    const now = new Date();
+    if (!promo.is_active) return { text: 'Paused', cls: 'bg-gray-200 text-gray-500' };
+    if (promo.expires_at && new Date(promo.expires_at) <= now) return { text: 'Expired', cls: 'bg-gray-200 text-gray-500' };
+    if (promo.starts_at && new Date(promo.starts_at) > now) return { text: 'Scheduled', cls: 'bg-amber-100 text-amber-700' };
+    if (promo.usage_mode === 'single_use' && promo.redeemed_at) return { text: 'Used', cls: 'bg-gray-200 text-gray-500' };
+    return { text: 'Live', cls: 'bg-green-100 text-green-700' };
+}
+
+function renderPromos() {
+    const container = document.getElementById('promos-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (allPromos.length === 0) {
+        container.innerHTML = `<p class="text-[10px] uppercase font-bold text-gray-400 tracking-widest text-center mt-10">No Campaigns Yet</p>`;
+        return;
+    }
+
+    allPromos.forEach(promo => {
+        const badge = promoStatusBadge(promo);
+        let detail = '';
+        if (promo.promo_type === 'tier') {
+            detail = `Ladder: ৳${escapeHtml(promo.discount_amount || '')}`;
+        } else if (promo.promo_type === 'percent') {
+            detail = `${escapeHtml(promo.discount_amount || '0')}% off`;
+        } else if (promo.promo_type === 'wheel') {
+            detail = `${(promo.segments || []).length} segments`;
+        }
+        const scope = promo.applies_to_all ? 'All products' : `${(promo.product_ids || []).length} product(s)`;
+
+        const card = document.createElement('div');
+        card.className = "bg-white p-4 rounded-xl border border-navy/10 shadow-sm";
+        card.innerHTML = `
+            <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <p class="font-black text-sm text-navy tracking-widest">${escapeHtml(promo.code)}</p>
+                        <span class="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${badge.cls}">${badge.text}</span>
+                        <span class="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-navy/5 text-navy/60">${promoTypeLabel(promo.promo_type)}</span>
+                    </div>
+                    <p class="text-[10px] text-navy/50 font-bold uppercase tracking-widest mt-1">${detail} · ${scope}</p>
+                    <p class="text-[9px] text-navy/40 mt-1">
+                        ${promo.usage_mode === 'single_use' ? 'Single-use' : 'Reusable'}
+                        ${promo.expires_at ? ` · Expires ${new Date(promo.expires_at).toLocaleString()}` : ''}
+                    </p>
+                </div>
+                <div class="flex gap-2 shrink-0">
+                    <button data-promo-id="${promo.id}" class="promo-edit-btn text-[9px] uppercase font-bold text-navy/50 tracking-widest">Edit</button>
+                    <button data-promo-id="${promo.id}" class="promo-delete-btn text-[9px] uppercase font-bold text-red-500 tracking-widest">Delete</button>
+                </div>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+
+    document.querySelectorAll('.promo-edit-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => openPromoModal(e.currentTarget.dataset.promoId));
+    });
+    document.querySelectorAll('.promo-delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => deletePromo(e.currentTarget.dataset.promoId));
+    });
+}
+
+function renderProductPicker(containerId, selectedIds) {
+    const picker = document.getElementById(containerId);
+    if (!picker) return;
+    picker.innerHTML = '';
+    if (allProductsForPicker.length === 0) {
+        picker.innerHTML = `<p class="text-[9px] text-navy/40 uppercase font-bold tracking-widest p-2">No products found</p>`;
+        return;
+    }
+    allProductsForPicker.forEach(p => {
+        const checked = (selectedIds || []).includes(p.id) ? 'checked' : '';
+        const row = document.createElement('label');
+        row.className = "flex items-center gap-2 text-xs text-navy py-1 px-1 cursor-pointer hover:bg-gray-50 rounded";
+        row.innerHTML = `
+            <input type="checkbox" class="promo-product-cb rounded" value="${p.id}" ${checked}>
+            <span class="flex-1 truncate">${escapeHtml(p.name)}</span>
+            <span class="text-navy/40 text-[10px]">৳${(p.price || 0).toFixed(0)}</span>
+        `;
+        picker.appendChild(row);
+    });
+}
+
+/* ---- Wheel segment rows (dynamic add/remove inside the promo modal) ---- */
+
+function addWheelSegmentRow(label = '', percent = '', weight = '') {
+    const wrap = document.getElementById('promo-wheel-segments');
+    if (!wrap) return;
+    const rowId = `wheel-seg-${wheelSegmentCount++}`;
+    const row = document.createElement('div');
+    row.className = "flex gap-2 items-center";
+    row.dataset.rowId = rowId;
+    row.innerHTML = `
+        <input type="text" placeholder="Label (e.g. 10% OFF)" value="${escapeHtml(label)}" class="wheel-seg-label flex-1 border border-navy/20 rounded-lg p-2 text-xs outline-none focus:border-gold">
+        <input type="number" placeholder="%" step="0.01" min="0" max="100" value="${percent}" class="wheel-seg-percent w-16 border border-navy/20 rounded-lg p-2 text-xs outline-none focus:border-gold">
+        <input type="number" placeholder="Weight" step="0.1" min="0" value="${weight}" class="wheel-seg-weight w-16 border border-navy/20 rounded-lg p-2 text-xs outline-none focus:border-gold">
+        <button type="button" class="wheel-seg-remove text-red-500 text-xs px-1">✕</button>
+    `;
+    row.querySelector('.wheel-seg-remove').addEventListener('click', () => row.remove());
+    wrap.appendChild(row);
+}
+
+function collectWheelSegments() {
+    return Array.from(document.querySelectorAll('#promo-wheel-segments > div')).map(row => ({
+        label: row.querySelector('.wheel-seg-label').value.trim(),
+        discount_percent: parseFloat(row.querySelector('.wheel-seg-percent').value) || 0,
+        weight: parseFloat(row.querySelector('.wheel-seg-weight').value) || 0,
+    })).filter(s => s.label);
+}
+
+/* ---- Type-dependent field visibility ---- */
+
+function updatePromoTypeFields() {
+    const type = document.getElementById('promo-type').value;
+    document.getElementById('promo-tier-fields').classList.toggle('hidden', type !== 'tier');
+    document.getElementById('promo-percent-fields').classList.toggle('hidden', type !== 'percent');
+    document.getElementById('promo-wheel-fields').classList.toggle('hidden', type !== 'wheel');
+    // Usage mode genuinely doesn't apply to wheel promos (each spin
+    // mints its own single-use prize code — see promo_service.spin_wheel),
+    // but the product scope DOES apply to every type including wheel:
+    // it decides which products a wheel's prize codes are allowed to
+    // discount. (Previously this wrapper was also hidden for wheel —
+    // that was the bug: a wheel promo could never get product_ids
+    // attached from this form, so its prize codes fell back to
+    // whatever applies_to_all defaulted to, and a scoped cart would
+    // reject them with "doesn't apply to your added products".)
+    document.getElementById('promo-usage-mode-wrap').classList.toggle('hidden', type === 'wheel');
+}
+
+/* ---- Modal open/close ---- */
+
+function openPromoModal(promoId) {
+    const modal = document.getElementById('promo-modal');
+    const title = document.getElementById('promo-modal-title');
+    if (!modal) return;
+
+    document.getElementById('promo-form').reset();
+    document.getElementById('promo-wheel-segments').innerHTML = '';
+    wheelSegmentCount = 0;
+
+    if (promoId) {
+        const promo = allPromos.find(p => p.id == promoId);
+        if (!promo) return;
+        title.textContent = 'Edit Campaign';
+        document.getElementById('promo-id').value = promo.id;
+        document.getElementById('promo-code').value = promo.code;
+        document.getElementById('promo-type').value = promo.promo_type;
+        document.getElementById('promo-usage-mode').value = promo.usage_mode;
+        document.getElementById('promo-applies-all').checked = !!promo.applies_to_all;
+        document.getElementById('promo-is-active').checked = !!promo.is_active;
+        document.getElementById('promo-starts-at').value = promo.starts_at ? promo.starts_at.slice(0, 16) : '';
+        document.getElementById('promo-expires-at').value = promo.expires_at ? promo.expires_at.slice(0, 16) : '';
+        // Code is the lookup key everywhere (cart, orders, redemptions)
+        // — changing it on an existing promo would silently orphan
+        // history, so it's locked to edit-create-new instead.
+        document.getElementById('promo-code').disabled = true;
+
+        if (promo.promo_type === 'tier') {
+            const ladder = (promo.discount_amount || '').split(',').map(s => s.trim());
+            document.getElementById('promo-tier-1').value = ladder[0] || '';
+            document.getElementById('promo-tier-2').value = ladder[1] || '';
+            document.getElementById('promo-tier-3').value = ladder[2] || '';
+        } else if (promo.promo_type === 'percent') {
+            document.getElementById('promo-percent-value').value = promo.discount_amount || '';
+        } else if (promo.promo_type === 'wheel') {
+            (promo.segments || []).forEach(s => addWheelSegmentRow(s.label, s.discount_percent, s.weight));
+        }
+
+        renderProductPicker('promo-products-picker', promo.product_ids || []);
+    } else {
+        title.textContent = 'New Campaign';
+        document.getElementById('promo-id').value = '';
+        document.getElementById('promo-code').disabled = false;
+        document.getElementById('promo-type').value = 'tier';
+        addWheelSegmentRow();
+        renderProductPicker('promo-products-picker', []);
+    }
+
+    updatePromoTypeFields();
+    modal.classList.remove('hidden');
+}
+
+function closePromoModal() {
+    document.getElementById('promo-modal')?.classList.add('hidden');
+}
+
+async function deletePromo(promoId) {
+    if (!confirm('Delete this campaign? Any wheel prize codes it issued will be deleted too.')) return;
+    try {
+        const res = await fetch(`/api/admin/promos/${promoId}`, {
+            method: 'DELETE',
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        });
+        const data = await res.json();
+        if (res.ok && data.status === 'success') {
+            showToast('Campaign deleted', true);
+            fetchPromos();
+        } else {
+            showToast(`Failed to delete: ${data.message}`, false);
+        }
+    } catch (err) {
+        showToast(`Error: ${err.message}`, false);
+    }
+}
+
+function setupPromoListeners() {
+    const addBtn = document.getElementById('add-promo-btn');
+    const cancelBtn = document.getElementById('promo-cancel-btn');
+    const form = document.getElementById('promo-form');
+    const typeSelect = document.getElementById('promo-type');
+    const addSegmentBtn = document.getElementById('promo-wheel-add-segment');
+    const appliesAllCb = document.getElementById('promo-applies-all');
+
+    if (addBtn) addBtn.addEventListener('click', () => openPromoModal(null));
+    if (cancelBtn) cancelBtn.addEventListener('click', closePromoModal);
+    if (typeSelect) typeSelect.addEventListener('change', updatePromoTypeFields);
+    if (addSegmentBtn) addSegmentBtn.addEventListener('click', () => addWheelSegmentRow());
+    if (appliesAllCb) {
+        appliesAllCb.addEventListener('change', () => {
+            document.getElementById('promo-products-picker').classList.toggle('hidden', appliesAllCb.checked);
+        });
+    }
+
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const promoId = document.getElementById('promo-id').value;
+            const type = document.getElementById('promo-type').value;
+            const appliesAll = document.getElementById('promo-applies-all').checked;
+
+            let discountAmount = null;
+            if (type === 'tier') {
+                const t1 = document.getElementById('promo-tier-1').value;
+                const t2 = document.getElementById('promo-tier-2').value;
+                const t3 = document.getElementById('promo-tier-3').value;
+                discountAmount = [t1, t2, t3].filter(v => v !== '').join(',');
+            } else if (type === 'percent') {
+                discountAmount = document.getElementById('promo-percent-value').value;
+            }
+
+            const payload = {
+                code: document.getElementById('promo-code').value.trim().toUpperCase(),
+                promo_type: type,
+                usage_mode: document.getElementById('promo-usage-mode').value,
+                discount_amount: discountAmount,
+                applies_to_all: appliesAll,
+                is_active: document.getElementById('promo-is-active').checked,
+                starts_at: document.getElementById('promo-starts-at').value || null,
+                expires_at: document.getElementById('promo-expires-at').value || null,
+                product_ids: appliesAll ? [] : Array.from(document.querySelectorAll('#promo-products-picker .promo-product-cb:checked')).map(cb => parseInt(cb.value, 10)),
+            };
+            if (type === 'wheel') {
+                payload.segments = collectWheelSegments();
+            }
+
+            const url = promoId ? `/api/admin/promos/${promoId}` : '/api/admin/promos';
+            const method = promoId ? 'PATCH' : 'POST';
+
+            try {
+                const res = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    showToast('Campaign saved', true);
+                    closePromoModal();
+                    fetchPromos();
+                } else {
+                    showToast(`Failed to save: ${data.message}`, false);
+                }
+            } catch (err) {
+                showToast(`Error: ${err.message}`, false);
+            }
+        });
+    }
+}
+
+/* ---- Airdrop bulk-generate ---- */
+
+function setupAirdropListeners() {
+    const openBtn = document.getElementById('add-airdrop-btn');
+    const modal = document.getElementById('airdrop-modal');
+    const cancelBtn = document.getElementById('airdrop-cancel-btn');
+    const form = document.getElementById('airdrop-form');
+    const appliesAllCb = document.getElementById('airdrop-applies-all');
+
+    if (openBtn) {
+        openBtn.addEventListener('click', () => {
+            document.getElementById('airdrop-form').reset();
+            document.getElementById('airdrop-result').classList.add('hidden');
+            renderProductPicker('airdrop-products-picker', []);
+            // form.reset() re-checks airdrop-applies-all (its HTML
+            // default) but does NOT re-hide the picker if a previous
+            // open had left it visible — keep the two in sync
+            // explicitly rather than relying on reset() alone.
+            document.getElementById('airdrop-products-picker').classList.toggle('hidden', appliesAllCb.checked);
+            modal.classList.remove('hidden');
+        });
+    }
+    if (cancelBtn) cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
+    if (appliesAllCb) {
+        appliesAllCb.addEventListener('change', () => {
+            document.getElementById('airdrop-products-picker').classList.toggle('hidden', appliesAllCb.checked);
+        });
+    }
+
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const appliesAll = document.getElementById('airdrop-applies-all').checked;
+            const payload = {
+                count: parseInt(document.getElementById('airdrop-count').value, 10),
+                prefix: document.getElementById('airdrop-prefix').value.trim().toUpperCase(),
+                discount_amount: document.getElementById('airdrop-percent').value,
+                starts_at: document.getElementById('airdrop-starts-at').value || null,
+                expires_at: document.getElementById('airdrop-expires-at').value || null,
+                applies_to_all: appliesAll,
+                product_ids: appliesAll ? [] : Array.from(document.querySelectorAll('#airdrop-products-picker .promo-product-cb:checked')).map(cb => parseInt(cb.value, 10)),
+            };
+
+            try {
+                const res = await fetch('/api/admin/promos/bulk', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    const resultBox = document.getElementById('airdrop-result');
+                    resultBox.textContent = data.data.codes.join(', ');
+                    resultBox.classList.remove('hidden');
+                    showToast(`${data.data.count} codes generated`, true);
+                    fetchPromos();
+                } else {
+                    showToast(`Failed: ${data.message}`, false);
+                }
+            } catch (err) {
+                showToast(`Error: ${err.message}`, false);
+            }
+        });
+    }
 }
 

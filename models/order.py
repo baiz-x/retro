@@ -98,6 +98,18 @@ class Order(db.Model):
     subtotal = db.Column(db.Float, nullable=False, default=0.0)
     total = db.Column(db.Float, nullable=False, default=0.0)
 
+    # Snapshot of the applied promo at purchase time — NOT a live
+    # foreign key, deliberately. Even if the Promo row is later edited
+    # or deleted, this order's receipt/dashboard view must always show
+    # exactly what the customer actually got. NULL on every order that
+    # used no typed code (tier-only or no promo at all still shows its
+    # savings via discount_amount below, just with promo_code=None).
+    promo_code = db.Column(db.String(60), nullable=True)
+    # Total ৳ shaved off subtotal by whichever promo applied (tier or
+    # typed) — 0.0 when none did. Computed once by promo_service.
+    # price_cart_items() at checkout and never recalculated afterward.
+    discount_amount = db.Column(db.Float, nullable=False, default=0.0)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -122,6 +134,8 @@ class Order(db.Model):
             "tracking_link": self.tracking_link,
             "subtotal": self.subtotal,
             "total": self.total,
+            "promo_code": self.promo_code,
+            "discount_amount": self.discount_amount,
             # Same value as `total` — duplicated under this name only
             # so the customer-facing order page can label it explicitly
             # as "Pay the delivery man" without every caller needing to

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Airdrop — RetroFit BD</title>
+<meta name="theme-color" content="#657d69" />
+<meta name="csrf-token" content="{{ csrf_token() }}" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="/static/index.css">
+<link rel="stylesheet" href="/static/cart.css">
+</head>
+
+<body class="bg-cream-50 text-slate-800 antialiased">
+
+{% include "partials/_icon_sprite.html" %}
+
+<div class="bg-sage-300 text-sage-950 text-center text-[11px] sm:text-xs font-semibold tracking-wide py-2 px-4">
+  Free delivery on all prepaid orders
+</div>
+
+{% include "partials/_navbar.html" %}
+
+<main class="max-w-md mx-auto px-4 sm:px-6 pt-8 sm:pt-12 pb-24 lg:pb-12 text-center">
+  <h1 class="font-display text-3xl sm:text-4xl text-slate-800 uppercase tracking-wide mb-4">Code Drop</h1>
+  <p class="text-slate-500/70 text-sm mb-8">Limited codes, first come first served. Grab one before they're gone.</p>
+
+  <!-- CODE ENTRY — a customer who got a code (from our social post)
+       types it here to check it's valid before heading to checkout.
+       This never redeems it — redemption only happens at checkout
+       (confirmed rule: "At checkout not at cart ever"), so this is a
+       pure validity check via the same preview endpoint checkout.js
+       uses. -->
+  <div class="checkout-card bg-cream-50 border border-sand-200 shadow-sm text-left">
+    <label class="text-[11px] font-bold uppercase tracking-widest text-slate-500/70 block mb-2">Got A Code?</label>
+    <div class="flex gap-2">
+      <input type="text" id="airdropCodeInput" class="checkout-input flex-1 uppercase" placeholder="Enter your code" autocomplete="off" />
+      <button type="button" id="airdropCheckBtn" class="shrink-0 bg-slate-800 text-cream-50 font-bold uppercase text-xs tracking-widest px-5 rounded-full hover:bg-slate-700 transition-colors">Check</button>
+    </div>
+    <p id="airdropMessage" class="text-xs mt-3 hidden"></p>
+    <a id="airdropShopLink" href="/" class="hidden mt-4 block w-full text-center bg-sage-400 text-cream-50 font-bold uppercase text-xs tracking-widest py-3 rounded-full hover:bg-sage-500 transition-colors">Shop Now &amp; Use It At Checkout</a>
+  </div>
+
+  <p class="text-xs text-slate-500/60 mt-6">
+    Codes are single-use — first person to complete checkout with a valid code gets it.
+    Follow our social pages for the next drop time.
+  </p>
+</main>
+
+{% include "partials/_footer.html" %}
+
+{% include "partials/_mobile_bar.html" %}
+
+<script src="/static/airdrop.js"></script>
+</body>
+</html>

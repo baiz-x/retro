@@ -88,7 +88,7 @@
     </header>
 
     <!-- Main Content Area -->
-    <main class="flex-1 overflow-y-auto p-4 md:p-8 pb-24 no-scrollbar">
+    <main id="dashboard-main" class="flex-1 overflow-y-auto p-4 md:p-8 no-scrollbar">
         
         <!-- TAB 1: REVENUE -->
         <section id="tab-revenue" class="tab-content active max-w-4xl mx-auto">
@@ -425,6 +425,10 @@
                     </div>
                     <div>
                         <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Receipt (optional)</label>
+                        <div id="expense-receipt-preview" class="hidden mb-2">
+                            <img id="expense-receipt-preview-img" src="" class="w-16 h-16 rounded-lg object-cover bg-gray-100 cursor-pointer" title="Tap to view full receipt">
+                            <p class="text-[9px] text-navy/40 mt-1">Current receipt — choosing a new file replaces it</p>
+                        </div>
                         <input type="file" id="expense-receipt" accept="image/*" class="w-full text-xs">
                     </div>
                     <div class="flex gap-2 pt-2">
@@ -493,7 +497,169 @@
             <div id="fulfill-container" class="space-y-3"></div>
         </section>
 
+        <!-- TAB 8: CAMPAIGNS — promo codes, tier deals, wheel, airdrops.
+             Everything routes through routes/promo_route.py and
+             services/promo_service.py; see that module's docstring for
+             the full pricing/stacking rules (tier auto-applies, a
+             typed code replaces it, only one typed code at a time). -->
+        <section id="tab-campaigns" class="tab-content max-w-4xl mx-auto">
+            <div class="flex justify-between items-center mb-6 border-b border-navy/10 pb-2">
+                <h2 class="font-heading text-xl font-bold uppercase tracking-widest text-navy">Campaigns</h2>
+                <div class="flex gap-2">
+                    <button type="button" id="add-airdrop-btn" class="bg-white border border-navy/20 text-navy text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-full">
+                        Airdrop
+                    </button>
+                    <button type="button" id="add-promo-btn" class="bg-navy text-gold text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-full">
+                        + New
+                    </button>
+                </div>
+            </div>
+            <div id="promos-container" class="space-y-3"></div>
+        </section>
+
+        <!-- Bottom-nav clearance spacer — every tab section above sits
+             inside this same <main>, so one spacer at the end covers
+             all of them. Height is set by JS (see sizeBottomNavSpacer
+             near the end of dashboard.js) to exactly match the fixed
+             nav's real rendered height plus a small buffer, rather
+             than a guessed fixed value like the old "pb-24" — that
+             guess was shorter than the nav's actual height on some
+             devices (the nav's "pb-safe" class has no matching CSS
+             rule defined anywhere in this file or its stylesheet, so
+             it silently added zero safe-area padding), which is why
+             the nav was overlaying and hiding real content. -->
+        <div id="bottom-nav-spacer" aria-hidden="true"></div>
+
     </main>
+
+    <!-- PROMO ADD/EDIT MODAL -->
+    <div id="promo-modal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-white w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl p-6 max-h-[90vh] overflow-y-auto">
+            <h3 id="promo-modal-title" class="font-heading text-sm font-bold uppercase tracking-widest text-navy mb-4">New Campaign</h3>
+            <form id="promo-form" class="space-y-3">
+                <input type="hidden" id="promo-id" value="">
+
+                <div>
+                    <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Code</label>
+                    <input type="text" id="promo-code" required placeholder="e.g. XJWW or SAVE11" class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold uppercase">
+                </div>
+
+                <div>
+                    <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Type</label>
+                    <select id="promo-type" required class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold bg-white">
+                        <option value="tier">Tier (auto-applied, buy more pay less)</option>
+                        <option value="percent">Percent (typed at checkout)</option>
+                        <option value="wheel">Wheel (spin to win)</option>
+                    </select>
+                </div>
+
+                <!-- TIER fields -->
+                <div id="promo-tier-fields" class="hidden space-y-1">
+                    <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Price Ladder (৳ per unit — 1, 2, 3+)</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <input type="number" id="promo-tier-1" step="0.01" placeholder="599" class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold">
+                        <input type="number" id="promo-tier-2" step="0.01" placeholder="499" class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold">
+                        <input type="number" id="promo-tier-3" step="0.01" placeholder="399" class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold">
+                    </div>
+                    <p class="text-[9px] text-navy/40">3rd box applies to 3 or more units too.</p>
+                </div>
+
+                <!-- PERCENT fields -->
+                <div id="promo-percent-fields" class="hidden">
+                    <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Percent Off</label>
+                    <input type="number" id="promo-percent-value" step="0.01" min="0" max="100" placeholder="11" class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold">
+                </div>
+
+                <!-- WHEEL fields -->
+                <div id="promo-wheel-fields" class="hidden space-y-2">
+                    <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Wheel Segments (odds are real — weight decides chance)</label>
+                    <div id="promo-wheel-segments" class="space-y-2"></div>
+                    <button type="button" id="promo-wheel-add-segment" class="w-full border border-navy/20 border-dashed text-navy/50 py-2 rounded-lg text-[10px] uppercase font-bold tracking-widest">+ Add Segment</button>
+                </div>
+
+                <div id="promo-usage-mode-wrap">
+                    <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Usage</label>
+                    <select id="promo-usage-mode" class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold bg-white">
+                        <option value="reusable">Reusable until expiry</option>
+                        <option value="single_use">Single-use (dies after first order)</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Starts (optional)</label>
+                        <input type="datetime-local" id="promo-starts-at" class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold">
+                    </div>
+                    <div>
+                        <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Expires (optional)</label>
+                        <input type="datetime-local" id="promo-expires-at" class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold">
+                    </div>
+                </div>
+
+                <div id="promo-products-wrap">
+                    <label class="flex items-center gap-2 text-[9px] uppercase font-bold text-navy/60 tracking-widest mb-2">
+                        <input type="checkbox" id="promo-applies-all" class="rounded">
+                        Applies to all products
+                    </label>
+                    <div id="promo-products-picker" class="border border-navy/20 rounded-lg p-2 max-h-40 overflow-y-auto space-y-1"></div>
+                </div>
+
+                <label class="flex items-center gap-2 text-[9px] uppercase font-bold text-navy/60 tracking-widest">
+                    <input type="checkbox" id="promo-is-active" checked class="rounded">
+                    Active
+                </label>
+
+                <div class="flex gap-2 pt-2">
+                    <button type="button" id="promo-cancel-btn" class="w-1/2 border border-navy/20 text-navy/60 py-2.5 rounded-full text-[10px] uppercase font-bold tracking-widest">Cancel</button>
+                    <button type="submit" class="w-1/2 bg-navy text-gold py-2.5 rounded-full text-[10px] uppercase font-bold tracking-widest">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- AIRDROP BULK-GENERATE MODAL -->
+    <div id="airdrop-modal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-white w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl p-6 max-h-[90vh] overflow-y-auto">
+            <h3 class="font-heading text-sm font-bold uppercase tracking-widest text-navy mb-4">New Airdrop Batch</h3>
+            <form id="airdrop-form" class="space-y-3">
+                <div>
+                    <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">How Many Codes</label>
+                    <input type="number" id="airdrop-count" min="1" max="200" value="10" required class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold">
+                </div>
+                <div>
+                    <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Prefix (optional)</label>
+                    <input type="text" id="airdrop-prefix" placeholder="e.g. DROP" class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold uppercase">
+                </div>
+                <div>
+                    <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Percent Off</label>
+                    <input type="number" id="airdrop-percent" step="0.01" min="0" max="100" placeholder="20" required class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Launch At</label>
+                        <input type="datetime-local" id="airdrop-starts-at" required class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold">
+                    </div>
+                    <div>
+                        <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Expires</label>
+                        <input type="datetime-local" id="airdrop-expires-at" class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold">
+                    </div>
+                </div>
+                <label class="flex items-center gap-2 text-[9px] uppercase font-bold text-navy/60 tracking-widest">
+                    <input type="checkbox" id="airdrop-applies-all" checked class="rounded">
+                    Applies to all products
+                </label>
+                <div id="airdrop-products-picker" class="hidden border border-navy/20 rounded-lg p-2 max-h-40 overflow-y-auto space-y-1"></div>
+
+                <div id="airdrop-result" class="hidden bg-navy text-gold rounded-xl p-3 text-[10px] font-bold break-all"></div>
+
+                <div class="flex gap-2 pt-2">
+                    <button type="button" id="airdrop-cancel-btn" class="w-1/2 border border-navy/20 text-navy/60 py-2.5 rounded-full text-[10px] uppercase font-bold tracking-widest">Cancel</button>
+                    <button type="submit" class="w-1/2 bg-navy text-gold py-2.5 rounded-full text-[10px] uppercase font-bold tracking-widest">Generate</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 
     <!-- Toast Notifications (survives tab switches — for async upload/update results) -->
     <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 w-[90%] max-w-sm pointer-events-none"></div>
@@ -532,11 +698,16 @@
             <i class="fa-solid fa-clipboard-list text-lg"></i>
             <span class="text-[9px] uppercase tracking-widest font-bold">Fulfill</span>
         </button>
+        <button data-tab="campaigns" class="nav-btn text-gray-400 hover:text-navy flex flex-col items-center gap-1 w-20 shrink-0 p-2 transition-colors">
+            <i class="fa-solid fa-gift text-lg"></i>
+            <span class="text-[9px] uppercase tracking-widest font-bold">Campaigns</span>
+        </button>
     </nav>
 
     <script src="/static/dashboard.js"></script>
 </body>
 </html>
+
 
 
 

@@ -11,6 +11,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const submitBtn = document.getElementById("guestSubmitBtn");
   const errorEl = document.getElementById("guestFormError");
 
+  // The page already renders a CSRF meta tag (see guest_order_form.html)
+  // but nothing read it before this fix — with Flask-WTF's CSRF
+  // protection on globally, that made every submit fail before
+  // submit_guest_order_route ever ran (400 "CSRF token is missing").
+  const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     errorEl.classList.add("hidden");
@@ -28,7 +34,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const res = await fetch(`/api/guest-order-links/${encodeURIComponent(token)}/submit`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
