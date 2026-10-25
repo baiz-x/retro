@@ -10,3 +10,4 @@ gunicorn==21.2.0
 psycopg2-binary
 pymysql
 cloudinary==1.44.1
+Flask-WTF
