@@ -1,12 +1,14 @@
 # wall.py
-from flask import Flask, request, abort
+from flask import Flask, request, abort, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_compress import Compress
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_wtf import CSRFProtect
+from flask_wtf.csrf import CSRFError
 from whitenoise import WhiteNoise
 from flask_talisman import Talisman
+from werkzeug.middleware.proxy_fix import ProxyFix
 import logging
 from logging.handlers import RotatingFileHandler
 import os
@@ -17,21 +19,37 @@ from models import db
 # -------------------
 logger = logging.getLogger('my_logger')
 logger.setLevel(logging.DEBUG)
-file_handler = RotatingFileHandler('app.log', maxBytes=10_000_000, backupCount=3)
-file_handler.setLevel(logging.INFO)
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-file_handler.setFormatter(formatter)
+
+# CHANGED: console level comes from LOG_LEVEL env (default INFO) so prod
+# logs aren't flooded with DEBUG. Set LOG_LEVEL=DEBUG locally if you want it.
+console_handler = logging.StreamHandler()
+console_handler.setLevel(os.getenv('LOG_LEVEL', 'INFO').upper())
 console_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
 logger.addHandler(console_handler)
+
+# CHANGED: file handler wrapped so a read-only / ephemeral filesystem
+# can never crash app startup. Render's disk is wiped on every deploy,
+# so stdout (console) is your real log on Render.
+try:
+    file_handler = RotatingFileHandler('app.log', maxBytes=10_000_000, backupCount=3)
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+except OSError as e:
+    logger.warning(f"File logging disabled: {e}")
 
 # -------------------
 # Extensions
 # -------------------
 compress = Compress()
-limiter = Limiter(key_func=get_remote_address)
+# CHANGED: explicit storage URI. Defaults to in-memory (same as before, just
+# without the warning). With >1 Gunicorn worker, limits are per-worker; set
+# RATELIMIT_STORAGE_URI=redis://... on Render for shared limits.
+limiter = Limiter(
+    key_func=get_remote_address,
+    storage_uri=os.getenv('RATELIMIT_STORAGE_URI', 'memory://')
+)
 csrf = CSRFProtect()
 
 # -------------------
@@ -96,6 +114,15 @@ def setup_security():
     csrf.init_app(app)
     app.wsgi_app = WhiteNoise(app.wsgi_app, root='static/', max_age=31536000)
 
+    # CHANGED: ProxyFix, applied last so it is the outermost wrapper.
+    # Behind Render's proxy this makes request.scheme / remote_addr reflect
+    # the real client (via X-Forwarded-Proto / X-Forwarded-For) instead of
+    # the proxy. Without it the rate limiter sees one shared IP for every
+    # visitor. If limiter IPs look wrong on your setup (e.g. Cloudflare in
+    # front of Render adds a hop), set TRUSTED_PROXY_COUNT=2.
+    proxy_hops = int(os.getenv('TRUSTED_PROXY_COUNT', '1'))
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=proxy_hops, x_proto=1)
+
     # -------------------
     # Talisman / CSP
     # -------------------
@@ -121,7 +148,11 @@ def setup_security():
         strict_transport_security=True,
         strict_transport_security_max_age=31536000,
         frame_options="DENY",
-        referrer_policy='no-referrer',
+        # CHANGED: was 'no-referrer'. Flask-WTF requires a Referer header on
+        # HTTPS requests (WTF_CSRF_SSL_STRICT), so 'no-referrer' made every
+        # CSRF-protected POST fail with 400 on Render. 'same-origin' sends
+        # the Referer only to your own domain, nothing to third parties.
+        referrer_policy='same-origin',
         x_xss_protection=True,
         x_content_type_options="nosniff"
     )
@@ -146,5 +177,18 @@ def setup_security():
 
         logger.warning(f"Blocked request from {request.host} with UA: {ua}")
         abort(403)
+
+    # CHANGED: CSRF failures on /api/ routes now return JSON instead of an
+    # HTML page. Before, response.json() threw in your JS and the user just
+    # saw "Connection failure". Now the real message reaches showMessage().
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(e):
+        logger.warning(f"CSRF rejected on {request.path}: {e.description}")
+        if request.path.startswith('/api/'):
+            return jsonify({
+                "status": "error",
+                "message": "Security check failed. Refresh the page and try again."
+            }), 400
+        return e
 
     return app
