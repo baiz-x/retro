@@ -40,7 +40,7 @@ csrf = CSRFProtect()
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
-    'https://retro-7wxo.onrender.com',
+    'retro-7wxo.onrender.com',
     'markazussunnahbd.com',
     'www.markazussunnahbd.com'
 ]
