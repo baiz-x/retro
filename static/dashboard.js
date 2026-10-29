@@ -51,16 +51,20 @@ const COLLECTION_FIELDS = {
     ]
 };
 
+console.info('[dashboard] dashboard.js loaded: campaign builder build 2026-10-30');
+
 document.addEventListener("DOMContentLoaded", () => {
-    initClock();
-    initEventListeners();
-    setupExpenseListeners();
-    setupGuestLinkListeners();
-    setupExpenseFromProductListeners();
-    setupPromoListeners();
-    setupAirdropListeners();
-    sizeBottomNavSpacer();
-    refreshData();
+    // Every section initialises on its own. One section throwing (for
+    // example dashboard.html and dashboard.js being out of sync after a
+    // deploy, or a stale cached copy of one of them) must never take the
+    // bottom nav or the data loading down with it. The bottom nav goes
+    // first and is bound with addEventListener only — no inline onclick.
+    [initBottomNav, initClock, initEventListeners, setupExpenseListeners,
+     setupGuestLinkListeners, setupExpenseFromProductListeners,
+     setupPromoListeners, setupAirdropListeners, sizeBottomNavSpacer, refreshData]
+        .forEach(fn => {
+            try { fn(); } catch (err) { console.error(`[dashboard] ${fn.name} failed:`, err); }
+        });
 });
 
 /* Fix: the fixed bottom nav was hiding content in every tab because
@@ -104,7 +108,7 @@ function initClock() {
     setInterval(update, 1000);
 }
 
-function initEventListeners() {
+function initBottomNav() {
     // Bottom Navigation Switcher Binding
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -118,6 +122,9 @@ function initEventListeners() {
             switchTab(tabId, targetBtn);
         });
     });
+}
+
+function initEventListeners() {
 
     // Product type radios — mutually exclusive by nature (native radio
     // behavior), so no manual uncheck-the-others logic is needed here
@@ -2067,7 +2074,7 @@ function updatePromoTypeFields() {
 async function openPromoModal(promoId) {
     const modal = document.getElementById('promo-modal');
     const title = document.getElementById('promo-modal-title');
-    if (!modal) return;
+    if (!modal || !promoPicker) return;
 
     document.getElementById('promo-form').reset();
     document.getElementById('promo-wheel-segments').innerHTML = '';
@@ -2098,11 +2105,4 @@ async function openPromoModal(promoId) {
 
         if (promo.promo_type === 'tier') {
             const ladder = (promo.discount_amount || '').split(',').map(s => s.trim());
-            document.getElementById('promo-tier-1').value = ladder[0] || '';
-            document.getElementById('promo-tier-2').value = ladder[1] || '';
-            document.getElementById('promo-tier-3').value = ladder[2] || '';
-            const hasCustom = (promo.premium_products || []).some(p => p.custom_ladder);
-            premiumMode = hasCustom ? 'custom' : 'offset';
-            document.getElementById('promo-premium-offset').value = promo.premium_offset || '';
-        } else if (promo.promo_type === 'percent') {
-            document.getElementById('promo-percent-value').value = promo.discount
+     
