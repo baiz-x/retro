@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 
 from flask import Blueprint, request, jsonify, session, current_app
@@ -40,20 +40,71 @@ def list_promos():
     return jsonify({"status": "success", "data": [p.to_dict() for p in promos]}), 200
 
 
+BD_UTC_OFFSET = timedelta(hours=6)  # Asia/Dhaka, no DST
+
+
 def _parse_dt(value):
+    """<input type="datetime-local"> gives naive Bangladesh time like
+    "2026-10-01T13:00". Stored as naive UTC because promo_service compares
+    against datetime.utcnow() — without this, a code set to expire at 8pm
+    stays live until 2am and an airdrop "launching at 8pm" goes live at 2am."""
     if not value:
         return None
     try:
-        # <input type="datetime-local"> gives "2026-10-01T13:00"
-        return datetime.fromisoformat(value)
+        dt = datetime.fromisoformat(value)
     except ValueError:
         return None
+    if dt.tzinfo is not None:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt - BD_UTC_OFFSET
 
 
-def _sync_products(promo, product_ids):
+def _premium_map(premium_products):
+    """[{"product_id": 5, "custom_ladder": "699,599,499" | null}, ...] (or bare
+    ids) -> {5: "699,599,499" | None}. Bad ids are skipped."""
+    out = {}
+    for entry in premium_products or []:
+        if isinstance(entry, dict):
+            pid, ladder = entry.get("product_id"), (entry.get("custom_ladder") or "").strip() or None
+        else:
+            pid, ladder = entry, None
+        try:
+            out[int(pid)] = ladder
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+def _validate_premium(premium_products, premium_offset):
+    """Returns (premium_offset_float_or_None, error_or_None)."""
+    offset = None
+    if premium_offset not in (None, ""):
+        try:
+            offset = float(premium_offset)
+        except (TypeError, ValueError):
+            return None, "Premium extra must be a number, e.g. 50"
+        if offset < 0:
+            return None, "Premium extra cannot be negative"
+    for ladder in _premium_map(premium_products).values():
+        if ladder:
+            ok, err = promo_service.validate_ladder_string(ladder)
+            if not ok:
+                return None, err
+    return (offset or None), None
+
+
+def _sync_products(promo, product_ids, premium_products=None):
+    """
+    product_ids: every product the campaign covers (premium ones included).
+    premium_products: subset flagged premium, each optionally with its own
+    custom_ladder. A premium product is always linked, even when
+    applies_to_all is on and product_ids is empty — that's how "all
+    products, but these 3 are premium" is stored.
+    """
     PromoProduct.query.filter_by(promo_id=promo.id).delete()
+    premium = _premium_map(premium_products)
     seen = set()
-    for pid in product_ids or []:
+    for pid in list(product_ids or []) + list(premium.keys()):
         try:
             pid = int(pid)
         except (TypeError, ValueError):
@@ -61,7 +112,10 @@ def _sync_products(promo, product_ids):
         if pid in seen:
             continue
         seen.add(pid)
-        db.session.add(PromoProduct(promo_id=promo.id, product_id=pid))
+        db.session.add(PromoProduct(
+            promo_id=promo.id, product_id=pid,
+            is_premium=pid in premium, custom_ladder=premium.get(pid),
+        ))
 
 
 def _sync_segments(promo, segments):
@@ -92,6 +146,7 @@ def create_promo():
         discount_amount = data.get("discount_amount")
         applies_to_all = bool(data.get("applies_to_all", False))
         product_ids = data.get("product_ids", [])
+        premium_products = data.get("premium_products", [])
         segments = data.get("segments", [])
 
         if not code:
@@ -105,6 +160,18 @@ def create_promo():
         if not is_valid:
             return jsonify({"status": "error", "message": err}), 400
 
+        # A campaign with no products and "all products" off would save fine and
+        # then silently apply to nothing ("doesn't apply to your products").
+        if not applies_to_all and not product_ids:
+            return jsonify({"status": "error",
+                            "message": "Pick at least one product, or choose all products."}), 400
+
+        premium_offset, perr = _validate_premium(premium_products, data.get("premium_offset"))
+        if perr:
+            return jsonify({"status": "error", "message": perr}), 400
+        if promo_type != PROMO_TYPE_TIER:
+            premium_offset, premium_products = None, []
+
         if Promo.query.filter_by(code=code).first():
             return jsonify({"status": "error", "message": "This code already exists"}), 400
 
@@ -116,12 +183,16 @@ def create_promo():
             starts_at=_parse_dt(data.get("starts_at")),
             expires_at=_parse_dt(data.get("expires_at")),
             applies_to_all=applies_to_all,
+            premium_offset=premium_offset,
             is_active=bool(data.get("is_active", True)),
         )
         db.session.add(promo)
         db.session.flush()
 
-        if not applies_to_all:
+        if promo_type == PROMO_TYPE_TIER:
+            # Tier keeps premium rows even when applies_to_all is on.
+            _sync_products(promo, [] if applies_to_all else product_ids, premium_products)
+        elif not applies_to_all:
             _sync_products(promo, product_ids)
         if promo_type == PROMO_TYPE_WHEEL:
             _sync_segments(promo, segments)
@@ -171,8 +242,29 @@ def update_promo(promo_id):
         if "is_active" in data:
             promo.is_active = bool(data["is_active"])
 
-        if "product_ids" in data:
-            _sync_products(promo, data["product_ids"])
+        if "premium_offset" in data or "premium_products" in data:
+            offset, perr = _validate_premium(
+                data.get("premium_products", promo.premium_products()),
+                data.get("premium_offset", promo.premium_offset),
+            )
+            if perr:
+                return jsonify({"status": "error", "message": perr}), 400
+            if promo.promo_type == PROMO_TYPE_TIER:
+                promo.premium_offset = offset
+
+        if "product_ids" in data or "premium_products" in data:
+            if "premium_products" in data and promo.promo_type == PROMO_TYPE_TIER:
+                premium = data["premium_products"]
+            elif promo.promo_type == PROMO_TYPE_TIER:
+                premium = promo.premium_products()  # keep existing flags
+            else:
+                premium = []
+            ids = data.get("product_ids", promo.linked_product_ids())
+            if not promo.applies_to_all and not ids:
+                db.session.rollback()
+                return jsonify({"status": "error",
+                                "message": "Pick at least one product, or choose all products."}), 400
+            _sync_products(promo, [] if promo.applies_to_all and promo.promo_type == PROMO_TYPE_TIER else ids, premium)
         if "segments" in data and promo.promo_type == PROMO_TYPE_WHEEL:
             _sync_segments(promo, data["segments"])
 
@@ -228,6 +320,9 @@ def bulk_create_airdrop():
 
         applies_to_all = bool(data.get("applies_to_all", False))
         product_ids = data.get("product_ids", [])
+        if not applies_to_all and not product_ids:
+            return jsonify({"status": "error",
+                            "message": "Pick at least one product, or choose all products."}), 400
         prefix = promo_service.normalize_code(data.get("prefix", ""))[:10]
         starts_at = _parse_dt(data.get("starts_at"))
         expires_at = _parse_dt(data.get("expires_at"))
@@ -265,7 +360,11 @@ def products_minimal():
     products = Product.query.order_by(Product.name.asc()).all()
     return jsonify({
         "status": "success",
-        "data": [{"id": p.id, "name": p.name, "price": p.price} for p in products],
+        "data": [{
+            "id": p.id, "name": p.name, "price": p.price,
+            "category": p.category, "club": p.club,
+            "product_type": p.product_type, "image": p.image,
+        } for p in products],
     }), 200
 
 
@@ -415,3 +514,4 @@ def wheel_spin_route():
         db.session.rollback()
         current_app.logger.error(f"DB error spinning wheel: {e}")
         return jsonify({"status": "error", "message": "Database error occurred"}), 500
+

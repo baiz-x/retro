@@ -100,6 +100,21 @@ def validate_discount_amount(promo_type, discount_amount):
     return False, f"Unknown promo_type '{promo_type}'"
 
 
+def validate_ladder_string(value, min_len=1):
+    """Used for a premium product's custom ladder, e.g. '699,599,499'.
+    Returns (is_valid, error_message_or_None)."""
+    parts = [x.strip() for x in str(value or "").split(",") if x.strip()]
+    if len(parts) < min_len:
+        return False, "Custom premium price needs at least one number, e.g. 699,599,499"
+    try:
+        values = [float(x) for x in parts]
+    except ValueError:
+        return False, "Custom premium prices must be numbers, e.g. 699,599,499"
+    if any(v < 0 for v in values):
+        return False, "Custom premium prices cannot be negative"
+    return True, None
+
+
 def parse_tier_ladder(discount_amount):
     """'599,499,399' -> [599.0, 499.0, 399.0]. Caller guarantees validity."""
     return [float(p.strip()) for p in discount_amount.split(",") if p.strip()]
@@ -116,6 +131,38 @@ def tier_unit_price(discount_amount, unit_count):
     idx = min(unit_count, len(ladder)) - 1
     idx = max(idx, 0)
     return ladder[idx]
+
+
+def _ladder_price(ladder, unit_count):
+    """Rung for unit_count units, clamped to the last rung (3+ = best price)."""
+    idx = max(min(unit_count, len(ladder)) - 1, 0)
+    return ladder[idx]
+
+
+def _tier_line_price(promo, row, base_ladder, unit_count):
+    """
+    Unit price one cart line pays under a tier promo. `row` is that
+    product's PromoProduct link (None when the promo applies_to_all and
+    the product isn't a premium override).
+
+      standard product          -> base ladder rung
+      premium + custom_ladder   -> that product's own ladder rung
+      premium + premium_offset  -> base ladder rung + offset
+      premium, neither set      -> base ladder rung
+
+    unit_count is ALWAYS the combined units of every product in the
+    campaign (standard + premium), so 2 standard + 1 premium on a
+    599/499/399 (+50) ladder prices as 399 + 399 + 449.
+    Returns (price, is_premium).
+    """
+    base = _ladder_price(base_ladder, unit_count)
+    if row is not None and row.is_premium:
+        if row.custom_ladder:
+            return round(_ladder_price(parse_tier_ladder(row.custom_ladder), unit_count), 2), True
+        if promo.premium_offset:
+            return round(base + promo.premium_offset, 2), True
+        return round(base, 2), True
+    return round(base, 2), False
 
 
 def generate_unique_code(prefix=""):
@@ -192,47 +239,90 @@ def price_cart_items(cart_items, typed_code=None, user_id=None):
     }
 
     if typed_code:
-        return _apply_typed_code(lines, typed_code, user_id, result)
+        result = _apply_typed_code(lines, typed_code, user_id, result)
+        if result["error"]:
+            # Bad / expired / wrong-account code: report the error, but keep
+            # the customer's automatic tier price instead of silently
+            # snapping the cart back to full price.
+            err = result["error"]
+            for l in lines:
+                l["unit_price"] = l["original_unit_price"]
+            result["applied_promo"] = None
+            result["reason"] = None
+            result["discount_total"] = 0.0
+            result = _apply_best_tier(lines, result)
+            result["error"] = err
+        return result
 
     return _apply_best_tier(lines, result)
 
 
-def _apply_best_tier(lines, result):
+def _apply_best_tier(lines, result, typed_promo=None):
     """
-    Auto-apply pass: for every active TIER promo, count linked-product
-    units in the cart and price those lines. If more than one tier
-    promo could apply to different lines, each applies independently to
-    its own linked products (they don't compete for the same lines,
-    since a product should only ever be linked to one active tier
-    promo — enforced as an admin-side convention, not a DB constraint).
+    Tier pass. For every live TIER promo, count the units of every product
+    it covers (applies_to_all = every line, otherwise only linked
+    products), find the ladder rung for that combined count, and price
+    each line: standard products on the base ladder, premium products on
+    base + premium_offset or their own custom ladder.
+
+    typed_promo: set when the customer TYPED a tier code. The discount is
+    the same as the automatic one — typing the code just confirms it,
+    records THAT code as the one applied (so it's counted as used on
+    order), and errors if it does nothing for this cart.
     """
     now = datetime.utcnow()
     tier_promos = Promo.query.filter_by(promo_type=PROMO_TYPE_TIER, is_active=True).all()
     reasons = []
+    touched_ids = set()
+    last_touched = None
 
     for promo in tier_promos:
         live, _ = _is_live(promo, now)
         if not live:
             continue
-        linked_ids = _linked_product_ids(promo)
-        if not linked_ids:
-            continue
 
-        matching = [l for l in lines if l["cart_item"].product_id in linked_ids]
+        rows = {pp.product_id: pp for pp in promo.products}
+        if promo.applies_to_all:
+            matching = list(lines)
+        else:
+            matching = [l for l in lines if l["cart_item"].product_id in rows]
         if not matching:
             continue
 
+        base_ladder = parse_tier_ladder(promo.discount_amount)
         unit_count = sum(l["cart_item"].quantity for l in matching)
-        unit_price = tier_unit_price(promo.discount_amount, unit_count)
 
+        std_price = prem_price = None
         touched = False
         for l in matching:
-            if l["unit_price"] > unit_price:
-                l["unit_price"] = unit_price
+            price, is_premium = _tier_line_price(
+                promo, rows.get(l["cart_item"].product_id), base_ladder, unit_count
+            )
+            if l["unit_price"] > price:
+                l["unit_price"] = price
                 touched = True
+                if is_premium:
+                    prem_price = price
+                else:
+                    std_price = price
+
         if touched:
-            reasons.append(f"Buy {unit_count}, pay ৳{unit_price:.0f} each ({promo.code})")
-            result["applied_promo"] = promo  # last one wins for display; each line still priced correctly
+            touched_ids.add(promo.id)
+            last_touched = promo
+            parts = []
+            if std_price is not None:
+                parts.append(f"৳{std_price:.0f} each")
+            if prem_price is not None:
+                parts.append(f"premium ৳{prem_price:.0f} each")
+            reasons.append(f"Buy {unit_count}: {', '.join(parts)} ({promo.code})")
+
+    if typed_promo is not None:
+        if typed_promo.id in touched_ids:
+            result["applied_promo"] = typed_promo
+        else:
+            result["error"] = "This offer doesn't apply to anything in your cart."
+    else:
+        result["applied_promo"] = last_touched
 
     if reasons:
         result["reason"] = " · ".join(reasons)
@@ -260,6 +350,11 @@ def _apply_typed_code(lines, typed_code, user_id, result):
     if not live:
         result["error"] = err
         return result
+
+    # A typed TIER code confirms the automatic tier deal. Tier deals work
+    # for guests, so this sits before the login check below.
+    if promo.promo_type == PROMO_TYPE_TIER:
+        return _apply_best_tier(lines, result, typed_promo=promo)
 
     if user_id is None:
         result["error"] = "Please log in to use a promo code."
@@ -420,8 +515,10 @@ def spin_wheel(raw_code, user_id):
     db.session.commit()
 
     return {
+        "segment_id": chosen.id,
         "label": chosen.label,
         "discount_percent": chosen.discount_percent,
         "prize_code": prize_promo.code if prize_promo else None,
         "expires_at": expires_at.isoformat() if expires_at else None,
     }, None
+

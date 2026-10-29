@@ -26,6 +26,7 @@ const wheelLoginNotice = document.getElementById('wheelLoginNotice');
 
 let activeWheelCode = null;
 let currentRotation = 0; // tracked across spins so a rotate() always adds forward, never snaps back
+let wheelSegments = []; // last drawn segments, needed to land on the server-picked slice
 
 const urlParams = new URLSearchParams(window.location.search);
 const prefillCode = urlParams.get('code');
@@ -53,8 +54,27 @@ const WHEEL_PALETTE = [
   { fill: '#d9c2a8', text: '#33302b' },
 ];
 
+/* Rotation (degrees, clockwise) that parks the pointer inside the slice the
+   SERVER picked. Slices are equal-sized (odds live in the weights, not the
+   artwork), slice 0 starts at 12 o'clock, so slice i is centred at
+   -(i + 0.5) * slice degrees. A little jitter keeps it from always landing
+   dead-centre, but never near a slice edge. */
+function nextWheelRotation(current, segments, segmentId, label) {
+  const n = segments.length;
+  const slice = 360 / n;
+  let idx = segments.findIndex(s => s.id === segmentId);
+  if (idx < 0) idx = segments.findIndex(s => s.label === label);
+  if (idx < 0) idx = Math.floor(Math.random() * n);
+  const jitter = (Math.random() - 0.5) * slice * 0.6;
+  const targetMod = (((360 - (idx + 0.5) * slice + jitter) % 360) + 360) % 360;
+  const currentMod = ((current % 360) + 360) % 360;
+  const delta = (targetMod - currentMod + 360) % 360;
+  return current + (5 + Math.floor(Math.random() * 3)) * 360 + delta;
+}
+
 function drawWheelSegments(container, segments) {
   container.innerHTML = '';
+  wheelSegments = segments;
   const size = 320;
   const svgNS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(svgNS, 'svg');
@@ -64,12 +84,15 @@ function drawWheelSegments(container, segments) {
   svg.style.transition = 'none';
   svg.style.transform = `rotate(${currentRotation}deg)`;
 
-  const cx = size / 2, cy = size / 2, r = size / 2 - 6;
-  const totalWeight = segments.reduce((s, seg) => s + Math.max(seg.weight, 0), 0) || 1;
-  let angleStart = -90; // start at 12 o'clock so the first slice sits under the pointer
+  const cx = size / 2, cy = size / 2, r = size / 2 - 8;
+  const n = segments.length;
+  // Equal slices: a 5%-chance prize drawn 5% wide is unreadable and looks
+  // like a trap. The real odds are decided server-side by weight.
+  const sliceAngle = 360 / n;
+  const fontSize = n <= 6 ? 15 : n <= 10 ? 12 : 10;
+  let angleStart = -90; // 12 o'clock, under the pointer
 
   segments.forEach((seg, i) => {
-    const sliceAngle = (Math.max(seg.weight, 0) / totalWeight) * 360;
     const angleEnd = angleStart + sliceAngle;
     const large = sliceAngle > 180 ? 1 : 0;
     const colors = WHEEL_PALETTE[i % WHEEL_PALETTE.length];
@@ -80,30 +103,45 @@ function drawWheelSegments(container, segments) {
     const y2 = cy + r * Math.sin((Math.PI * angleEnd) / 180);
 
     const path = document.createElementNS(svgNS, 'path');
-    path.setAttribute('d', `M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} Z`);
+    path.setAttribute('d', n === 1
+      ? `M${cx},${cy - r} A${r},${r} 0 1 1 ${cx - 0.01},${cy - r} Z`
+      : `M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} Z`);
     path.setAttribute('fill', colors.fill);
     path.setAttribute('stroke', '#f7f3ec');
-    path.setAttribute('stroke-width', '3');
+    path.setAttribute('stroke-width', '2');
     svg.appendChild(path);
 
-    const midAngle = (angleStart + angleEnd) / 2;
-    const labelR = r * 0.62;
-    const lx = cx + labelR * Math.cos((Math.PI * midAngle) / 180);
-    const ly = cy + labelR * Math.sin((Math.PI * midAngle) / 180);
+    // Radial label: reads from the hub out to the rim, so long prize
+    // names fit instead of being squeezed across a narrow slice.
+    const midAngle = angleStart + sliceAngle / 2;
+    const label = seg.label.length > 14 ? seg.label.slice(0, 13) + '…' : seg.label;
     const text = document.createElementNS(svgNS, 'text');
-    text.setAttribute('x', lx);
-    text.setAttribute('y', ly);
-    text.setAttribute('font-size', sliceAngle < 35 ? '11' : '14');
+    text.setAttribute('x', cx + r * 0.92);
+    text.setAttribute('y', cy);
+    text.setAttribute('font-size', fontSize);
     text.setAttribute('font-weight', '800');
     text.setAttribute('fill', colors.text);
-    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('text-anchor', 'end');
     text.setAttribute('dominant-baseline', 'middle');
-    text.setAttribute('transform', `rotate(${midAngle + 90}, ${lx}, ${ly})`);
-    text.textContent = seg.label;
+    text.setAttribute('transform', `rotate(${midAngle}, ${cx}, ${cy})`);
+    text.textContent = label;
     svg.appendChild(text);
 
     angleStart = angleEnd;
   });
+
+  // Rim + studs so it reads as a wheel, not a pie chart.
+  const rim = document.createElementNS(svgNS, 'circle');
+  rim.setAttribute('cx', cx); rim.setAttribute('cy', cy); rim.setAttribute('r', r);
+  rim.setAttribute('fill', 'none'); rim.setAttribute('stroke', '#33302b'); rim.setAttribute('stroke-width', '5');
+  svg.appendChild(rim);
+  for (let k = 0; k < 24; k++) {
+    const a = (k / 24) * Math.PI * 2;
+    const stud = document.createElementNS(svgNS, 'circle');
+    stud.setAttribute('cx', cx + r * Math.cos(a)); stud.setAttribute('cy', cy + r * Math.sin(a));
+    stud.setAttribute('r', 2.2); stud.setAttribute('fill', '#f7f3ec');
+    svg.appendChild(stud);
+  }
 
   container.appendChild(svg);
 }
@@ -191,16 +229,13 @@ wheelSpinBtn.addEventListener('click', async () => {
       return;
     }
 
-    const { label, prize_code } = result.data;
+    const { label, prize_code, segment_id } = result.data;
 
-    // Real spin physics: several full rotations plus a fine-tuned
-    // final angle, eased with a curve that front-loads speed and
-    // decelerates hard at the end — closer to how a physical wheel
-    // actually slows down than a flat ease-out.
+    // The server already picked the winner; the animation's only job is
+    // to land the pointer on THAT slice, so what the customer sees is
+    // what they actually won.
     const svg = document.getElementById('wheelSvg');
-    const spins = 5 + Math.random() * 2; // 5–7 full rotations
-    const finalOffset = Math.random() * 360;
-    currentRotation += spins * 360 + finalOffset;
+    currentRotation = nextWheelRotation(currentRotation, wheelSegments, segment_id, label);
 
     if (svg) {
       svg.style.transition = 'transform 4.2s cubic-bezier(0.11, 0.79, 0.12, 1)';
@@ -214,7 +249,18 @@ wheelSpinBtn.addEventListener('click', async () => {
       wheelSpinBtn.textContent = 'Already Spun';
       if (prize_code) {
         wheelResultHeadline.textContent = `You Won ${label}!`;
-        wheelResultSub.innerHTML = `Code <strong class="text-slate-800">${escapeHtml(prize_code)}</strong> — valid 24 hours, use it at checkout.`;
+        wheelResultSub.innerHTML = `Code <strong class="text-slate-800">${escapeHtml(prize_code)}</strong> — valid 24 hours, use it at checkout. <button type="button" id="copyPrizeBtn" class="underline font-bold text-slate-800">Copy</button>`;
+        const copyBtn = document.getElementById('copyPrizeBtn');
+        if (copyBtn) {
+          copyBtn.addEventListener('click', async () => {
+            try {
+              await navigator.clipboard.writeText(prize_code);
+              copyBtn.textContent = 'Copied';
+            } catch (e) {
+              copyBtn.textContent = prize_code;
+            }
+          });
+        }
       } else {
         wheelResultHeadline.textContent = label || 'No Prize This Time';
         wheelResultSub.textContent = 'Follow our page for the next drop.';
@@ -230,4 +276,5 @@ wheelSpinBtn.addEventListener('click', async () => {
     wheelSpinBtn.textContent = 'Spin The Wheel';
   }
 });
+
 

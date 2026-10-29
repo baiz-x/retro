@@ -1,5 +1,14 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from . import db
+
+# Admin enters <input type="datetime-local"> values in Bangladesh time (UTC+6, no DST).
+# The DB and promo_service compare against datetime.utcnow(), so promo_route converts
+# admin input to UTC on the way in and to_dict converts back on the way out.
+BD_UTC_OFFSET = timedelta(hours=6)
+
+
+def _to_bd_iso(dt):
+    return (dt + BD_UTC_OFFSET).isoformat() if dt else None
 
 
 # ---------------------------------------------------------------------
@@ -61,6 +70,11 @@ class Promo(db.Model):
     # True = every product; False = only rows in promo_products.
     applies_to_all = db.Column(db.Boolean, nullable=False, default=False)
 
+    # TIER only: how much MORE a premium product pays on every rung of the
+    # ladder (599,499,399 + 50 -> 649,549,449). NULL/0 = no flat offset.
+    # A premium product with its own custom_ladder ignores this.
+    premium_offset = db.Column(db.Float, nullable=True)
+
     # Manual kill switch. Off = dead instantly, everywhere.
     is_active = db.Column(db.Boolean, nullable=False, default=True)
 
@@ -100,6 +114,12 @@ class Promo(db.Model):
     def linked_product_ids(self):
         return [pp.product_id for pp in self.products]
 
+    def premium_products(self):
+        return [
+            {"product_id": pp.product_id, "custom_ladder": pp.custom_ladder}
+            for pp in self.products if pp.is_premium
+        ]
+
     def to_dict(self, include_products=True):
         data = {
             "id": self.id,
@@ -107,9 +127,10 @@ class Promo(db.Model):
             "promo_type": self.promo_type,
             "usage_mode": self.usage_mode,
             "discount_amount": self.discount_amount,
-            "starts_at": self.starts_at.isoformat() if self.starts_at else None,
-            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
+            "starts_at": _to_bd_iso(self.starts_at),
+            "expires_at": _to_bd_iso(self.expires_at),
             "applies_to_all": self.applies_to_all,
+            "premium_offset": self.premium_offset,
             "is_active": self.is_active,
             "redeemed_at": self.redeemed_at.isoformat() if self.redeemed_at else None,
             "wheel_parent_id": self.wheel_parent_id,
@@ -118,6 +139,7 @@ class Promo(db.Model):
         }
         if include_products:
             data["product_ids"] = self.linked_product_ids()
+            data["premium_products"] = self.premium_products()
         if self.promo_type == PROMO_TYPE_WHEEL:
             data["segments"] = [s.to_dict() for s in self.segments]
         return data
@@ -133,6 +155,11 @@ class PromoProduct(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     promo_id = db.Column(db.Integer, db.ForeignKey("promos.id", ondelete="CASCADE"), nullable=False, index=True)
     product_id = db.Column(db.Integer, db.ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    # TIER only. is_premium rows use the campaign's premium_offset, or their
+    # own custom_ladder (e.g. "699,599,499") when one is set.
+    is_premium = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    custom_ladder = db.Column(db.String(120), nullable=True)
 
     promo = db.relationship("Promo", back_populates="products")
 
@@ -209,3 +236,4 @@ class WheelSpin(db.Model):
     # The minted prize code, if the result was a win (NULL for a no-win slice).
     prize_promo_id = db.Column(db.Integer, db.ForeignKey("promos.id", ondelete="SET NULL"), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+

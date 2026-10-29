@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Master Ledger | Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -25,6 +25,37 @@
         }
     </script>
     <style>
+        /* ---- Bottom-nav clearance: content hidden under the fixed nav ----
+           1) h-screen is 100vh = the LARGEST mobile viewport (browser
+              toolbars retracted), so <main> ran taller than the visible
+              screen and its last ~60-100px sat off-screen before the nav
+              even covered it. 100dvh follows the real visible height.
+           2) The spacer at the end of <main> is sized here in CSS, not
+              only by JS: the nav is ~78px tall plus the home-indicator
+              inset, so 7rem leaves a clear gap under the last card on
+              EVERY tab. If dashboard.js sizes it larger inline, the larger
+              value wins.
+           3) "pb-safe" was never defined, so the nav ignored the inset. */
+        html body.h-screen { height: 100vh; height: 100dvh; }
+        #bottom-nav-spacer { flex-shrink: 0; min-height: calc(7rem + env(safe-area-inset-bottom, 0px)); }
+        nav.pb-safe { padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px)); }
+
+        /* ---- Compact unfolded cards (Orders, Wholesale, Fulfill) ----
+           Same content, tighter box: less padding, shorter inputs, smaller
+           gaps. Scoped to the card bodies so nothing else changes. */
+        .dash-order-body, .wholesale-row-body, .fulfill-product-body { padding: 0 .75rem .5rem !important; }
+        .dash-order-body .mb-3 { margin-bottom: .375rem; }
+        .dash-order-body .py-3 { padding-top: .375rem; padding-bottom: .375rem; }
+        .dash-order-body .mt-2 { margin-top: .25rem; }
+        .dash-order-body input, .dash-order-body select,
+        .wholesale-row-body input { padding: .3rem .5rem; }
+        .dash-order-body .status-select { padding: .3rem .5rem; }
+        .wholesale-row-body .mt-3 { margin-top: .375rem; }
+        .wholesale-row-body .pt-3 { padding-top: .375rem; }
+        .wholesale-row-body .grid { gap: .375rem; }
+        .fulfill-product-body > * + * { margin-top: .25rem !important; }
+        .fulfill-product-body > div { padding: .375rem .5rem !important; }
+
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .tab-content { display: none; opacity: 0; transition: opacity 0.3s ease; }
@@ -314,7 +345,7 @@
              modal above (search/pick product, then set the fixed
              admin-chosen fields). -->
         <div id="guest-link-modal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
-            <div class="bg-white w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl p-6 max-h-[85vh] overflow-y-auto">
+            <div class="bg-white w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl p-6 max-h-[85dvh] overflow-y-auto">
                 <h3 class="font-heading text-sm font-bold uppercase tracking-widest text-navy mb-4">Generate Guest Link</h3>
 
                 <!-- Step 1: search/pick product -->
@@ -444,7 +475,7 @@
              that product's wholesale_price) -> one expense row,
              amount = qty * price. -->
         <div id="expense-product-modal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
-            <div class="bg-white w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl p-6 max-h-[85vh] overflow-y-auto">
+            <div class="bg-white w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl p-6 max-h-[85dvh] overflow-y-auto">
                 <h3 class="font-heading text-sm font-bold uppercase tracking-widest text-navy mb-4">Expense From Product</h3>
 
                 <!-- Step 1: search/pick -->
@@ -532,22 +563,26 @@
 
     </main>
 
-    <!-- PROMO ADD/EDIT MODAL -->
+    <!-- PROMO ADD/EDIT MODAL
+         Bottom sheet on phones: scrolling form + a footer that never scrolls away,
+         16px inputs (no iOS zoom-on-focus), 44px+ tap targets. -->
     <div id="promo-modal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
-        <div class="bg-white w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl p-6 max-h-[90vh] overflow-y-auto">
-            <h3 id="promo-modal-title" class="font-heading text-sm font-bold uppercase tracking-widest text-navy mb-4">New Campaign</h3>
-            <form id="promo-form" class="space-y-3">
+        <div class="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl max-h-[92dvh] flex flex-col">
+            <div class="px-5 pt-5 pb-3 border-b border-navy/5 shrink-0">
+                <h3 id="promo-modal-title" class="font-heading text-sm font-bold uppercase tracking-widest text-navy">New Campaign</h3>
+            </div>
+            <form id="promo-form" class="flex-1 overflow-y-auto overscroll-contain px-5 py-4 space-y-4">
                 <input type="hidden" id="promo-id" value="">
 
                 <div>
                     <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Code</label>
-                    <input type="text" id="promo-code" required placeholder="e.g. XJWW or SAVE11" class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold uppercase">
+                    <input type="text" id="promo-code" required autocapitalize="characters" placeholder="e.g. XXLE or SAVE11" class="w-full border border-navy/20 rounded-lg p-3 text-[16px] sm:text-sm outline-none focus:border-gold uppercase">
                 </div>
 
                 <div>
                     <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Type</label>
-                    <select id="promo-type" required class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold bg-white">
-                        <option value="tier">Tier (auto-applied, buy more pay less)</option>
+                    <select id="promo-type" required class="w-full border border-navy/20 rounded-lg p-3 text-[16px] sm:text-sm outline-none focus:border-gold bg-white">
+                        <option value="tier">Tier (buy more, pay less per piece)</option>
                         <option value="percent">Percent (typed at checkout)</option>
                         <option value="wheel">Wheel (spin to win)</option>
                     </select>
@@ -555,108 +590,135 @@
 
                 <!-- TIER fields -->
                 <div id="promo-tier-fields" class="hidden space-y-1">
-                    <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Price Ladder (৳ per unit — 1, 2, 3+)</label>
+                    <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Price per piece (৳) — 1 · 2 · 3+</label>
                     <div class="grid grid-cols-3 gap-2">
-                        <input type="number" id="promo-tier-1" step="0.01" placeholder="599" class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold">
-                        <input type="number" id="promo-tier-2" step="0.01" placeholder="499" class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold">
-                        <input type="number" id="promo-tier-3" step="0.01" placeholder="399" class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold">
+                        <input type="number" inputmode="decimal" id="promo-tier-1" step="0.01" placeholder="599" class="w-full border border-navy/20 rounded-lg p-3 text-[16px] sm:text-sm outline-none focus:border-gold">
+                        <input type="number" inputmode="decimal" id="promo-tier-2" step="0.01" placeholder="499" class="w-full border border-navy/20 rounded-lg p-3 text-[16px] sm:text-sm outline-none focus:border-gold">
+                        <input type="number" inputmode="decimal" id="promo-tier-3" step="0.01" placeholder="399" class="w-full border border-navy/20 rounded-lg p-3 text-[16px] sm:text-sm outline-none focus:border-gold">
                     </div>
-                    <p class="text-[9px] text-navy/40">3rd box applies to 3 or more units too.</p>
+                    <p class="text-[10px] text-navy/40">The 3rd box applies to 3 or more pieces too. Applies automatically at checkout; typing the code just confirms it.</p>
                 </div>
 
                 <!-- PERCENT fields -->
                 <div id="promo-percent-fields" class="hidden">
                     <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Percent Off</label>
-                    <input type="number" id="promo-percent-value" step="0.01" min="0" max="100" placeholder="11" class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold">
+                    <input type="number" inputmode="decimal" id="promo-percent-value" step="0.01" min="0" max="100" placeholder="11" class="w-full border border-navy/20 rounded-lg p-3 text-[16px] sm:text-sm outline-none focus:border-gold">
                 </div>
 
                 <!-- WHEEL fields -->
                 <div id="promo-wheel-fields" class="hidden space-y-2">
-                    <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Wheel Segments (odds are real — weight decides chance)</label>
+                    <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Wheel segments (odds are real — weight decides the chance)</label>
+                    <div class="flex gap-2 text-[9px] uppercase font-bold text-navy/40 tracking-widest pr-9">
+                        <span class="flex-1">Label</span><span class="w-16 text-center">% off</span><span class="w-16 text-center">Weight</span>
+                    </div>
                     <div id="promo-wheel-segments" class="space-y-2"></div>
-                    <button type="button" id="promo-wheel-add-segment" class="w-full border border-navy/20 border-dashed text-navy/50 py-2 rounded-lg text-[10px] uppercase font-bold tracking-widest">+ Add Segment</button>
+                    <button type="button" id="promo-wheel-add-segment" class="w-full border border-navy/20 border-dashed text-navy/50 py-3 rounded-lg text-[10px] uppercase font-bold tracking-widest">+ Add Segment</button>
+                    <p class="text-[10px] text-navy/40">Use 0% for a "try again" slice. Prize codes only work on the products chosen below.</p>
                 </div>
 
                 <div id="promo-usage-mode-wrap">
                     <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Usage</label>
-                    <select id="promo-usage-mode" class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold bg-white">
+                    <select id="promo-usage-mode" class="w-full border border-navy/20 rounded-lg p-3 text-[16px] sm:text-sm outline-none focus:border-gold bg-white">
                         <option value="reusable">Reusable until expiry</option>
                         <option value="single_use">Single-use (dies after first order)</option>
                     </select>
                 </div>
 
-                <div class="grid grid-cols-2 gap-2">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Starts (optional)</label>
-                        <input type="datetime-local" id="promo-starts-at" class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold">
+                        <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Starts (optional, BD time)</label>
+                        <input type="datetime-local" id="promo-starts-at" class="w-full border border-navy/20 rounded-lg p-3 text-[16px] sm:text-sm outline-none focus:border-gold">
                     </div>
                     <div>
-                        <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Expires (optional)</label>
-                        <input type="datetime-local" id="promo-expires-at" class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold">
+                        <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Expires (optional, BD time)</label>
+                        <input type="datetime-local" id="promo-expires-at" class="w-full border border-navy/20 rounded-lg p-3 text-[16px] sm:text-sm outline-none focus:border-gold">
                     </div>
                 </div>
 
+                <!-- PRODUCTS: scope toggle + searchable list (built by createProductPicker) -->
                 <div id="promo-products-wrap">
-                    <label class="flex items-center gap-2 text-[9px] uppercase font-bold text-navy/60 tracking-widest mb-2">
-                        <input type="checkbox" id="promo-applies-all" class="rounded">
-                        Applies to all products
-                    </label>
-                    <div id="promo-products-picker" class="border border-navy/20 rounded-lg p-2 max-h-40 overflow-y-auto space-y-1"></div>
+                    <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest block mb-2">Products</label>
+                    <div id="promo-picker-mount"></div>
+
+                    <!-- PREMIUM (tier only) -->
+                    <div id="promo-premium-block" class="hidden mt-4">
+                        <button type="button" id="promo-premium-toggle" class="w-full py-3.5 rounded-xl text-[11px] uppercase font-bold tracking-widest border border-gold/60 text-navy">★ Make some products premium</button>
+                        <div id="promo-premium-settings" class="hidden mt-3 space-y-3 bg-gold/5 border border-gold/30 rounded-xl p-3">
+                            <p class="text-[11px] text-navy/60">Tap <b>★ Premium</b> on the products above that should cost more. <span id="promo-premium-count" class="font-bold text-navy"></span></p>
+                            <div class="flex rounded-full bg-white p-1 border border-navy/10">
+                                <button type="button" data-mode="offset" class="premium-mode flex-1 py-3 rounded-full text-[10px] uppercase font-bold tracking-widest">+ Extra on every price</button>
+                                <button type="button" data-mode="custom" class="premium-mode flex-1 py-3 rounded-full text-[10px] uppercase font-bold tracking-widest">Custom prices</button>
+                            </div>
+                            <div id="promo-premium-offset-wrap">
+                                <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Premium costs how much more? (৳)</label>
+                                <input type="number" inputmode="decimal" id="promo-premium-offset" step="0.01" min="0" placeholder="50" class="w-full border border-navy/20 rounded-lg p-3 text-[16px] sm:text-sm outline-none focus:border-gold mt-1 bg-white">
+                                <div id="promo-premium-preview" class="mt-3 text-[11px] text-navy space-y-1"></div>
+                            </div>
+                            <div id="promo-premium-custom-wrap" class="hidden">
+                                <div id="promo-premium-custom-list" class="space-y-2"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <label class="flex items-center gap-2 text-[9px] uppercase font-bold text-navy/60 tracking-widest">
-                    <input type="checkbox" id="promo-is-active" checked class="rounded">
+                <label class="flex items-center gap-3 text-[9px] uppercase font-bold text-navy/60 tracking-widest py-1">
+                    <input type="checkbox" id="promo-is-active" checked class="w-5 h-5 accent-navy">
                     Active
                 </label>
-
-                <div class="flex gap-2 pt-2">
-                    <button type="button" id="promo-cancel-btn" class="w-1/2 border border-navy/20 text-navy/60 py-2.5 rounded-full text-[10px] uppercase font-bold tracking-widest">Cancel</button>
-                    <button type="submit" class="w-1/2 bg-navy text-gold py-2.5 rounded-full text-[10px] uppercase font-bold tracking-widest">Save</button>
-                </div>
             </form>
+            <div class="shrink-0 px-5 pt-3 border-t border-navy/10 flex gap-2 bg-white rounded-b-2xl" style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));">
+                <button type="button" id="promo-cancel-btn" class="w-1/2 border border-navy/20 text-navy/60 py-3.5 rounded-full text-[10px] uppercase font-bold tracking-widest">Cancel</button>
+                <button type="submit" form="promo-form" class="w-1/2 bg-navy text-gold py-3.5 rounded-full text-[10px] uppercase font-bold tracking-widest">Save</button>
+            </div>
         </div>
     </div>
 
     <!-- AIRDROP BULK-GENERATE MODAL -->
     <div id="airdrop-modal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
-        <div class="bg-white w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl p-6 max-h-[90vh] overflow-y-auto">
-            <h3 class="font-heading text-sm font-bold uppercase tracking-widest text-navy mb-4">New Airdrop Batch</h3>
-            <form id="airdrop-form" class="space-y-3">
-                <div>
-                    <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">How Many Codes</label>
-                    <input type="number" id="airdrop-count" min="1" max="200" value="10" required class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold">
+        <div class="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl max-h-[92dvh] flex flex-col">
+            <div class="px-5 pt-5 pb-3 border-b border-navy/5 shrink-0">
+                <h3 class="font-heading text-sm font-bold uppercase tracking-widest text-navy">New Airdrop Batch</h3>
+            </div>
+            <form id="airdrop-form" class="flex-1 overflow-y-auto overscroll-contain px-5 py-4 space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">How many codes</label>
+                        <input type="number" inputmode="numeric" id="airdrop-count" min="1" max="200" value="10" required class="w-full border border-navy/20 rounded-lg p-3 text-[16px] sm:text-sm outline-none focus:border-gold">
+                    </div>
+                    <div>
+                        <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Percent off</label>
+                        <input type="number" inputmode="decimal" id="airdrop-percent" step="0.01" min="0" max="100" placeholder="20" required class="w-full border border-navy/20 rounded-lg p-3 text-[16px] sm:text-sm outline-none focus:border-gold">
+                    </div>
                 </div>
                 <div>
                     <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Prefix (optional)</label>
-                    <input type="text" id="airdrop-prefix" placeholder="e.g. DROP" class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold uppercase">
+                    <input type="text" id="airdrop-prefix" autocapitalize="characters" placeholder="e.g. DROP" class="w-full border border-navy/20 rounded-lg p-3 text-[16px] sm:text-sm outline-none focus:border-gold uppercase">
                 </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Launch at (BD time)</label>
+                        <input type="datetime-local" id="airdrop-starts-at" required class="w-full border border-navy/20 rounded-lg p-3 text-[16px] sm:text-sm outline-none focus:border-gold">
+                    </div>
+                    <div>
+                        <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Expires (BD time)</label>
+                        <input type="datetime-local" id="airdrop-expires-at" class="w-full border border-navy/20 rounded-lg p-3 text-[16px] sm:text-sm outline-none focus:border-gold">
+                    </div>
+                </div>
+
                 <div>
-                    <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Percent Off</label>
-                    <input type="number" id="airdrop-percent" step="0.01" min="0" max="100" placeholder="20" required class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold">
+                    <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest block mb-2">Products</label>
+                    <div id="airdrop-picker-mount"></div>
                 </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Launch At</label>
-                        <input type="datetime-local" id="airdrop-starts-at" required class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold">
-                    </div>
-                    <div>
-                        <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Expires</label>
-                        <input type="datetime-local" id="airdrop-expires-at" class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold">
-                    </div>
-                </div>
-                <label class="flex items-center gap-2 text-[9px] uppercase font-bold text-navy/60 tracking-widest">
-                    <input type="checkbox" id="airdrop-applies-all" checked class="rounded">
-                    Applies to all products
-                </label>
-                <div id="airdrop-products-picker" class="hidden border border-navy/20 rounded-lg p-2 max-h-40 overflow-y-auto space-y-1"></div>
 
-                <div id="airdrop-result" class="hidden bg-navy text-gold rounded-xl p-3 text-[10px] font-bold break-all"></div>
-
-                <div class="flex gap-2 pt-2">
-                    <button type="button" id="airdrop-cancel-btn" class="w-1/2 border border-navy/20 text-navy/60 py-2.5 rounded-full text-[10px] uppercase font-bold tracking-widest">Cancel</button>
-                    <button type="submit" class="w-1/2 bg-navy text-gold py-2.5 rounded-full text-[10px] uppercase font-bold tracking-widest">Generate</button>
+                <div id="airdrop-result-wrap" class="hidden">
+                    <div id="airdrop-result" class="bg-navy text-gold rounded-xl p-3 text-[11px] font-bold break-all select-all"></div>
+                    <button type="button" id="airdrop-copy-btn" class="mt-2 w-full border border-navy/20 text-navy py-3 rounded-full text-[10px] uppercase font-bold tracking-widest">Copy all codes</button>
                 </div>
             </form>
+            <div class="shrink-0 px-5 pt-3 border-t border-navy/10 flex gap-2 bg-white rounded-b-2xl" style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));">
+                <button type="button" id="airdrop-cancel-btn" class="w-1/2 border border-navy/20 text-navy/60 py-3.5 rounded-full text-[10px] uppercase font-bold tracking-widest">Close</button>
+                <button type="submit" form="airdrop-form" class="w-1/2 bg-navy text-gold py-3.5 rounded-full text-[10px] uppercase font-bold tracking-widest">Generate</button>
+            </div>
         </div>
     </div>
 
@@ -707,6 +769,7 @@
     <script src="/static/dashboard.js"></script>
 </body>
 </html>
+
 
 
 

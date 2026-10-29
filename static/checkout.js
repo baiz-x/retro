@@ -391,23 +391,33 @@ async function previewPromo(typedCode) {
     const result = await res.json();
 
     if (result.status !== 'success') {
-      appliedDiscountTotal = 0;
-      promoDiscountRow.classList.add('hidden');
+      // Even on error the server keeps the automatic tier price, so
+      // refresh from its numbers instead of resetting to full price.
+      const d = result.data || {};
+      appliedDiscountTotal = d.discount_total || 0;
+      if (d.subtotal !== undefined) currentSubtotal = d.subtotal;
+      if (appliedDiscountTotal > 0) {
+        promoDiscountRow.classList.remove('hidden');
+        promoDiscountAmountEl.textContent = `−${formatTaka(appliedDiscountTotal)}`;
+      } else {
+        promoDiscountRow.classList.add('hidden');
+      }
+      orderSubtotalEl.textContent = formatTaka(
+        appliedDiscountTotal > 0 && d.original_subtotal ? d.original_subtotal : currentSubtotal
+      );
       if (typedCode) showPromoMessage(result.message || 'Invalid code.', true);
       else promoMessageEl.classList.add('hidden');
-      // Even on error, refresh from the server's own subtotal (tier
-      // pricing may still apply automatically with no code).
-      currentSubtotal = result.data ? result.data.subtotal : currentSubtotal;
-      orderSubtotalEl.textContent = formatTaka(currentSubtotal);
       updateGrandTotal();
       return;
     }
 
-    const { subtotal, discount_total, reason } = result.data;
+    const { subtotal, original_subtotal, discount_total, reason } = result.data;
     currentSubtotal = subtotal;
     appliedDiscountTotal = discount_total;
 
-    orderSubtotalEl.textContent = formatTaka(subtotal);
+    // Subtotal shows the full price; the discount row shows what comes
+    // off; the grand total (from currentSubtotal) is the discounted one.
+    orderSubtotalEl.textContent = formatTaka(discount_total > 0 && original_subtotal ? original_subtotal : subtotal);
     if (discount_total > 0) {
       promoDiscountRow.classList.remove('hidden');
       promoDiscountAmountEl.textContent = `−${formatTaka(discount_total)}`;
@@ -424,18 +434,35 @@ async function previewPromo(typedCode) {
 }
 
 if (applyPromoBtn) {
-  applyPromoBtn.addEventListener('click', () => {
+  applyPromoBtn.addEventListener('click', async () => {
     const typed = promoCodeInput.value.trim();
     if (!typed) return;
 
-    // A WHEEL code isn't a discount by itself — it opens the spin
-    // popup instead (mirrors promo_service.price_cart_items rejecting
-    // a wheel code as a direct discount).
-    if (typed.toUpperCase().startsWith('WHEEL-') || typed.toUpperCase().startsWith('WHEEL')) {
-      openWheelPopup(typed);
-      return;
+    // A WHEEL code isn't a discount by itself — it opens the spin popup
+    // instead. The server decides what a code is (not the code's
+    // spelling), via /promo/check.
+    try {
+      const res = await csrfFetch(`${API_BASE}/promo/check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: typed }),
+      });
+      const check = await res.json();
+      if (check.data && check.data.kind === 'wheel') {
+        openWheelPopup(typed);
+        return;
+      }
+    } catch (err) {
+      // Network hiccup on the check — fall through to the normal preview.
     }
     previewPromo(typed);
+  });
+}
+
+// Clearing the box removes the discount instead of leaving a stale one.
+if (promoCodeInput) {
+  promoCodeInput.addEventListener('change', () => {
+    if (!promoCodeInput.value.trim()) previewPromo(null);
   });
 }
 
@@ -454,6 +481,7 @@ if (applyPromoBtn) {
 
 let activeWheelCode = null;
 let checkoutWheelRotation = 0; // tracked across spins so rotation always adds forward
+let checkoutWheelSegments = []; // last drawn segments, needed to land on the server-picked slice
 
 /* Same palette as the standalone /wheel page (static/js/wheel.js) —
    alternating warm/cool tones with per-slice text color for contrast,
@@ -467,8 +495,27 @@ const CHECKOUT_WHEEL_PALETTE = [
   { fill: '#d9c2a8', text: '#33302b' },
 ];
 
+/* Rotation (degrees, clockwise) that parks the pointer inside the slice the
+   SERVER picked. Slices are equal-sized (odds live in the weights, not the
+   artwork), slice 0 starts at 12 o'clock, so slice i is centred at
+   -(i + 0.5) * slice degrees. A little jitter keeps it from always landing
+   dead-centre, but never near a slice edge. */
+function nextCheckoutWheelRotation(current, segments, segmentId, label) {
+  const n = segments.length;
+  const slice = 360 / n;
+  let idx = segments.findIndex(s => s.id === segmentId);
+  if (idx < 0) idx = segments.findIndex(s => s.label === label);
+  if (idx < 0) idx = Math.floor(Math.random() * n);
+  const jitter = (Math.random() - 0.5) * slice * 0.6;
+  const targetMod = (((360 - (idx + 0.5) * slice + jitter) % 360) + 360) % 360;
+  const currentMod = ((current % 360) + 360) % 360;
+  const delta = (targetMod - currentMod + 360) % 360;
+  return current + (5 + Math.floor(Math.random() * 3)) * 360 + delta;
+}
+
 function drawWheelSegments(container, segments) {
   container.innerHTML = '';
+  checkoutWheelSegments = segments;
   const size = 260;
   const svgNS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(svgNS, 'svg');
@@ -478,12 +525,15 @@ function drawWheelSegments(container, segments) {
   svg.style.transition = 'none';
   svg.style.transform = `rotate(${checkoutWheelRotation}deg)`;
 
-  const cx = size / 2, cy = size / 2, r = size / 2 - 6;
-  const totalWeight = segments.reduce((s, seg) => s + Math.max(seg.weight, 0), 0) || 1;
+  const cx = size / 2, cy = size / 2, r = size / 2 - 8;
+  const n = segments.length;
+  // Equal slices: a 5%-chance prize drawn 5% wide is unreadable and looks
+  // like a trap. The real odds are decided server-side by weight.
+  const sliceAngle = 360 / n;
+  const fontSize = n <= 6 ? 13 : n <= 10 ? 10 : 9;
   let angleStart = -90; // 12 o'clock, under the pointer
 
   segments.forEach((seg, i) => {
-    const sliceAngle = (Math.max(seg.weight, 0) / totalWeight) * 360;
     const angleEnd = angleStart + sliceAngle;
     const large = sliceAngle > 180 ? 1 : 0;
     const colors = CHECKOUT_WHEEL_PALETTE[i % CHECKOUT_WHEEL_PALETTE.length];
@@ -492,31 +542,47 @@ function drawWheelSegments(container, segments) {
     const y1 = cy + r * Math.sin((Math.PI * angleStart) / 180);
     const x2 = cx + r * Math.cos((Math.PI * angleEnd) / 180);
     const y2 = cy + r * Math.sin((Math.PI * angleEnd) / 180);
+
     const path = document.createElementNS(svgNS, 'path');
-    path.setAttribute('d', `M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} Z`);
+    path.setAttribute('d', n === 1
+      ? `M${cx},${cy - r} A${r},${r} 0 1 1 ${cx - 0.01},${cy - r} Z`
+      : `M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} Z`);
     path.setAttribute('fill', colors.fill);
     path.setAttribute('stroke', '#f7f3ec');
-    path.setAttribute('stroke-width', '3');
+    path.setAttribute('stroke-width', '2');
     svg.appendChild(path);
 
-    const midAngle = (angleStart + angleEnd) / 2;
-    const labelR = r * 0.62;
-    const lx = cx + labelR * Math.cos((Math.PI * midAngle) / 180);
-    const ly = cy + labelR * Math.sin((Math.PI * midAngle) / 180);
+    // Radial label: reads from the hub out to the rim, so long prize
+    // names fit instead of being squeezed across a narrow slice.
+    const midAngle = angleStart + sliceAngle / 2;
+    const label = seg.label.length > 14 ? seg.label.slice(0, 13) + '…' : seg.label;
     const text = document.createElementNS(svgNS, 'text');
-    text.setAttribute('x', lx);
-    text.setAttribute('y', ly);
-    text.setAttribute('font-size', sliceAngle < 35 ? '9' : '11');
+    text.setAttribute('x', cx + r * 0.92);
+    text.setAttribute('y', cy);
+    text.setAttribute('font-size', fontSize);
     text.setAttribute('font-weight', '800');
     text.setAttribute('fill', colors.text);
-    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('text-anchor', 'end');
     text.setAttribute('dominant-baseline', 'middle');
-    text.setAttribute('transform', `rotate(${midAngle + 90}, ${lx}, ${ly})`);
-    text.textContent = seg.label;
+    text.setAttribute('transform', `rotate(${midAngle}, ${cx}, ${cy})`);
+    text.textContent = label;
     svg.appendChild(text);
 
     angleStart = angleEnd;
   });
+
+  // Rim + studs so it reads as a wheel, not a pie chart.
+  const rim = document.createElementNS(svgNS, 'circle');
+  rim.setAttribute('cx', cx); rim.setAttribute('cy', cy); rim.setAttribute('r', r);
+  rim.setAttribute('fill', 'none'); rim.setAttribute('stroke', '#33302b'); rim.setAttribute('stroke-width', '5');
+  svg.appendChild(rim);
+  for (let k = 0; k < 24; k++) {
+    const a = (k / 24) * Math.PI * 2;
+    const stud = document.createElementNS(svgNS, 'circle');
+    stud.setAttribute('cx', cx + r * Math.cos(a)); stud.setAttribute('cy', cy + r * Math.sin(a));
+    stud.setAttribute('r', 2.2); stud.setAttribute('fill', '#f7f3ec');
+    svg.appendChild(stud);
+  }
 
   container.appendChild(svg);
 }
@@ -601,15 +667,11 @@ if (wheelPopupSpinBtn) {
         return;
       }
 
-      const { label, prize_code } = result.data;
-      // Real spin physics: several full rotations plus a random final
-      // angle, eased with a curve that decelerates hard at the end —
-      // the OUTCOME itself was already decided server-side before
-      // this animation starts, this is purely visual feedback.
+      const { label, prize_code, segment_id } = result.data;
+      // The outcome was decided server-side; the animation lands the
+      // pointer on that exact slice so the picture matches the prize.
       const svg = document.getElementById('wheelPopupSvg');
-      const spins = 5 + Math.random() * 2;
-      const finalOffset = Math.random() * 360;
-      checkoutWheelRotation += spins * 360 + finalOffset;
+      checkoutWheelRotation = nextCheckoutWheelRotation(checkoutWheelRotation, checkoutWheelSegments, segment_id, label);
       if (svg) {
         svg.style.transition = 'transform 4.2s cubic-bezier(0.11, 0.79, 0.12, 1)';
         void svg.getBoundingClientRect();
@@ -621,6 +683,7 @@ if (wheelPopupSpinBtn) {
         if (prize_code) {
           wheelPopupResult.innerHTML = `🎉 You won ${escapeHtml(label)}!<br>Code: <strong>${escapeHtml(prize_code)}</strong> (valid 24h)`;
           promoCodeInput.value = prize_code;
+          previewPromo(prize_code);
         } else {
           wheelPopupResult.textContent = `Result: ${label}. Better luck on the next drop!`;
         }
@@ -634,4 +697,5 @@ if (wheelPopupSpinBtn) {
     }
   });
 }
+
 
