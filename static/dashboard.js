@@ -53,16 +53,41 @@ const COLLECTION_FIELDS = {
 
 console.info('[dashboard] dashboard.js loaded: campaign builder build 2026-10-30');
 
-// The campaign tab (picker, premium builder, wheel, airdrop) lives in its own
-// file, dashboard_campaigns.js, loaded right after this one. Split so no single
-// file is big enough to be silently truncated by a copy-paste or editor limit.
+// Visible on-screen problem notice. Uses dash_diag.js's banner when it is
+// deployed, and builds its own when it is not, so a deploy mismatch can never
+// fail silently.
+function dashProblem(msg) {
+    console.error('[dashboard] ' + msg);
+    if (window.__dashBanner) { window.__dashBanner(msg); return; }
+    try {
+        let el = document.getElementById('dash-error-banner');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'dash-error-banner';
+            el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#b91c1c;color:#fff;font:12px/1.4 monospace;padding:8px 12px;max-height:40vh;overflow:auto;white-space:pre-wrap';
+            el.addEventListener('click', () => el.remove());
+            document.body.appendChild(el);
+        }
+        el.textContent += msg + '\n';
+    } catch (e) { /* never throw from diagnostics */ }
+}
+
+// Campaign tab init (picker, premium builder, wheel, airdrop) — defined further down this file.
 function setupCampaignModules() {
-    if (typeof setupPromoListeners !== 'function' || typeof setupAirdropListeners !== 'function') {
-        window.__dashBanner && window.__dashBanner('dashboard_campaigns.js is missing or did not load - the Campaigns tab is disabled.');
+    const run = () => { setupPromoListeners(); setupAirdropListeners(); };
+    if (typeof setupPromoListeners === 'function' && typeof setupAirdropListeners === 'function') {
+        run();
         return;
     }
-    setupPromoListeners();
-    setupAirdropListeners();
+    // dashboard.html has no <script> tag for dashboard_campaigns.js (old html
+    // still deployed). Load it ourselves so the real problem can be reported.
+    const s = document.createElement('script');
+    s.src = '/static/dashboard_campaigns.js?v=20261030';
+    s.onload = () => {
+        try { run(); } catch (err) { dashProblem('Campaigns tab failed to start: ' + err.message); }
+    };
+    s.onerror = () => dashProblem('dashboard_campaigns.js could not be loaded (missing from static/?) - Campaigns tab disabled.');
+    document.body.appendChild(s);
 }
 
 function bootDashboard() {
@@ -79,7 +104,7 @@ function bootDashboard() {
         .forEach(fn => {
             try { fn(); } catch (err) {
                 console.error(`[dashboard] ${fn.name} failed:`, err);
-                window.__dashBanner && window.__dashBanner(`${fn.name} failed: ${err.message}`);
+                dashProblem(`${fn.name} failed: ${err.message}`);
             }
         });
 }
@@ -1691,4 +1716,713 @@ function setupExpenseFromProductListeners() {
     });
 }
 
-/* END OF dashboard.js (core) - if you can read this line in the served file, it is complete. */
+/* ================= TAB 8: CAMPAIGNS ================= */
+// Talks to routes/promo_route.py. All pricing/validation logic lives
+// server-side in services/promo_service.py — this file only renders
+// state and posts what the admin picked in the form.
+
+let allPromos = [];
+let allProductsForPicker = [];
+let wheelSegmentCount = 0;
+let promoPicker = null;      // campaign modal product picker
+let airdropPicker = null;    // airdrop modal product picker
+let premiumMode = 'offset';  // 'offset' (+N on every rung) | 'custom' (own prices)
+let premiumCardsKey = null;  // avoids rebuilding custom-price cards while typing
+
+async function fetchPromos() {
+    try {
+        const res = await fetch('/api/admin/promos');
+        const result = await res.json();
+        if (result.status === 'success') {
+            allPromos = result.data || [];
+            renderPromos();
+        }
+    } catch (err) {
+        console.error("Failed to fetch promos:", err);
+    }
+}
+
+async function fetchProductsForPicker() {
+    if (allProductsForPicker.length) return; // fetched once per page load is enough
+    try {
+        const res = await fetch('/api/admin/products/minimal');
+        const result = await res.json();
+        if (result.status === 'success') {
+            allProductsForPicker = result.data || [];
+        }
+    } catch (err) {
+        console.error("Failed to fetch products for picker:", err);
+        showToast('Could not load products for the picker', false);
+    }
+}
+
+function promoTypeLabel(type) {
+    if (type === 'tier') return 'Tier';
+    if (type === 'percent') return 'Percent';
+    if (type === 'wheel') return 'Wheel';
+    return type;
+}
+
+function promoStatusBadge(promo) {
+    const now = new Date();
+    if (!promo.is_active) return { text: 'Paused', cls: 'bg-gray-200 text-gray-500' };
+    if (promo.expires_at && new Date(promo.expires_at) <= now) return { text: 'Expired', cls: 'bg-gray-200 text-gray-500' };
+    if (promo.starts_at && new Date(promo.starts_at) > now) return { text: 'Scheduled', cls: 'bg-amber-100 text-amber-700' };
+    if (promo.usage_mode === 'single_use' && promo.redeemed_at) return { text: 'Used', cls: 'bg-gray-200 text-gray-500' };
+    return { text: 'Live', cls: 'bg-green-100 text-green-700' };
+}
+
+function renderPromos() {
+    const container = document.getElementById('promos-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (allPromos.length === 0) {
+        container.innerHTML = `<p class="text-[10px] uppercase font-bold text-gray-400 tracking-widest text-center mt-10">No Campaigns Yet</p>`;
+        return;
+    }
+
+    allPromos.forEach(promo => {
+        const badge = promoStatusBadge(promo);
+        let detail = '';
+        if (promo.promo_type === 'tier') {
+            detail = `Ladder: ৳${escapeHtml(promo.discount_amount || '')}`;
+            const prem = promo.premium_products || [];
+            if (prem.length) {
+                detail += prem.some(p => p.custom_ladder)
+                    ? ` · ${prem.length} premium (own prices)`
+                    : ` · ${prem.length} premium +৳${promo.premium_offset || 0}`;
+            }
+        } else if (promo.promo_type === 'percent') {
+            detail = `${escapeHtml(promo.discount_amount || '0')}% off`;
+        } else if (promo.promo_type === 'wheel') {
+            detail = `${(promo.segments || []).length} segments`;
+        }
+        const scope = promo.applies_to_all ? 'All products' : `${(promo.product_ids || []).length} product(s)`;
+
+        const card = document.createElement('div');
+        card.className = "bg-white p-4 rounded-xl border border-navy/10 shadow-sm";
+        card.innerHTML = `
+            <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <p class="font-black text-sm text-navy tracking-widest">${escapeHtml(promo.code)}</p>
+                        <span class="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${badge.cls}">${badge.text}</span>
+                        <span class="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-navy/5 text-navy/60">${promoTypeLabel(promo.promo_type)}</span>
+                    </div>
+                    <p class="text-[10px] text-navy/50 font-bold uppercase tracking-widest mt-1">${detail} · ${scope}</p>
+                    <p class="text-[9px] text-navy/40 mt-1">
+                        ${promo.usage_mode === 'single_use' ? 'Single-use' : 'Reusable'}
+                        ${promo.expires_at ? ` · Expires ${new Date(promo.expires_at).toLocaleString()}` : ''}
+                    </p>
+                </div>
+                <div class="flex gap-2 shrink-0">
+                    <button data-promo-id="${promo.id}" class="promo-edit-btn text-[9px] uppercase font-bold text-navy/50 tracking-widest">Edit</button>
+                    <button data-promo-id="${promo.id}" class="promo-delete-btn text-[9px] uppercase font-bold text-red-500 tracking-widest">Delete</button>
+                </div>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+
+    document.querySelectorAll('.promo-edit-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => openPromoModal(e.currentTarget.dataset.promoId));
+    });
+    document.querySelectorAll('.promo-delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => deletePromo(e.currentTarget.dataset.promoId));
+    });
+}
+
+/* ---- Searchable product picker (shared by the campaign + airdrop modals) ----
+   Replaces the old checkbox list, which read its selection back out of the
+   DOM (so it could never be searched or filtered) and whose visibility was
+   only synced on a "change" event — form.reset() doesn't fire one, so after
+   a previous open had hidden the list it stayed hidden on the next open.
+   State lives in JS now, and the view is re-synced on every render.
+
+   Modes: All products | Choose products. With allowPremium, a "★ Premium"
+   chip appears on each row once premium is switched on. */
+function createProductPicker(mount, { allowPremium = false } = {}) {
+    const state = { appliesAll: false, selected: new Set(), premium: new Map(), premiumOn: false, query: '' };
+    let products = [];
+    const listeners = [];
+    const emit = () => listeners.forEach(fn => fn());
+
+    mount.innerHTML = `
+        <div class="flex rounded-full bg-navy/5 p-1 mb-3">
+            <button type="button" data-scope="all" class="picker-scope"></button>
+            <button type="button" data-scope="selected" class="picker-scope"></button>
+        </div>
+        <p class="picker-all-note hidden text-[11px] text-navy/60 mb-2"></p>
+        <div class="picker-body">
+            <input type="search" placeholder="Search name, category, club…" class="picker-search w-full border border-navy/20 rounded-lg p-3 text-[16px] sm:text-sm outline-none focus:border-gold mb-2">
+            <div class="flex items-center justify-between text-[10px] uppercase font-bold tracking-widest text-navy/50 mb-2">
+                <span class="picker-count"></span>
+                <span class="picker-actions">
+                    <button type="button" class="picker-select-shown py-1.5 px-1">Select shown</button> ·
+                    <button type="button" class="picker-clear py-1.5 px-1">Clear</button>
+                </span>
+            </div>
+            <div class="picker-list max-h-64 overflow-y-auto overscroll-contain border border-navy/10 rounded-lg divide-y divide-navy/5"></div>
+        </div>`;
+
+    const q = (sel) => mount.querySelector(sel);
+    const scopeBtns = mount.querySelectorAll('.picker-scope');
+    const note = q('.picker-all-note');
+    const body = q('.picker-body');
+    const search = q('.picker-search');
+    const count = q('.picker-count');
+    const list = q('.picker-list');
+    const actions = q('.picker-actions');
+
+    function filtered() {
+        const term = state.query.trim().toLowerCase();
+        if (!term) return products;
+        return products.filter(p =>
+            [p.name, p.category, p.club].some(v => (v || '').toLowerCase().includes(term)));
+    }
+
+    function render() {
+        scopeBtns.forEach(b => {
+            const isAll = b.dataset.scope === 'all';
+            const active = isAll === state.appliesAll;
+            b.className = `picker-scope flex-1 py-3 rounded-full text-[10px] uppercase font-bold tracking-widest transition ${active ? 'bg-navy text-gold shadow' : 'text-navy/50'}`;
+            b.textContent = isAll ? 'All products' : 'Choose products';
+        });
+
+        const premiumVisible = allowPremium && state.premiumOn;
+        body.classList.toggle('hidden', state.appliesAll && !premiumVisible);
+        note.classList.toggle('hidden', !state.appliesAll);
+        note.textContent = premiumVisible
+            ? 'Every product is included. Tap ★ Premium on the ones that should cost more.'
+            : 'Applies to every product in the store.';
+        actions.classList.toggle('hidden', state.appliesAll);
+        count.textContent = state.appliesAll
+            ? `${state.premium.size} premium`
+            : `${state.selected.size} selected${premiumVisible ? ` · ${state.premium.size} premium` : ''}`;
+
+        const shown = filtered();
+        const scroll = list.scrollTop;
+        if (!products.length) {
+            list.innerHTML = `<p class="text-[10px] text-navy/40 uppercase font-bold tracking-widest p-4 text-center">No products loaded — close and reopen to retry</p>`;
+        } else if (!shown.length) {
+            list.innerHTML = `<p class="text-[10px] text-navy/40 uppercase font-bold tracking-widest p-4 text-center">No match</p>`;
+        } else {
+            list.innerHTML = shown.map(p => {
+                const sel = state.selected.has(p.id);
+                const prem = state.premium.has(p.id);
+                const meta = [p.category, p.club].filter(Boolean).join(' · ');
+                return `
+                <div class="picker-row flex items-center gap-3 px-3 min-h-[56px] cursor-pointer ${sel && !state.appliesAll ? 'bg-gold/10' : ''}" data-id="${p.id}">
+                    ${state.appliesAll ? '' : `<input type="checkbox" class="picker-cb w-5 h-5 accent-navy shrink-0 pointer-events-none" ${sel ? 'checked' : ''}>`}
+                    <div class="flex-1 min-w-0 py-2">
+                        <p class="text-sm font-semibold text-navy truncate">${escapeHtml(p.name)}</p>
+                        <p class="text-[10px] text-navy/40 truncate">৳${(p.price || 0).toFixed(0)}${meta ? ' · ' + escapeHtml(meta) : ''}</p>
+                    </div>
+                    ${premiumVisible ? `<button type="button" class="picker-prem shrink-0 px-3 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-widest border ${prem ? 'bg-gold text-navy border-gold' : 'border-navy/20 text-navy/40'}">★ Premium</button>` : ''}
+                </div>`;
+            }).join('');
+        }
+        list.scrollTop = scroll;
+    }
+
+    function toggleSelect(id) {
+        if (state.selected.has(id)) { state.selected.delete(id); state.premium.delete(id); }
+        else state.selected.add(id);
+    }
+    function togglePremium(id) {
+        if (state.premium.has(id)) state.premium.delete(id);
+        else { state.premium.set(id, null); if (!state.appliesAll) state.selected.add(id); }
+    }
+
+    list.addEventListener('click', (e) => {
+        const row = e.target.closest('.picker-row');
+        if (!row) return;
+        const id = parseInt(row.dataset.id, 10);
+        if (e.target.closest('.picker-prem')) togglePremium(id);
+        else if (!state.appliesAll) toggleSelect(id);
+        else return;
+        render();
+        emit();
+    });
+
+    scopeBtns.forEach(b => b.addEventListener('click', () => {
+        state.appliesAll = b.dataset.scope === 'all';
+        // Premium products must stay inside a "Choose products" selection.
+        if (!state.appliesAll) state.premium.forEach((_, id) => state.selected.add(id));
+        render();
+        emit();
+    }));
+    search.addEventListener('input', () => { state.query = search.value; render(); });
+    q('.picker-select-shown').addEventListener('click', () => {
+        filtered().forEach(p => state.selected.add(p.id));
+        render(); emit();
+    });
+    q('.picker-clear').addEventListener('click', () => {
+        state.selected.clear(); state.premium.clear();
+        render(); emit();
+    });
+
+    return {
+        setProducts(items) { products = items || []; render(); },
+        setState({ appliesAll = false, selected = [], premium = [] } = {}) {
+            state.appliesAll = !!appliesAll;
+            state.selected = new Set((selected || []).map(Number));
+            state.premium = new Map((premium || []).map(e => [Number(e.product_id), e.custom_ladder || null]));
+            state.premiumOn = allowPremium && state.premium.size > 0;
+            state.query = '';
+            search.value = '';
+            render();
+        },
+        setPremiumOn(on) {
+            state.premiumOn = allowPremium && !!on;
+            if (!state.premiumOn) state.premium.clear();
+            render(); emit();
+        },
+        isPremiumOn() { return state.premiumOn; },
+        setPremiumLadder(id, ladder) { if (state.premium.has(id)) state.premium.set(id, ladder || null); },
+        getPremiumEntries() {
+            return Array.from(state.premium.entries()).map(([product_id, custom_ladder]) => ({ product_id, custom_ladder }));
+        },
+        getValue() {
+            return {
+                applies_to_all: state.appliesAll,
+                product_ids: state.appliesAll ? [] : Array.from(state.selected),
+                premium_products: allowPremium && state.premiumOn ? this.getPremiumEntries() : [],
+            };
+        },
+        onChange(fn) { listeners.push(fn); },
+    };
+}
+
+/* ---- Tier campaign: premium pricing builder ---- */
+
+function promoReadBaseLadder() {
+    return [1, 2, 3]
+        .map(i => parseFloat(document.getElementById(`promo-tier-${i}`).value))
+        .filter(v => !isNaN(v));
+}
+
+function updatePremiumPreview() {
+    const el = document.getElementById('promo-premium-preview');
+    if (!el) return;
+    const base = promoReadBaseLadder();
+    const extra = parseFloat(document.getElementById('promo-premium-offset').value) || 0;
+    if (!base.length) {
+        el.textContent = 'Fill in the base prices above to preview the premium prices.';
+        return;
+    }
+    const labels = ['1 piece', '2 pieces', '3+ pieces'];
+    const last = base[base.length - 1];
+    el.innerHTML = base.map((v, i) =>
+        `<div class="flex justify-between"><span>${labels[i]}</span><span>৳${v} · <b>premium ৳${v + extra}</b></span></div>`
+    ).join('') + `<p class="mt-2 text-navy/50">Normal and premium pieces count together: 2 normal + 1 premium → ৳${last} + ৳${last} + ৳${last + extra}.</p>`;
+}
+
+function renderPremiumCustomCards(force) {
+    const wrap = document.getElementById('promo-premium-custom-list');
+    if (!wrap || !promoPicker) return;
+    const entries = promoPicker.getPremiumEntries();
+    const key = entries.map(e => e.product_id).join(',');
+    if (!force && key === premiumCardsKey) return; // don't rebuild (and lose focus) while typing
+    premiumCardsKey = key;
+
+    if (!entries.length) {
+        wrap.innerHTML = `<p class="text-[11px] text-navy/50">Tap ★ Premium on products in the list above, then set their own prices here.</p>`;
+        return;
+    }
+    const base = promoReadBaseLadder();
+    const rungLabels = ['1 pc', '2 pcs', '3+ pcs'];
+    wrap.innerHTML = entries.map(e => {
+        const prod = allProductsForPicker.find(p => p.id === e.product_id);
+        const parts = (e.custom_ladder || '').split(',').map(s => s.trim());
+        const inputs = [0, 1, 2].map(i => `
+            <div>
+                <label class="block text-[9px] uppercase font-bold text-navy/50 tracking-widest mb-1">${rungLabels[i]}</label>
+                <input type="number" inputmode="decimal" step="0.01" min="0" data-pid="${e.product_id}" data-rung="${i}"
+                       value="${escapeHtml(parts[i] || '')}" placeholder="${base[i] !== undefined ? base[i] : ''}"
+                       class="premium-rung w-full border border-navy/20 rounded-lg p-3 text-[16px] sm:text-sm outline-none focus:border-gold bg-white">
+            </div>`).join('');
+        return `
+            <div class="border border-navy/10 rounded-xl p-3 bg-white">
+                <p class="text-xs font-bold text-navy truncate mb-2">${escapeHtml(prod ? prod.name : '#' + e.product_id)}</p>
+                <div class="grid grid-cols-3 gap-2">${inputs}</div>
+            </div>`;
+    }).join('');
+}
+
+function syncPremiumUi() {
+    if (!promoPicker) return;
+    const on = promoPicker.isPremiumOn();
+    const toggle = document.getElementById('promo-premium-toggle');
+    document.getElementById('promo-premium-settings').classList.toggle('hidden', !on);
+    toggle.textContent = on ? '★ Premium on — tap to turn off' : '★ Make some products premium';
+    toggle.className = `w-full py-3.5 rounded-xl text-[11px] uppercase font-bold tracking-widest border ${on ? 'bg-gold text-navy border-gold' : 'border-gold/60 text-navy'}`;
+    document.getElementById('promo-premium-count').textContent =
+        `${promoPicker.getPremiumEntries().length} premium selected`;
+
+    document.querySelectorAll('.premium-mode').forEach(b => {
+        const active = b.dataset.mode === premiumMode;
+        b.className = `premium-mode flex-1 py-3 rounded-full text-[10px] uppercase font-bold tracking-widest transition ${active ? 'bg-navy text-gold shadow' : 'text-navy/50'}`;
+    });
+    document.getElementById('promo-premium-offset-wrap').classList.toggle('hidden', premiumMode !== 'offset');
+    document.getElementById('promo-premium-custom-wrap').classList.toggle('hidden', premiumMode !== 'custom');
+    updatePremiumPreview();
+    if (on && premiumMode === 'custom') renderPremiumCustomCards(false);
+}
+
+/* ---- Wheel segment rows (dynamic add/remove inside the promo modal) ---- */
+
+function addWheelSegmentRow(label = '', percent = '', weight = '') {
+    const wrap = document.getElementById('promo-wheel-segments');
+    if (!wrap) return;
+    const rowId = `wheel-seg-${wheelSegmentCount++}`;
+    const row = document.createElement('div');
+    row.className = "flex gap-2 items-center";
+    row.dataset.rowId = rowId;
+    row.innerHTML = `
+        <input type="text" placeholder="Label (e.g. 10% OFF)" value="${escapeHtml(label)}" class="wheel-seg-label flex-1 min-w-0 border border-navy/20 rounded-lg p-2.5 text-[16px] sm:text-xs outline-none focus:border-gold">
+        <input type="number" placeholder="%" step="0.01" min="0" max="100" value="${percent}" class="wheel-seg-percent w-16 border border-navy/20 rounded-lg p-2.5 text-[16px] sm:text-xs outline-none focus:border-gold">
+        <input type="number" placeholder="Weight" step="0.1" min="0" value="${weight}" class="wheel-seg-weight w-16 border border-navy/20 rounded-lg p-2.5 text-[16px] sm:text-xs outline-none focus:border-gold">
+        <button type="button" class="wheel-seg-remove text-red-500 text-base px-2 py-2">✕</button>
+    `;
+    row.querySelector('.wheel-seg-remove').addEventListener('click', () => row.remove());
+    wrap.appendChild(row);
+}
+
+function collectWheelSegments() {
+    return Array.from(document.querySelectorAll('#promo-wheel-segments > div')).map(row => ({
+        label: row.querySelector('.wheel-seg-label').value.trim(),
+        discount_percent: parseFloat(row.querySelector('.wheel-seg-percent').value) || 0,
+        weight: parseFloat(row.querySelector('.wheel-seg-weight').value) || 0,
+    })).filter(s => s.label);
+}
+
+/* ---- Type-dependent field visibility ---- */
+
+function updatePromoTypeFields() {
+    const type = document.getElementById('promo-type').value;
+    document.getElementById('promo-tier-fields').classList.toggle('hidden', type !== 'tier');
+    document.getElementById('promo-percent-fields').classList.toggle('hidden', type !== 'percent');
+    document.getElementById('promo-wheel-fields').classList.toggle('hidden', type !== 'wheel');
+    // Usage mode genuinely doesn't apply to wheel promos (each spin
+    // mints its own single-use prize code — see promo_service.spin_wheel),
+    // but the product scope DOES apply to every type including wheel:
+    // it decides which products a wheel's prize codes are allowed to
+    // discount.
+    document.getElementById('promo-usage-mode-wrap').classList.toggle('hidden', type === 'wheel');
+
+    // Premium pricing only exists for tier campaigns.
+    document.getElementById('promo-premium-block').classList.toggle('hidden', type !== 'tier');
+    if (type !== 'tier' && promoPicker && promoPicker.isPremiumOn()) promoPicker.setPremiumOn(false);
+    syncPremiumUi();
+}
+
+/* ---- Modal open/close ---- */
+
+async function openPromoModal(promoId) {
+    const modal = document.getElementById('promo-modal');
+    const title = document.getElementById('promo-modal-title');
+    if (!modal || !promoPicker) return;
+
+    document.getElementById('promo-form').reset();
+    document.getElementById('promo-wheel-segments').innerHTML = '';
+    wheelSegmentCount = 0;
+    premiumMode = 'offset';
+    premiumCardsKey = null;
+
+    // Always have products before drawing the picker — opening the modal
+    // before the background fetch finished used to leave it empty.
+    await fetchProductsForPicker();
+    promoPicker.setProducts(allProductsForPicker);
+
+    if (promoId) {
+        const promo = allPromos.find(p => p.id == promoId);
+        if (!promo) return;
+        title.textContent = 'Edit Campaign';
+        document.getElementById('promo-id').value = promo.id;
+        document.getElementById('promo-code').value = promo.code;
+        document.getElementById('promo-type').value = promo.promo_type;
+        document.getElementById('promo-usage-mode').value = promo.usage_mode;
+        document.getElementById('promo-is-active').checked = !!promo.is_active;
+        document.getElementById('promo-starts-at').value = promo.starts_at ? promo.starts_at.slice(0, 16) : '';
+        document.getElementById('promo-expires-at').value = promo.expires_at ? promo.expires_at.slice(0, 16) : '';
+        // Code is the lookup key everywhere (cart, orders, redemptions)
+        // — changing it on an existing promo would silently orphan
+        // history, so it's locked to edit-create-new instead.
+        document.getElementById('promo-code').disabled = true;
+
+        if (promo.promo_type === 'tier') {
+            const ladder = (promo.discount_amount || '').split(',').map(s => s.trim());
+            document.getElementById('promo-tier-1').value = ladder[0] || '';
+            document.getElementById('promo-tier-2').value = ladder[1] || '';
+            document.getElementById('promo-tier-3').value = ladder[2] || '';
+            const hasCustom = (promo.premium_products || []).some(p => p.custom_ladder);
+            premiumMode = hasCustom ? 'custom' : 'offset';
+            document.getElementById('promo-premium-offset').value = promo.premium_offset || '';
+        } else if (promo.promo_type === 'percent') {
+            document.getElementById('promo-percent-value').value = promo.discount_amount || '';
+        } else if (promo.promo_type === 'wheel') {
+            (promo.segments || []).forEach(s => addWheelSegmentRow(s.label, s.discount_percent, s.weight));
+        }
+
+        promoPicker.setState({
+            appliesAll: promo.applies_to_all,
+            selected: promo.product_ids || [],
+            premium: promo.promo_type === 'tier' ? (promo.premium_products || []) : [],
+        });
+    } else {
+        title.textContent = 'New Campaign';
+        document.getElementById('promo-id').value = '';
+        document.getElementById('promo-code').disabled = false;
+        document.getElementById('promo-type').value = 'tier';
+        addWheelSegmentRow();
+        promoPicker.setState({ appliesAll: false, selected: [], premium: [] });
+    }
+
+    updatePromoTypeFields();
+    modal.classList.remove('hidden');
+}
+
+function closePromoModal() {
+    document.getElementById('promo-modal')?.classList.add('hidden');
+}
+
+async function deletePromo(promoId) {
+    if (!confirm('Delete this campaign? Any wheel prize codes it issued will be deleted too.')) return;
+    try {
+        const res = await fetch(`/api/admin/promos/${promoId}`, {
+            method: 'DELETE',
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        });
+        const data = await res.json();
+        if (res.ok && data.status === 'success') {
+            showToast('Campaign deleted', true);
+            fetchPromos();
+        } else {
+            showToast(`Failed to delete: ${data.message}`, false);
+        }
+    } catch (err) {
+        showToast(`Error: ${err.message}`, false);
+    }
+}
+
+function setupPromoListeners() {
+    if (!document.getElementById('promo-picker-mount')) {
+        dashProblem('dashboard.html is OUT OF DATE (no #promo-picker-mount). The New and Airdrop buttons are disabled until you deploy the new dashboard.html next to the new JS files.');
+        return;
+    }
+    const addBtn = document.getElementById('add-promo-btn');
+    const cancelBtn = document.getElementById('promo-cancel-btn');
+    const form = document.getElementById('promo-form');
+    const typeSelect = document.getElementById('promo-type');
+    const addSegmentBtn = document.getElementById('promo-wheel-add-segment');
+
+    promoPicker = createProductPicker(document.getElementById('promo-picker-mount'), { allowPremium: true });
+    promoPicker.onChange(syncPremiumUi);
+
+    if (addBtn) addBtn.addEventListener('click', () => openPromoModal(null));
+    if (cancelBtn) cancelBtn.addEventListener('click', closePromoModal);
+    if (typeSelect) typeSelect.addEventListener('change', updatePromoTypeFields);
+    if (addSegmentBtn) addSegmentBtn.addEventListener('click', () => addWheelSegmentRow());
+
+    // Premium builder wiring
+    document.getElementById('promo-premium-toggle').addEventListener('click', () => {
+        promoPicker.setPremiumOn(!promoPicker.isPremiumOn());
+        syncPremiumUi();
+    });
+    document.querySelectorAll('.premium-mode').forEach(b => b.addEventListener('click', () => {
+        premiumMode = b.dataset.mode;
+        syncPremiumUi();
+        if (premiumMode === 'custom') renderPremiumCustomCards(true);
+    }));
+    ['promo-premium-offset', 'promo-tier-1', 'promo-tier-2', 'promo-tier-3'].forEach(id =>
+        document.getElementById(id).addEventListener('input', updatePremiumPreview));
+    document.getElementById('promo-premium-custom-list').addEventListener('input', (e) => {
+        const input = e.target.closest('.premium-rung');
+        if (!input) return;
+        const pid = parseInt(input.dataset.pid, 10);
+        const vals = Array.from(document.querySelectorAll(`.premium-rung[data-pid="${pid}"]`))
+            .sort((a, b) => a.dataset.rung - b.dataset.rung)
+            .map(el => el.value.trim());
+        promoPicker.setPremiumLadder(pid, vals.filter(v => v !== '').join(',') || null);
+    });
+
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const promoId = document.getElementById('promo-id').value;
+            const type = document.getElementById('promo-type').value;
+            const scope = promoPicker.getValue();
+
+            if (!scope.applies_to_all && scope.product_ids.length === 0) {
+                showToast('Pick at least one product, or choose All products', false);
+                return;
+            }
+
+            let discountAmount = null;
+            if (type === 'tier') {
+                const t1 = document.getElementById('promo-tier-1').value;
+                const t2 = document.getElementById('promo-tier-2').value;
+                const t3 = document.getElementById('promo-tier-3').value;
+                discountAmount = [t1, t2, t3].filter(v => v !== '').join(',');
+            } else if (type === 'percent') {
+                discountAmount = document.getElementById('promo-percent-value').value;
+            }
+
+            const payload = {
+                code: document.getElementById('promo-code').value.trim().toUpperCase(),
+                promo_type: type,
+                usage_mode: document.getElementById('promo-usage-mode').value,
+                discount_amount: discountAmount,
+                applies_to_all: scope.applies_to_all,
+                is_active: document.getElementById('promo-is-active').checked,
+                starts_at: document.getElementById('promo-starts-at').value || null,
+                expires_at: document.getElementById('promo-expires-at').value || null,
+                product_ids: scope.product_ids,
+            };
+            if (type === 'wheel') {
+                payload.segments = collectWheelSegments();
+            }
+
+            if (type === 'tier') {
+                // Always sent (even empty) so turning premium off on an edit clears it.
+                payload.premium_products = [];
+                payload.premium_offset = null;
+                if (promoPicker.isPremiumOn()) {
+                    const premium = scope.premium_products;
+                    if (premium.length === 0) {
+                        showToast('Tap ★ Premium on at least one product, or turn premium off', false);
+                        return;
+                    }
+                    if (premiumMode === 'offset') {
+                        const extra = parseFloat(document.getElementById('promo-premium-offset').value);
+                        if (!(extra > 0)) {
+                            showToast('Enter how much more premium products cost', false);
+                            return;
+                        }
+                        payload.premium_offset = extra;
+                        payload.premium_products = premium.map(p => ({ product_id: p.product_id, custom_ladder: null }));
+                    } else {
+                        for (const p of premium) {
+                            const rungs = [0, 1, 2].map(i => {
+                                const el = document.querySelector(`.premium-rung[data-pid="${p.product_id}"][data-rung="${i}"]`);
+                                return el ? el.value.trim() : '';
+                            });
+                            const prod = allProductsForPicker.find(x => x.id === p.product_id);
+                            const name = prod ? prod.name : `#${p.product_id}`;
+                            if (rungs[0] === '') { showToast(`Set the 1-piece price for ${name}`, false); return; }
+                            if ((rungs[1] === '' && rungs[2] !== '') ) { showToast(`${name}: fill the 2-piece price before 3+`, false); return; }
+                        }
+                        payload.premium_products = premium;
+                    }
+                }
+            }
+
+            const url = promoId ? `/api/admin/promos/${promoId}` : '/api/admin/promos';
+            const method = promoId ? 'PATCH' : 'POST';
+
+            try {
+                const res = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    showToast('Campaign saved', true);
+                    closePromoModal();
+                    fetchPromos();
+                } else {
+                    showToast(`Failed to save: ${data.message}`, false);
+                }
+            } catch (err) {
+                showToast(`Error: ${err.message}`, false);
+            }
+        });
+    }
+}
+
+/* ---- Airdrop bulk-generate ---- */
+
+function setupAirdropListeners() {
+    if (!document.getElementById('airdrop-picker-mount')) {
+        dashProblem('dashboard.html is OUT OF DATE (no #airdrop-picker-mount). Deploy the new dashboard.html.');
+        return;
+    }
+    const openBtn = document.getElementById('add-airdrop-btn');
+    const modal = document.getElementById('airdrop-modal');
+    const cancelBtn = document.getElementById('airdrop-cancel-btn');
+    const form = document.getElementById('airdrop-form');
+    const copyBtn = document.getElementById('airdrop-copy-btn');
+    let lastCodes = [];
+
+    airdropPicker = createProductPicker(document.getElementById('airdrop-picker-mount'), { allowPremium: false });
+
+    if (openBtn) {
+        openBtn.addEventListener('click', async () => {
+            form.reset();
+            document.getElementById('airdrop-result-wrap').classList.add('hidden');
+            lastCodes = [];
+            await fetchProductsForPicker();
+            airdropPicker.setProducts(allProductsForPicker);
+            airdropPicker.setState({ appliesAll: true, selected: [] });
+            modal.classList.remove('hidden');
+        });
+    }
+    if (cancelBtn) cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
+
+    if (copyBtn) {
+        copyBtn.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(lastCodes.join('\n'));
+                showToast('Codes copied', true);
+            } catch (err) {
+                showToast('Copy failed — select the codes manually', false);
+            }
+        });
+    }
+
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const scope = airdropPicker.getValue();
+            if (!scope.applies_to_all && scope.product_ids.length === 0) {
+                showToast('Pick at least one product, or choose All products', false);
+                return;
+            }
+            const payload = {
+                count: parseInt(document.getElementById('airdrop-count').value, 10),
+                prefix: document.getElementById('airdrop-prefix').value.trim().toUpperCase(),
+                discount_amount: document.getElementById('airdrop-percent').value,
+                starts_at: document.getElementById('airdrop-starts-at').value || null,
+                expires_at: document.getElementById('airdrop-expires-at').value || null,
+                applies_to_all: scope.applies_to_all,
+                product_ids: scope.product_ids,
+            };
+
+            try {
+                const res = await fetch('/api/admin/promos/bulk', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    lastCodes = data.data.codes;
+                    document.getElementById('airdrop-result').textContent = lastCodes.join(', ');
+                    document.getElementById('airdrop-result-wrap').classList.remove('hidden');
+                    showToast(`${data.data.count} codes generated`, true);
+                    fetchPromos();
+                } else {
+                    showToast(`Failed: ${data.message}`, false);
+                }
+            } catch (err) {
+                showToast(`Error: ${err.message}`, false);
+            }
+        });
+    }
+}
+
+/* END OF dashboard.js - if you can read this line in the served file, it is complete. */
