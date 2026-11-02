@@ -207,7 +207,7 @@ def _linked_product_ids(promo):
 # Cart pricing — THE single entry point every surface calls
 # =====================================================================
 
-def price_cart_items(cart_items, typed_code=None, user_id=None):
+def price_cart_items(cart_items, typed_code=None, user_id=None, trusted=False):
     """
     cart_items: objects with .product_id, .price (full unit price),
                 .quantity — works for both CartItem and the narrowed
@@ -215,6 +215,9 @@ def price_cart_items(cart_items, typed_code=None, user_id=None):
     typed_code: raw string from the checkout promo field, or None.
     user_id:    required to validate a typed code (login-only codes);
                 None is fine for the auto tier pass (guests included).
+    trusted:    True ONLY when STAFF (admin/moderator) attached the code to a
+                guest order link. Skips the customer login requirement; codes
+                locked to a customer account (wheel prizes) are still refused.
 
     Returns a dict:
       {
@@ -239,7 +242,7 @@ def price_cart_items(cart_items, typed_code=None, user_id=None):
     }
 
     if typed_code:
-        result = _apply_typed_code(lines, typed_code, user_id, result)
+        result = _apply_typed_code(lines, typed_code, user_id, result, trusted=trusted)
         if result["error"]:
             # Bad / expired / wrong-account code: report the error, but keep
             # the customer's automatic tier price instead of silently
@@ -332,7 +335,7 @@ def _apply_best_tier(lines, result, typed_promo=None):
     return result
 
 
-def _apply_typed_code(lines, typed_code, user_id, result):
+def _apply_typed_code(lines, typed_code, user_id, result, trusted=False):
     """
     Typed code REPLACES tier pricing entirely (confirmed rule) — lines
     stay at original_unit_price except where the typed promo applies.
@@ -356,12 +359,18 @@ def _apply_typed_code(lines, typed_code, user_id, result):
     if promo.promo_type == PROMO_TYPE_TIER:
         return _apply_best_tier(lines, result, typed_promo=promo)
 
-    if user_id is None:
+    if trusted:
+        # Staff-attached code on a guest link: no customer login to check,
+        # but a code locked to someone's account can't be handed to a guest.
+        if promo.owner_user_id is not None:
+            result["error"] = "This code is locked to a customer account and can't be used on a link."
+            return result
+    elif user_id is None:
         result["error"] = "Please log in to use a promo code."
         return result
 
     # A prize code is locked to whoever spun it.
-    if promo.owner_user_id is not None and promo.owner_user_id != user_id:
+    if not trusted and promo.owner_user_id is not None and promo.owner_user_id != user_id:
         result["error"] = "This code isn't valid on your account."
         return result
 

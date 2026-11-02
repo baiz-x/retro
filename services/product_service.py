@@ -335,30 +335,66 @@ def update_product(product_id, data, image_file=None, gallery_files=None):
         return None, f"Update failed: {str(e)}"
 
 def delete_product(product_id):
+    """
+    Hard-deletes a product that has never been ordered.
+
+    Past orders keep their OWN copy of name / price / variants (OrderItem
+    snapshots them), so editing a price never touches history — but each order
+    line still points at the product row, so a product that appears in any
+    order can't be deleted without breaking that link. For those, set stock to
+    0 instead (the storefront already hides stock-0 products).
+
+    Order matters: the database delete happens FIRST and the Cloudinary images
+    are only destroyed afterwards. The old order destroyed the photos before
+    the delete, so a failed delete left a product with no pictures.
+    """
     product = get_product_by_id(product_id)
     if not product:
         return False, "Product not found"
 
     try:
-        # 1. Delete Main Image
-        public_id = extract_public_id(product.image)
-        if public_id:
-            cloudinary.uploader.destroy(public_id)
+        from models import OrderItem, CartItem, GuestOrderLink
+        from models.guest_order_link import GuestOrderLinkItem
 
-        # 2. Delete Gallery Images
-        if product.gallery:
-            for url in product.gallery:
-                gid = extract_public_id(url)
-                if gid: cloudinary.uploader.destroy(gid)
+        order_lines = OrderItem.query.filter_by(product_id=product.id).count()
+        if order_lines:
+            return False, (
+                f"This product is in {order_lines} past order line(s), so deleting it would break "
+                "order history. Set its stock to 0 to hide it from the store instead."
+            )
 
-        # 3. Delete from Database
+        image_urls = [product.image] + list(product.gallery or [])
+
+        # Carts are throw-away — drop any lines for this product.
+        CartItem.query.filter_by(product_id=product.id).delete(synchronize_session=False)
+
+        # Guest links: a link whose product is gone must not stay usable.
+        linked = {it.link_id for it in GuestOrderLinkItem.query.filter_by(product_id=product.id).all()}
+        linked |= {l.id for l in GuestOrderLink.query.filter_by(product_id=product.id).all()}
+        if linked:
+            GuestOrderLink.query.filter(
+                GuestOrderLink.id.in_(linked), GuestOrderLink.used_at.is_(None)
+            ).update({"expires_at": datetime.utcnow()}, synchronize_session=False)
+            GuestOrderLinkItem.query.filter_by(product_id=product.id).delete(synchronize_session=False)
+            GuestOrderLink.query.filter_by(product_id=product.id).update(
+                {"product_id": None}, synchronize_session=False
+            )
+
         db.session.delete(product)
         db.session.commit()
-        return True, None
-
     except Exception as e:
         db.session.rollback()
         return False, f"Deletion failed: {str(e)}"
+
+    # The product is gone — now it is safe to remove its images (best effort).
+    for url in image_urls:
+        try:
+            public_id = extract_public_id(url) if url else None
+            if public_id:
+                cloudinary.uploader.destroy(public_id)
+        except Exception as e:
+            current_app.logger.warning(f"Image cleanup failed for deleted product {product_id}: {e}")
+    return True, None
 
 def filter_products_service(filters):
     """
@@ -879,8 +915,3 @@ def build_product_json_ld(product, base_url):
     # missing on a real product) — Google's parser is stricter about
     # explicit nulls than about an absent key.
     return {k: v for k, v in data.items() if v is not None}
-
-
-
-
-

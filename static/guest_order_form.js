@@ -1,61 +1,106 @@
-// guest_order_form.js — public guest order link form
-// (templates/guest_order_form.html). Submits directly to
-// POST /api/guest-order-links/<token>/submit, no auth/session
-// involved — the URL token IS the only credential.
+/* guest_order_form.js — public guest order form (/order-link/<token>).
+   addEventListener only (the site CSP blocks inline handlers). */
+(function () {
+  'use strict';
 
-document.addEventListener("DOMContentLoaded", () => {
-  const form = document.getElementById("guestOrderForm");
-  if (!form) return; // dead-link state has no form to wire up
+  var form = document.getElementById('guestOrderForm');
+  if (!form) return; // dead-link state has no form
 
-  const token = form.dataset.token;
-  const submitBtn = document.getElementById("guestSubmitBtn");
-  const errorEl = document.getElementById("guestFormError");
+  var submitBtn = document.getElementById('guestSubmitBtn');
+  var errorEl = document.getElementById('guestFormError');
+  var successEl = document.getElementById('guestSuccessState');
+  var orderIdEl = document.getElementById('guestOrderIdDisplay');
+  var channelInput = document.getElementById('contact_channel');
+  var handleInput = document.getElementById('contact_handle');
+  var channelBtns = document.querySelectorAll('.contact-channel-btn');
 
-  // The page already renders a CSRF meta tag (see guest_order_form.html)
-  // but nothing read it before this fix — with Flask-WTF's CSRF
-  // protection on globally, that made every submit fail before
-  // submit_guest_order_route ever ran (400 "CSRF token is missing").
-  const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+  var CHANNELS = {
+    whatsapp:  { placeholder: 'Your WhatsApp number', inputmode: 'tel' },
+    facebook:  { placeholder: 'Your Facebook username', inputmode: 'text' },
+    instagram: { placeholder: 'Your Instagram username', inputmode: 'text' }
+  };
 
-  form.addEventListener("submit", async (e) => {
+  function csrfToken() {
+    var meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : '';
+  }
+
+  function showError(message) {
+    errorEl.textContent = message;
+    errorEl.classList.remove('hidden');
+  }
+
+  function selectChannel(channel) {
+    channelInput.value = channel;
+    channelBtns.forEach(function (btn) {
+      var active = btn.dataset.channel === channel;
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      btn.classList.toggle('bg-navy', active);
+      btn.classList.toggle('text-gold', active);
+    });
+    handleInput.placeholder = CHANNELS[channel].placeholder;
+    handleInput.setAttribute('inputmode', CHANNELS[channel].inputmode);
+    handleInput.focus();
+  }
+
+  channelBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () { selectChannel(btn.dataset.channel); });
+  });
+  // Paint the default (WhatsApp) selection without stealing focus on load.
+  channelBtns.forEach(function (btn) {
+    var active = btn.dataset.channel === channelInput.value;
+    btn.classList.toggle('bg-navy', active);
+    btn.classList.toggle('text-gold', active);
+  });
+
+  form.addEventListener('submit', function (e) {
     e.preventDefault();
-    errorEl.classList.add("hidden");
-    submitBtn.disabled = true;
-    submitBtn.textContent = "Placing Order...";
+    errorEl.classList.add('hidden');
 
-    const payload = {
-      customer_name: document.getElementById("customer_name").value.trim(),
-      phone: document.getElementById("phone").value.trim(),
-      address: document.getElementById("address").value.trim(),
-      thana: document.getElementById("thana").value.trim(),
-      size: document.getElementById("size").value,
+    var sizeEl = document.getElementById('size');
+    var payload = {
+      customer_name: document.getElementById('customer_name').value.trim(),
+      phone: document.getElementById('phone').value.trim(),
+      address: document.getElementById('address').value.trim(),
+      thana: document.getElementById('thana').value.trim(),
+      contact_channel: channelInput.value,
+      contact_handle: handleInput.value.trim(),
+      size: sizeEl ? sizeEl.value : ''
     };
 
-    try {
-      const res = await fetch(`/api/guest-order-links/${encodeURIComponent(token)}/submit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-
-      if (!res.ok || data.status !== "success") {
-        throw new Error(data.message || "Something went wrong. Please try again.");
-      }
-
-      // Success — swap the form out for the confirmation state. The
-      // link is now single-use-consumed server-side, so reloading
-      // this page will show the "already used" dead-link state,
-      // which is correct — no need to re-enable the form.
-      form.classList.add("hidden");
-      document.getElementById("guestOrderIdDisplay").textContent = "#" + data.data.order_id;
-      document.getElementById("guestSuccessState").classList.remove("hidden");
-    } catch (err) {
-      errorEl.textContent = err.message;
-      errorEl.classList.remove("hidden");
-      submitBtn.disabled = false;
-      submitBtn.textContent = "Confirm Order";
+    if (!payload.contact_handle) {
+      showError('Please tell us how to reach you (WhatsApp, Facebook or Instagram).');
+      handleInput.focus();
+      return;
     }
+
+    submitBtn.disabled = true;
+    var originalLabel = submitBtn.textContent;
+    submitBtn.textContent = 'Placing order…';
+
+    fetch('/api/guest-order-links/' + encodeURIComponent(form.dataset.token) + '/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
+      body: JSON.stringify(payload)
+    })
+      .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, body: body }; }); })
+      .then(function (result) {
+        if (result.ok && result.body.status === 'success') {
+          orderIdEl.textContent = result.body.data.order_id || '';
+          form.classList.add('hidden');
+          successEl.classList.remove('hidden');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          showError(result.body.message || 'Could not place your order. Please try again.');
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalLabel;
+        }
+      })
+      .catch(function () {
+        showError('Network problem. Please check your connection and try again.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalLabel;
+      });
   });
-});
+})();
 

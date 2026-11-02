@@ -99,7 +99,7 @@ function bootDashboard() {
     // bottom nav or the data loading down with it. The bottom nav goes
     // first and is bound with addEventListener only — no inline onclick.
     [initBottomNav, initClock, initEventListeners, setupExpenseListeners,
-     setupGuestLinkListeners, setupExpenseFromProductListeners,
+     setupGuestLinkListeners, setupModeratorLinkListeners, setupExpenseFromProductListeners,
      setupCampaignModules, sizeBottomNavSpacer, refreshData]
         .forEach(fn => {
             try { fn(); } catch (err) {
@@ -804,6 +804,7 @@ function renderOrders() {
             </button>
             <div class="dash-order-body px-5 pb-5">
                 <p class="text-[10px] text-gray-500 font-semibold">${escapeHtml(order.phone || 'No phone')}</p>
+                ${order.guest_contact ? `<p class="text-[10px] text-navy font-bold">${escapeHtml(CONTACT_LABEL[order.guest_contact.channel] || 'Contact')}: ${escapeHtml(order.guest_contact.handle || '')} <span class="text-gray-400 font-semibold">· via ${escapeHtml(order.guest_contact.via || 'Admin')}</span></p>` : ''}
                 <p class="text-[10px] text-gray-500 font-semibold mb-3">${escapeHtml(order.address || 'No address')}</p>
                 <div class="border-y border-navy/10 py-3 mb-3">
                     ${itemsHtml}
@@ -984,6 +985,9 @@ function renderInventory() {
                 <button data-product-id="${prod.id}" class="edit-product-btn w-8 h-8 rounded border border-navy/20 text-navy flex justify-center items-center hover:bg-gray-100" title="Edit Asset">
                     <i class="fa-solid fa-pen text-xs"></i>
                 </button>
+                <button data-product-id="${prod.id}" data-product-name="${escapeHtml(prod.name)}" class="delete-product-btn w-8 h-8 rounded border border-red-200 text-red-500 flex justify-center items-center hover:bg-red-50" title="Delete product">
+                    <i class="fa-solid fa-trash text-xs"></i>
+                </button>
             </div>
         `;
         container.appendChild(card);
@@ -997,12 +1001,41 @@ function renderInventory() {
         });
     });
 
+    // Attach listeners to delete buttons
+    document.querySelectorAll('.delete-product-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const target = e.currentTarget;
+            deleteProduct(parseInt(target.dataset.productId, 10), target.dataset.productName);
+        });
+    });
+
     // Attach listeners to edit buttons
     document.querySelectorAll('.edit-product-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             enterEditMode(parseInt(e.currentTarget.dataset.productId, 10));
         });
     });
+}
+
+async function deleteProduct(productId, name) {
+    if (!confirm(`Delete "${name}"? This can't be undone.`)) return;
+    try {
+        const res = await fetch(`/api/admin/products/${productId}`, {
+            method: 'DELETE',
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        });
+        const data = await res.json();
+        if (res.ok && data.status === 'success') {
+            allProductsForPicker = [];   // campaign/airdrop pickers re-fetch the list
+            showToast('Product deleted', true);
+            await refreshData();
+        } else {
+            // e.g. "in 3 past order lines ... set its stock to 0 instead"
+            alert(data.message || 'Could not delete this product');
+        }
+    } catch (err) {
+        alert(`Error: ${err.message}`);
+    }
 }
 
 async function adjustStock(productId, delta) {
@@ -1430,116 +1463,41 @@ async function checkoffFulfillmentItem(productId, size) {
 /* ================= GUEST ORDER LINKS (inside Orders tab) ================= */
 
 let allGuestLinks = [];
-let guestLinkSelectedProduct = null;
+let allModeratorLinks = [];
+let guestLinkBuilder = null;
+
+const CONTACT_LABEL = { whatsapp: 'WhatsApp', facebook: 'Facebook', instagram: 'Instagram' };
 
 function setupGuestLinkListeners() {
     const openPanelBtn = document.getElementById('open-guest-link-modal-btn');
     const closePanelBtn = document.getElementById('close-guest-links-panel-btn');
     const panel = document.getElementById('guest-links-panel');
-
     const modal = document.getElementById('guest-link-modal');
-    const searchStep = document.getElementById('guest-link-step-search');
-    const searchInput = document.getElementById('guest-link-product-search-input');
-    const resultsContainer = document.getElementById('guest-link-product-search-results');
+    const mount = document.getElementById('guest-link-builder-mount');
     const cancelBtn = document.getElementById('guest-link-cancel-btn');
-    const form = document.getElementById('guest-link-form');
-    const backBtn = document.getElementById('guest-link-back-btn');
-    const resultStep = document.getElementById('guest-link-result');
-    const resultUrlInput = document.getElementById('guest-link-result-url');
-    const copyBtn = document.getElementById('guest-link-copy-btn');
-    const doneBtn = document.getElementById('guest-link-done-btn');
 
     if (!openPanelBtn) return;
+    if (!mount || typeof createLinkBuilder !== 'function') {
+        dashProblem('Guest Link needs the new dashboard.html and static/link_builder.js — deploy both. The Guest Link button is disabled until then.');
+        return;
+    }
 
-    // "Guest Link" button opens the GENERATE modal directly — the panel
-    // (list of past links) is a separate toggle, shown once at least
-    // one link exists or the admin explicitly wants to see the list.
+    // The same widget the moderator console uses: several products, the same
+    // product in different sizes, payment/zone/type and an optional promo code.
+    guestLinkBuilder = createLinkBuilder(mount, {
+        getProducts: () => allProducts,
+        createUrl: '/api/admin/guest-links',
+        headers: () => ({ 'X-CSRFToken': getCsrfToken() }),
+        onCreated: () => fetchGuestLinks(),
+    });
+
     openPanelBtn.addEventListener('click', () => {
-        resetGuestLinkModal();
+        guestLinkBuilder.reset();
         modal.classList.remove('hidden');
         fetchGuestLinks(); // keep the panel's list fresh whenever the modal is opened
     });
-
     if (closePanelBtn) closePanelBtn.addEventListener('click', () => panel.classList.add('hidden'));
-
-    function resetGuestLinkModal() {
-        searchStep.classList.remove('hidden');
-        form.classList.add('hidden');
-        resultStep.classList.add('hidden');
-        searchInput.value = '';
-        resultsContainer.innerHTML = '';
-        guestLinkSelectedProduct = null;
-    }
-
-    searchInput.addEventListener('input', (e) => {
-        const query = e.target.value.trim().toLowerCase();
-        if (!query) { resultsContainer.innerHTML = ''; return; }
-        const matches = allProducts.filter(p => (p.name || '').toLowerCase().includes(query)).slice(0, 8);
-        resultsContainer.innerHTML = matches.map(p => `
-            <button type="button" data-product-id="${p.id}" class="guest-link-product-pick w-full flex items-center gap-3 p-2 rounded-lg border border-navy/10 hover:border-gold text-left">
-                <img src="${escapeHtml(p.image || '')}" class="w-9 h-9 rounded-lg object-cover bg-gray-100 shrink-0" onerror="this.style.visibility='hidden'">
-                <span class="text-xs font-bold text-navy truncate">${escapeHtml(p.name)}</span>
-            </button>
-        `).join('') || `<p class="text-[10px] text-gray-400 text-center py-4">No matches</p>`;
-
-        resultsContainer.querySelectorAll('.guest-link-product-pick').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const product = allProducts.find(p => p.id == btn.dataset.productId);
-                if (!product) return;
-                guestLinkSelectedProduct = product;
-                document.getElementById('guest-link-product-id').value = product.id;
-                document.getElementById('guest-link-product-image').src = product.image || '';
-                document.getElementById('guest-link-product-name').textContent = product.name;
-                searchStep.classList.add('hidden');
-                form.classList.remove('hidden');
-            });
-        });
-    });
-
     if (cancelBtn) cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
-    if (backBtn) backBtn.addEventListener('click', () => {
-        form.classList.add('hidden');
-        searchStep.classList.remove('hidden');
-    });
-
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const payload = {
-            product_id: document.getElementById('guest-link-product-id').value,
-            payment_method: document.getElementById('guest-link-payment-method').value,
-            shipping_zone: document.getElementById('guest-link-shipping-zone').value,
-            payment_type: document.getElementById('guest-link-payment-type').value,
-        };
-        try {
-            const res = await fetch('/api/admin/guest-links', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-                body: JSON.stringify(payload)
-            });
-            const data = await res.json();
-            if (res.ok && data.status === 'success') {
-                const url = `${window.location.origin}/order-link/${data.data.token}`;
-                resultUrlInput.value = url;
-                form.classList.add('hidden');
-                resultStep.classList.remove('hidden');
-                fetchGuestLinks();
-            } else {
-                showToast(`Failed to generate link: ${data.message}`, false);
-            }
-        } catch (err) {
-            showToast(`Error: ${err.message}`, false);
-        }
-    });
-
-    if (copyBtn) {
-        copyBtn.addEventListener('click', () => {
-            resultUrlInput.select();
-            navigator.clipboard?.writeText(resultUrlInput.value);
-            showToast('Link copied', true);
-        });
-    }
-
-    if (doneBtn) doneBtn.addEventListener('click', () => modal.classList.add('hidden'));
 }
 
 async function fetchGuestLinks() {
@@ -1574,15 +1532,23 @@ function renderGuestLinks() {
 
         const url = `${window.location.origin}/order-link/${link.token}`;
         const canCopy = !link.is_used && !link.is_expired;
+        const contact = link.contact_handle
+            ? `<p class="text-[10px] text-navy/60 mt-1">${escapeHtml(link.customer_name || '')} · ${escapeHtml(CONTACT_LABEL[link.contact_channel] || '')}: <strong>${escapeHtml(link.contact_handle)}</strong></p>`
+            : '';
 
         return `
-            <div class="flex items-center justify-between p-3">
+            <div class="flex items-center justify-between gap-3 p-3">
                 <div class="min-w-0">
-                    <p class="text-xs font-bold text-navy truncate">${escapeHtml(link.product_name || 'Unknown Product')}</p>
-                    <span class="inline-block mt-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${statusClass}">${statusLabel}</span>
+                    <p class="text-xs font-bold text-navy leading-snug">${escapeHtml(link.product_name || 'Unknown Product')}</p>
+                    <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                        <span class="inline-block px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${statusClass}">${statusLabel}</span>
+                        <span class="text-[9px] text-navy/40 uppercase tracking-widest">by ${escapeHtml(link.created_by || 'Admin')}</span>
+                        ${link.promo_code ? `<span class="text-[9px] text-navy/40 uppercase tracking-widest">· ${escapeHtml(link.promo_code)}</span>` : ''}
+                    </div>
+                    ${contact}
                 </div>
                 ${canCopy
-                    ? `<button type="button" data-url="${escapeHtml(url)}" class="guest-link-list-copy shrink-0 bg-navy text-gold text-[9px] font-bold uppercase tracking-widest px-3 py-2 rounded-lg">Copy</button>`
+                    ? `<button type="button" data-url="${escapeHtml(url)}" class="guest-link-list-copy shrink-0 bg-navy text-gold text-[9px] font-bold uppercase tracking-widest px-3 py-3 rounded-lg">Copy</button>`
                     : ''
                 }
             </div>
@@ -1595,6 +1561,137 @@ function renderGuestLinks() {
             showToast('Link copied', true);
         });
     });
+}
+
+/* ---------------- Moderator access links ---------------- */
+
+function setupModeratorLinkListeners() {
+    const openBtn = document.getElementById('open-moderator-panel-btn');
+    const closeBtn = document.getElementById('close-moderator-panel-btn');
+    const panel = document.getElementById('moderator-links-panel');
+    const createBtn = document.getElementById('moderator-create-btn');
+    const labelInput = document.getElementById('moderator-label');
+    const daysSelect = document.getElementById('moderator-days');
+    const resultBox = document.getElementById('moderator-result');
+    const resultUrl = document.getElementById('moderator-result-url');
+    const resultCopy = document.getElementById('moderator-result-copy');
+    const list = document.getElementById('moderator-links-list');
+
+    if (!openBtn) return;
+    if (!panel || !createBtn) {
+        dashProblem('Moderator access needs the new dashboard.html — deploy it. The Moderator button is disabled until then.');
+        return;
+    }
+
+    openBtn.addEventListener('click', () => {
+        panel.classList.toggle('hidden');
+        if (!panel.classList.contains('hidden')) fetchModeratorLinks();
+    });
+    if (closeBtn) closeBtn.addEventListener('click', () => panel.classList.add('hidden'));
+
+    createBtn.addEventListener('click', async () => {
+        const label = labelInput.value.trim();
+        if (!label) { showToast('Give the moderator link a name', false); return; }
+        createBtn.disabled = true;
+        try {
+            const res = await fetch('/api/admin/moderator-links', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                body: JSON.stringify({ label, days: parseInt(daysSelect.value, 10) })
+            });
+            const data = await res.json();
+            if (res.ok && data.status === 'success') {
+                resultUrl.value = `${window.location.origin}/mod/${data.data.token}`;
+                resultBox.classList.remove('hidden');
+                labelInput.value = '';
+                fetchModeratorLinks();
+            } else {
+                showToast(`Failed: ${data.message}`, false);
+            }
+        } catch (err) {
+            showToast(`Error: ${err.message}`, false);
+        } finally {
+            createBtn.disabled = false;
+        }
+    });
+
+    if (resultCopy) {
+        resultCopy.addEventListener('click', () => {
+            resultUrl.select();
+            navigator.clipboard?.writeText(resultUrl.value);
+            showToast('Moderator link copied', true);
+        });
+    }
+
+    // One delegated listener for Copy / Revoke on the list
+    list.addEventListener('click', async (e) => {
+        const copyBtn = e.target.closest('.moderator-copy');
+        if (copyBtn) {
+            navigator.clipboard?.writeText(copyBtn.dataset.url);
+            showToast('Moderator link copied', true);
+            return;
+        }
+        const revokeBtn = e.target.closest('.moderator-revoke');
+        if (revokeBtn) {
+            if (!confirm('Revoke this moderator link? It stops working immediately.')) return;
+            try {
+                const res = await fetch(`/api/admin/moderator-links/${revokeBtn.dataset.id}/revoke`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'success') { showToast('Moderator link revoked', true); fetchModeratorLinks(); }
+                else showToast(`Failed: ${data.message}`, false);
+            } catch (err) {
+                showToast(`Error: ${err.message}`, false);
+            }
+        }
+    });
+}
+
+async function fetchModeratorLinks() {
+    try {
+        const res = await fetch('/api/admin/moderator-links');
+        const result = await res.json();
+        if (result.status === 'success') {
+            allModeratorLinks = result.data || [];
+            renderModeratorLinks();
+        }
+    } catch (err) {
+        console.error('Failed to fetch moderator links:', err);
+    }
+}
+
+function renderModeratorLinks() {
+    const list = document.getElementById('moderator-links-list');
+    if (!list) return;
+    if (!allModeratorLinks.length) {
+        list.innerHTML = `<p class="text-[10px] text-gray-400 text-center py-6">No moderator links yet</p>`;
+        return;
+    }
+    list.innerHTML = allModeratorLinks.map(m => {
+        let statusLabel, statusClass;
+        if (m.is_revoked) { statusLabel = 'Revoked'; statusClass = 'bg-red-50 text-red-500'; }
+        else if (m.is_expired) { statusLabel = 'Expired'; statusClass = 'bg-gray-100 text-gray-500'; }
+        else { statusLabel = 'Active'; statusClass = 'bg-green-50 text-green-600'; }
+        const url = `${window.location.origin}/mod/${m.token}`;
+        const expires = m.expires_at ? new Date(m.expires_at + 'Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : '';
+        return `
+            <div class="flex items-center justify-between gap-3 p-3">
+                <div class="min-w-0">
+                    <p class="text-xs font-bold text-navy">${escapeHtml(m.label)}</p>
+                    <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                        <span class="inline-block px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${statusClass}">${statusLabel}</span>
+                        <span class="text-[9px] text-navy/40 uppercase tracking-widest">until ${escapeHtml(expires)} · ${m.links_created || 0} links</span>
+                    </div>
+                </div>
+                ${m.is_active ? `
+                <div class="flex gap-2 shrink-0">
+                    <button type="button" data-url="${escapeHtml(url)}" class="moderator-copy bg-navy text-gold text-[9px] font-bold uppercase tracking-widest px-3 py-3 rounded-lg">Copy</button>
+                    <button type="button" data-id="${m.id}" class="moderator-revoke border border-red-200 text-red-500 text-[9px] font-bold uppercase tracking-widest px-3 py-3 rounded-lg">Revoke</button>
+                </div>` : ''}
+            </div>`;
+    }).join('');
 }
 
 /* ================= EXPENSE FROM PRODUCT (inside Expenses tab) ================= */

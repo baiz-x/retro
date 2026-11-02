@@ -4,6 +4,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from models import db, Order
 
 from services.admin_service import admin_required
+from services.guest_order_link_service import attach_guest_contacts
 from services.cart_service import get_cart_owner, clear_cart
 from services.order_service import (
     fetch_cart_items,
@@ -110,7 +111,7 @@ def get_orders():
     """Fetches all orders for the admin, including item details and variants."""
     try:
         orders = get_all_orders()
-        return jsonify({'status': 'success', 'data': [o.to_dict(True) for o in orders]}), 200
+        return jsonify({'status': 'success', 'data': attach_guest_contacts([o.to_dict(True) for o in orders])}), 200
     except Exception as e:
         current_app.logger.error(f"Error fetching orders: {str(e)}")
         return jsonify({'status': 'error', 'message': 'Failed to fetch orders'}), 500
@@ -132,7 +133,7 @@ def search_orders_route():
         query = request.args.get('q', '')
         status = request.args.get('status') or None
         orders = search_orders(query, status=status)
-        return jsonify({'status': 'success', 'data': [o.to_dict(True) for o in orders]}), 200
+        return jsonify({'status': 'success', 'data': attach_guest_contacts([o.to_dict(True) for o in orders])}), 200
     except Exception as e:
         current_app.logger.error(f"Error in search_orders_route: {str(e)}")
         return jsonify({'status': 'error', 'message': 'Search failed'}), 500
@@ -261,5 +262,6 @@ def update_order_status_route(order_id):
         db.session.rollback()
         current_app.logger.error(f"Unexpected error in update_order_status_route: {str(e)}")
         return jsonify({'status': 'error', 'message': 'Internal error'}), 500
+
 
 

@@ -296,9 +296,14 @@
         <section id="tab-orders" class="tab-content max-w-4xl mx-auto">
             <div class="flex justify-between items-center mb-6 border-b border-navy/10 pb-2">
                 <h2 class="font-heading text-xl font-bold uppercase tracking-widest text-navy">Order Dispatch</h2>
-                <button type="button" id="open-guest-link-modal-btn" class="bg-white border border-navy/20 text-navy text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-full">
-                    Guest Link
-                </button>
+                <div class="flex gap-2">
+                    <button type="button" id="open-moderator-panel-btn" class="bg-white border border-navy/20 text-navy text-[10px] font-bold uppercase tracking-widest px-4 py-2.5 rounded-full">
+                        Moderator
+                    </button>
+                    <button type="button" id="open-guest-link-modal-btn" class="bg-white border border-navy/20 text-navy text-[10px] font-bold uppercase tracking-widest px-4 py-2.5 rounded-full">
+                        Guest Link
+                    </button>
+                </div>
             </div>
 
             <!-- Guest Order Links panel — collapsed by default, toggled
@@ -313,6 +318,37 @@
                     </button>
                 </div>
                 <div id="guest-links-list" class="divide-y divide-navy/10"></div>
+            </div>
+
+            <!-- Moderator access links. A moderator opens /mod/<token> and can ONLY build guest
+                 order links and see the links he made — no admin password, no admin panel.
+                 Access ends when the days run out or the moment you revoke it. -->
+            <div id="moderator-links-panel" class="hidden mb-6 bg-white rounded-xl border border-navy/10 shadow-sm">
+                <div class="flex justify-between items-center p-4 border-b border-navy/10">
+                    <h3 class="text-[10px] uppercase font-bold text-navy tracking-widest">Moderator Access</h3>
+                    <button type="button" id="close-moderator-panel-btn" class="text-navy/40 text-xs p-1" aria-label="Close">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                <div class="p-4 space-y-3 border-b border-navy/10">
+                    <div class="grid grid-cols-5 gap-2">
+                        <input type="text" id="moderator-label" maxlength="60" placeholder="Name, e.g. Rahim" class="col-span-3 border border-navy/20 rounded-lg p-3 text-[16px] sm:text-sm outline-none focus:border-gold">
+                        <select id="moderator-days" class="col-span-2 border border-navy/20 rounded-lg p-3 text-[16px] sm:text-sm bg-white outline-none focus:border-gold">
+                            <option value="1">1 day</option>
+                            <option value="3">3 days</option>
+                            <option value="7" selected>7 days</option>
+                            <option value="14">14 days</option>
+                            <option value="30">30 days</option>
+                        </select>
+                    </div>
+                    <button type="button" id="moderator-create-btn" class="w-full bg-navy text-gold py-3.5 rounded-full text-[10px] uppercase font-bold tracking-widest">Create moderator link</button>
+                    <div id="moderator-result" class="hidden space-y-2">
+                        <input type="text" id="moderator-result-url" readonly class="w-full border border-navy/20 rounded-lg p-3 text-xs bg-gray-50 select-all">
+                        <button type="button" id="moderator-result-copy" class="w-full border border-navy/20 text-navy py-3 rounded-full text-[10px] uppercase font-bold tracking-widest">Copy link</button>
+                        <p class="text-[10px] text-navy/50">Send this to your moderator. Anyone with the link can build order links until it expires or you revoke it.</p>
+                    </div>
+                </div>
+                <div id="moderator-links-list" class="divide-y divide-navy/10"></div>
             </div>
 
             <!-- Single search box: matches order_id (contains) / phone
@@ -345,61 +381,15 @@
              modal above (search/pick product, then set the fixed
              admin-chosen fields). -->
         <div id="guest-link-modal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
-            <div class="bg-white w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl p-6 max-h-[85dvh] overflow-y-auto">
-                <h3 class="font-heading text-sm font-bold uppercase tracking-widest text-navy mb-4">Generate Guest Link</h3>
-
-                <!-- Step 1: search/pick product -->
-                <div id="guest-link-step-search">
-                    <input type="text" id="guest-link-product-search-input" placeholder="Search product name..." class="w-full border border-navy/20 rounded-lg p-2.5 text-sm outline-none focus:border-gold mb-3">
-                    <div id="guest-link-product-search-results" class="space-y-2 max-h-64 overflow-y-auto"></div>
-                    <button type="button" id="guest-link-cancel-btn" class="w-full border border-navy/20 text-navy/60 py-2.5 rounded-full text-[10px] uppercase font-bold tracking-widest mt-3">Cancel</button>
+            <div class="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl max-h-[92dvh] flex flex-col">
+                <div class="px-5 pt-5 pb-3 border-b border-navy/5 shrink-0 flex items-center justify-between">
+                    <h3 class="font-heading text-sm font-bold uppercase tracking-widest text-navy">Generate Guest Link</h3>
+                    <button type="button" id="guest-link-cancel-btn" class="text-[10px] uppercase font-bold tracking-widest text-navy/50 py-2 px-2">Close</button>
                 </div>
-
-                <!-- Step 2: configure fixed fields -->
-                <form id="guest-link-form" class="hidden space-y-3">
-                    <input type="hidden" id="guest-link-product-id" value="">
-                    <div class="flex items-center gap-3 bg-gray-50 p-2 rounded-lg">
-                        <img id="guest-link-product-image" src="" class="w-10 h-10 rounded-lg object-cover bg-gray-100 shrink-0" onerror="this.style.visibility='hidden'">
-                        <p id="guest-link-product-name" class="text-xs font-bold text-navy truncate"></p>
-                    </div>
-                    <div>
-                        <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Payment Method</label>
-                        <select id="guest-link-payment-method" required class="w-full border border-navy/20 rounded-lg p-2.5 text-sm bg-white outline-none focus:border-gold">
-                            <option value="bkash">bKash</option>
-                            <option value="nagad">Nagad</option>
-                            <option value="cod">Cash on Delivery</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Shipping Zone</label>
-                        <select id="guest-link-shipping-zone" required class="w-full border border-navy/20 rounded-lg p-2.5 text-sm bg-white outline-none focus:border-gold">
-                            <option value="inside_dhaka">Inside Dhaka (৳70)</option>
-                            <option value="sub_city">Sub City (৳70)</option>
-                            <option value="outside_dhaka">Outside Dhaka (৳140)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-[9px] uppercase font-bold text-navy/60 tracking-widest">Payment Type</label>
-                        <select id="guest-link-payment-type" required class="w-full border border-navy/20 rounded-lg p-2.5 text-sm bg-white outline-none focus:border-gold">
-                            <option value="postpaid">Postpaid (+)</option>
-                            <option value="prepaid">Prepaid</option>
-                            <option value="included">Included (-)</option>
-                        </select>
-                    </div>
-                    <div class="flex gap-2 pt-2">
-                        <button type="button" id="guest-link-back-btn" class="w-1/2 border border-navy/20 text-navy/60 py-2.5 rounded-full text-[10px] uppercase font-bold tracking-widest">Back</button>
-                        <button type="submit" class="w-1/2 bg-navy text-gold py-2.5 rounded-full text-[10px] uppercase font-bold tracking-widest">Generate</button>
-                    </div>
-                </form>
-
-                <!-- Step 3: show the generated link -->
-                <div id="guest-link-result" class="hidden space-y-3">
-                    <p class="text-[10px] uppercase font-bold text-navy/60 tracking-widest">Link Generated — expires in 24h</p>
-                    <div class="flex gap-2">
-                        <input type="text" id="guest-link-result-url" readonly class="flex-1 border border-navy/20 rounded-lg p-2.5 text-xs bg-gray-50 outline-none">
-                        <button type="button" id="guest-link-copy-btn" class="shrink-0 bg-navy text-gold text-[10px] font-bold uppercase tracking-widest px-4 py-2.5 rounded-lg">Copy</button>
-                    </div>
-                    <button type="button" id="guest-link-done-btn" class="w-full border border-navy/20 text-navy/60 py-2.5 rounded-full text-[10px] uppercase font-bold tracking-widest">Done</button>
+                <!-- Several products, the same product in different sizes, optional promo code.
+                     Built by createLinkBuilder (static/link_builder.js) — same widget the moderator uses. -->
+                <div class="flex-1 overflow-y-auto overscroll-contain px-5 py-4" style="padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));">
+                    <div id="guest-link-builder-mount"></div>
                 </div>
             </div>
         </div>
@@ -766,7 +756,8 @@
         </button>
     </nav>
 
-    <script src="/static/dash_diag.js?v=20261030"></script>
-    <script src="/static/dashboard.js?v=20261030"></script>
+    <script src="/static/dash_diag.js?v=20261101"></script>
+    <script src="/static/link_builder.js?v=20261101"></script>
+    <script src="/static/dashboard.js?v=20261101"></script>
 </body>
 </html>
