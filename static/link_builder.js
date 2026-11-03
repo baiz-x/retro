@@ -64,11 +64,11 @@
     mount.innerHTML =
       '<div class="space-y-4">' +
         '<div><p class="' + LBL + '">Items on this link (<span data-r="count">0</span>)</p>' +
-          '<div data-r="lines" class="space-y-2"></div></div>' +
+          '<div data-r="lines" class="space-y-3"></div></div>' +
         '<div class="border border-[#0a192f]/10 rounded-xl p-3 bg-[#0a192f]/[0.02]">' +
           '<p class="' + LBL + '">Add a product</p>' +
           '<input type="search" data-r="search" placeholder="Search products…" class="' + INPUT + '">' +
-          '<div data-r="results" class="mt-2 space-y-1"></div>' +
+          '<div data-r="results" class="mt-2 space-y-2"></div>' +
           '<div data-r="picker" class="hidden mt-3"></div>' +
         '</div>' +
         '<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">' +
@@ -108,8 +108,8 @@
         return;
       }
       els.lines.innerHTML = state.lines.map(function (l, i) {
-        return '<div class="flex items-center gap-3 border border-[#0a192f]/10 rounded-xl p-2 bg-white">' +
-          '<img src="' + esc(l.product.image || '') + '" alt="" class="w-11 h-11 rounded-lg object-cover bg-gray-100 shrink-0">' +
+        return '<div class="flex items-center gap-3.5 border border-[#0a192f]/10 rounded-xl p-3 bg-white">' +
+          '<img src="' + esc(l.product.image || '') + '" alt="" class="w-14 h-14 rounded-xl object-cover bg-gray-100 shrink-0 ml-0.5">' +
           '<div class="min-w-0 flex-1"><p class="text-xs font-bold text-[#0a192f] truncate">' + esc(l.product.name) + '</p>' +
           '<p class="text-[10px] text-[#0a192f]/50">' + esc(label(l.sel)) + (label(l.sel) ? ' · ' : '') + money(priceFor(l.product, l.sel)) + ' each</p></div>' +
           '<div class="flex items-center gap-1 shrink-0">' +
@@ -138,8 +138,8 @@
       if (!q) { els.results.innerHTML = ''; return; }
       var hits = products().filter(function (p) { return (p.name || '').toLowerCase().indexOf(q) !== -1; }).slice(0, 8);
       els.results.innerHTML = hits.map(function (p) {
-        return '<button type="button" data-pid="' + p.id + '" class="w-full flex items-center gap-3 p-2 rounded-lg border border-[#0a192f]/10 text-left bg-white min-h-[52px]">' +
-          '<img src="' + esc(p.image || '') + '" alt="" class="w-10 h-10 rounded-lg object-cover bg-gray-100 shrink-0">' +
+        return '<button type="button" data-pid="' + p.id + '" class="w-full flex items-center gap-3.5 p-2.5 rounded-lg border border-[#0a192f]/10 text-left bg-white min-h-[56px]">' +
+          '<img src="' + esc(p.image || '') + '" alt="" class="w-12 h-12 rounded-lg object-cover bg-gray-100 shrink-0">' +
           '<span class="flex-1 min-w-0"><span class="block text-xs font-bold text-[#0a192f] truncate">' + esc(p.name) + '</span>' +
           '<span class="block text-[10px] text-[#0a192f]/50">' + money(p.price) + ' · ' + (p.stock || 0) + ' in stock</span></span></button>';
       }).join('') || '<p class="text-[11px] text-[#0a192f]/40 text-center py-3">No matches</p>';

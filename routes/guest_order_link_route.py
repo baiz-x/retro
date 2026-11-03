@@ -26,7 +26,10 @@ guest_link_bp = Blueprint("guest_order_links", __name__)
 def _moderator_privacy_headers(response):
     if request.path.startswith('/mod/') or request.path.startswith('/api/mod/'):
         response.headers['Cache-Control'] = 'no-store'
-        response.headers['Referrer-Policy'] = 'no-referrer'
+        # NOT 'no-referrer': Flask-WTF's strict CSRF check on HTTPS needs a Referer on
+        # the page's own POSTs. 'same-origin' still keeps the token-in-URL out of any
+        # request to another site.
+        response.headers['Referrer-Policy'] = 'same-origin'
         response.headers['X-Robots-Tag'] = 'noindex, nofollow'
     return response
 

@@ -8,7 +8,7 @@ from datetime import datetime
 from functools import wraps
 
 from flask import request, jsonify, current_app
-from sqlalchemy import func
+from sqlalchemy import func, inspect as sa_inspect, text as sa_text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -334,6 +334,19 @@ def update_product(product_id, data, image_file=None, gallery_files=None):
         db.session.rollback()
         return None, f"Update failed: {str(e)}"
 
+def _product_references():
+    """[(table, column)] for every foreign key that points at products.id, read
+    from the LIVE schema — so a table I've never seen can't surprise a delete."""
+    insp = sa_inspect(db.engine)
+    refs = []
+    for table in insp.get_table_names():
+        for fk in insp.get_foreign_keys(table):
+            if fk.get("referred_table") == "products":
+                for col in fk.get("constrained_columns", []):
+                    refs.append((table, col))
+    return refs
+
+
 def delete_product(product_id):
     """
     Hard-deletes a product that has never been ordered.
@@ -344,6 +357,10 @@ def delete_product(product_id):
     order can't be deleted without breaking that link. For those, set stock to
     0 instead (the storefront already hides stock-0 products).
 
+    Rows that exist only because the product exists (cart lines, its wholesale
+    record, campaign links) go with it. Any OTHER table that still references
+    the product blocks the delete with a clear message instead of a raw DB error.
+
     Order matters: the database delete happens FIRST and the Cloudinary images
     are only destroyed afterwards. The old order destroyed the photos before
     the delete, so a failed delete left a product with no pictures.
@@ -352,34 +369,50 @@ def delete_product(product_id):
     if not product:
         return False, "Product not found"
 
+    ALWAYS_DELETE = {"cart_items", "wholesale", "promo_products"}   # meaningless without the product
+    GUEST_LINK_TABLES = {"guest_order_link_items", "guest_order_links"}  # handled below
+    pid = product.id
+
     try:
-        from models import OrderItem, CartItem, GuestOrderLink
+        from models import GuestOrderLink
         from models.guest_order_link import GuestOrderLinkItem
 
-        order_lines = OrderItem.query.filter_by(product_id=product.id).count()
-        if order_lines:
-            return False, (
-                f"This product is in {order_lines} past order line(s), so deleting it would break "
-                "order history. Set its stock to 0 to hide it from the store instead."
-            )
+        to_delete = []
+        for table, col in _product_references():
+            n = db.session.execute(
+                sa_text(f'SELECT COUNT(*) FROM "{table}" WHERE "{col}" = :pid'), {"pid": pid}
+            ).scalar()
+            if not n:
+                continue
+            if table == "order_items":
+                return False, (
+                    f"This product is in {n} past order line(s), so deleting it would break "
+                    "order history. Set its stock to 0 to hide it from the store instead."
+                )
+            if table in ALWAYS_DELETE:
+                to_delete.append((table, col))
+            elif table not in GUEST_LINK_TABLES:
+                return False, f"This product is still used by '{table}' ({n} row(s)), so it can't be deleted yet."
 
         image_urls = [product.image] + list(product.gallery or [])
 
-        # Carts are throw-away — drop any lines for this product.
-        CartItem.query.filter_by(product_id=product.id).delete(synchronize_session=False)
+        for table, col in to_delete:
+            db.session.execute(sa_text(f'DELETE FROM "{table}" WHERE "{col}" = :pid'), {"pid": pid})
 
         # Guest links: a link whose product is gone must not stay usable.
-        linked = {it.link_id for it in GuestOrderLinkItem.query.filter_by(product_id=product.id).all()}
-        linked |= {l.id for l in GuestOrderLink.query.filter_by(product_id=product.id).all()}
+        linked = {it.link_id for it in GuestOrderLinkItem.query.filter_by(product_id=pid).all()}
+        linked |= {l.id for l in GuestOrderLink.query.filter_by(product_id=pid).all()}
         if linked:
             GuestOrderLink.query.filter(
                 GuestOrderLink.id.in_(linked), GuestOrderLink.used_at.is_(None)
             ).update({"expires_at": datetime.utcnow()}, synchronize_session=False)
-            GuestOrderLinkItem.query.filter_by(product_id=product.id).delete(synchronize_session=False)
-            GuestOrderLink.query.filter_by(product_id=product.id).update(
+            GuestOrderLinkItem.query.filter_by(product_id=pid).delete(synchronize_session=False)
+            GuestOrderLink.query.filter_by(product_id=pid).update(
                 {"product_id": None}, synchronize_session=False
             )
 
+        # The ORM must not try to NULL-out the rows we just removed.
+        db.session.expire(product)
         db.session.delete(product)
         db.session.commit()
     except Exception as e:

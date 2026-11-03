@@ -13,6 +13,41 @@
 
 <link rel="stylesheet" href="/static/index.css">
 <link rel="stylesheet" href="/static/cart.css">
+<style>
+  /* Guest order page — own CSS so spacing/borders never depend on which utility
+     classes the site's compiled stylesheet contains. */
+  .gl-summary { background:#fbf8f2; border:1px solid #e3dccd; border-radius:20px; padding:14px; margin-bottom:24px; }
+  .gl-line { display:flex; align-items:center; gap:14px; background:#fff; border:1px solid #e8e1d3; border-radius:16px; padding:10px 12px 10px 10px; }
+  .gl-line + .gl-line { margin-top:10px; }
+  .gl-line img { width:68px; height:68px; flex:none; object-fit:cover; border-radius:12px; background:#f1ece1; margin:0; }
+  .gl-line-body { flex:1; min-width:0; }
+  .gl-line-name { font-weight:700; font-size:14px; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .gl-line-meta { font-size:12px; color:#64748b; margin-top:3px; }
+  .gl-line-price { flex:none; text-align:right; }
+  .gl-old { font-size:11px; color:#94a3b8; text-decoration:line-through; }
+  .gl-price { font-weight:700; font-size:14px; color:#1e293b; }
+  .gl-totals { margin-top:14px; padding-top:6px; border-top:1px dashed #d4ccba; }
+  .gl-totals > div { display:flex; justify-content:space-between; font-size:14px; color:#475569; padding:5px 2px; }
+  .gl-totals .gl-discount { color:#2f7a4f; font-weight:600; }
+  .gl-totals .gl-total { font-weight:800; font-size:17px; color:#1e293b; border-top:1px solid #d4ccba; margin-top:6px; padding-top:11px; }
+
+  .gl-contact { margin-bottom:4px; }
+  .gl-contact-note { font-size:12px; color:#64748b; margin:2px 0 10px; }
+  .gl-chips { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:12px; }
+  .gl-chip { appearance:none; -webkit-appearance:none; cursor:pointer; background:#fff; color:#334155;
+             border:2px solid #cfc7b6; border-radius:14px; padding:14px 4px; font:700 13px/1.1 inherit; font-family:inherit;
+             transition:border-color .15s, background .15s, color .15s, transform .08s; }
+  .gl-chip:active { transform:scale(.97); }
+  .gl-chip.is-active { background:#1e293b; border-color:#1e293b; color:#fff; }
+
+  .gl-btn-primary { display:block; width:100%; appearance:none; -webkit-appearance:none; cursor:pointer;
+             background:#1e293b; color:#fff; border:2px solid #0f172a; border-radius:16px; padding:18px 20px;
+             font:800 14px/1 inherit; font-family:inherit; letter-spacing:.14em; text-transform:uppercase;
+             box-shadow:0 5px 0 #0b1220, 0 10px 20px rgba(15,23,42,.18); transition:transform .08s, box-shadow .08s, opacity .15s; }
+  .gl-btn-primary:active { transform:translateY(4px); box-shadow:0 1px 0 #0b1220, 0 4px 10px rgba(15,23,42,.18); }
+  .gl-btn-primary:focus-visible, .gl-chip:focus-visible { outline:3px solid #d4af37; outline-offset:2px; }
+  .gl-btn-primary:disabled { opacity:.6; cursor:default; }
+</style>
 </head>
 
 <body class="bg-cream-50 text-slate-800 antialiased">
@@ -41,42 +76,37 @@
   <p class="text-sm text-slate-500/80 mb-8">Fill in your details below to place your order.</p>
 
   {% if view %}
-  <!-- Order summary — fixed by whoever made the link (admin/moderator), not editable here.
-       Several products, the same product in different sizes, the discount and the total. -->
-  <div class="checkout-card bg-cream-50 border border-sand-200 shadow-sm mb-6 space-y-4">
+  <!-- Order summary — fixed by whoever made the link (admin/moderator), not editable here. -->
+  <div class="gl-summary">
     {% for l in view.lines %}
-    <div class="flex items-center gap-4">
-      <img src="{{ l.image or '' }}" alt="" class="w-16 h-16 rounded-lg object-cover bg-sand-100 shrink-0">
-      <div class="min-w-0 flex-1">
-        <p class="font-bold text-sm text-slate-800 truncate">{{ l.name }}</p>
-        <p class="text-xs text-slate-500/70">{% if l.variant %}{{ l.variant }} &middot; {% endif %}Qty {{ l.quantity }}</p>
+    <div class="gl-line">
+      <img src="{{ l.image or '' }}" alt="">
+      <div class="gl-line-body">
+        <div class="gl-line-name">{{ l.name }}</div>
+        <div class="gl-line-meta">{% if l.variant %}{{ l.variant }} &middot; {% endif %}Qty {{ l.quantity }}</div>
       </div>
-      <div class="text-right shrink-0">
-        {% if l.unit_price != l.original_unit_price %}
-        <p class="text-[11px] text-slate-500/50 line-through">৳{{ "%.0f"|format(l.original_unit_price * l.quantity) }}</p>
-        {% endif %}
-        <p class="text-sm font-bold text-slate-800">৳{{ "%.0f"|format(l.line_total) }}</p>
+      <div class="gl-line-price">
+        {% if l.unit_price != l.original_unit_price %}<div class="gl-old">৳{{ "%.0f"|format(l.original_unit_price * l.quantity) }}</div>{% endif %}
+        <div class="gl-price">৳{{ "%.0f"|format(l.line_total) }}</div>
       </div>
     </div>
     {% endfor %}
-    <div class="border-t border-sand-200 pt-3 space-y-1 text-sm">
-      <div class="flex justify-between text-slate-500/80"><span>Subtotal</span><span>৳{{ "%.0f"|format(view.subtotal + view.discount_total) }}</span></div>
-      {% if view.discount_total > 0 %}
-      <div class="flex justify-between text-sage-500"><span>Discount</span><span>&minus;৳{{ "%.0f"|format(view.discount_total) }}</span></div>
-      {% endif %}
-      {% if view.payment_type == 'postpaid' %}
-      <div class="flex justify-between text-slate-500/80"><span>Delivery charge</span><span>৳{{ "%.0f"|format(view.shipping_fee) }}</span></div>
-      {% endif %}
-      <div class="flex justify-between font-bold text-slate-800 text-base pt-1"><span>Total to pay</span><span>৳{{ "%.0f"|format(view.total) }}</span></div>
+    <div class="gl-totals">
+      <div><span>Subtotal</span><span>৳{{ "%.0f"|format(view.subtotal + view.discount_total) }}</span></div>
+      {% if view.discount_total > 0 %}<div class="gl-discount"><span>Discount</span><span>&minus;৳{{ "%.0f"|format(view.discount_total) }}</span></div>{% endif %}
+      {% if view.payment_type == 'postpaid' %}<div><span>Delivery charge</span><span>৳{{ "%.0f"|format(view.shipping_fee) }}</span></div>{% endif %}
+      <div class="gl-total"><span>Total to pay</span><span>৳{{ "%.0f"|format(view.total) }}</span></div>
     </div>
   </div>
   {% else %}
   <!-- Legacy single-product link — the customer picks the size below -->
-  <div class="checkout-card bg-cream-50 border border-sand-200 shadow-sm mb-6 flex items-center gap-4">
-    <img src="{{ link.product.image or '' }}" alt="" class="w-16 h-16 rounded-lg object-cover bg-sand-100 shrink-0">
-    <div class="min-w-0">
-      <p class="font-bold text-sm text-slate-800 truncate">{{ link.product.name }}</p>
-      <p class="text-xs text-slate-500/70">৳{{ "%.2f"|format(link.product.price) }}</p>
+  <div class="gl-summary">
+    <div class="gl-line">
+      <img src="{{ link.product.image or '' }}" alt="">
+      <div class="gl-line-body">
+        <div class="gl-line-name">{{ link.product.name }}</div>
+        <div class="gl-line-meta">৳{{ "%.2f"|format(link.product.price) }}</div>
+      </div>
     </div>
   </div>
   {% endif %}
@@ -100,13 +130,13 @@
         <input type="text" id="thana" name="thana" class="checkout-input" placeholder="e.g. Mirpur" required />
       </label>
 
-      <div class="block">
+      <div class="gl-contact">
         <span class="checkout-label">How can we reach you? <span class="text-red-600">*</span></span>
-        <p class="text-[11px] text-slate-500/60 mb-2">We'll message you here when your parcel arrives.</p>
-        <div class="grid grid-cols-3 gap-2 mb-2" id="contactChannelGroup" role="radiogroup" aria-label="Contact channel">
-          <button type="button" class="contact-channel-btn checkout-input text-center text-xs font-bold" data-channel="whatsapp" aria-pressed="true">WhatsApp</button>
-          <button type="button" class="contact-channel-btn checkout-input text-center text-xs font-bold" data-channel="facebook" aria-pressed="false">Facebook</button>
-          <button type="button" class="contact-channel-btn checkout-input text-center text-xs font-bold" data-channel="instagram" aria-pressed="false">Instagram</button>
+        <p class="gl-contact-note">We'll message you here when your parcel arrives.</p>
+        <div class="gl-chips" id="contactChannelGroup" role="radiogroup" aria-label="Contact channel">
+          <button type="button" class="gl-chip contact-channel-btn is-active" data-channel="whatsapp" aria-pressed="true">WhatsApp</button>
+          <button type="button" class="gl-chip contact-channel-btn" data-channel="facebook" aria-pressed="false">Facebook</button>
+          <button type="button" class="gl-chip contact-channel-btn" data-channel="instagram" aria-pressed="false">Instagram</button>
         </div>
         <input type="hidden" id="contact_channel" name="contact_channel" value="whatsapp" />
         <input type="text" id="contact_handle" name="contact_handle" class="checkout-input" placeholder="Your WhatsApp number" inputmode="tel" autocomplete="off" required />
@@ -127,7 +157,7 @@
       {% endif %}
     </div>
 
-    <button type="submit" id="guestSubmitBtn" class="w-full bg-navy text-gold font-bold uppercase tracking-widest text-sm py-4 rounded-full">
+    <button type="submit" id="guestSubmitBtn" class="gl-btn-primary">
       Confirm Order
     </button>
     <p id="guestFormError" class="hidden text-center text-xs text-red-600"></p>
@@ -146,9 +176,7 @@
 
 {% include "partials/_footer.html" %}
 
-<script src="/static/guest_order_form.js"></script>
+<script src="/static/guest_order_form.js?v=20261102"></script>
 
 </body>
 </html>
-
-

@@ -1018,7 +1018,7 @@ function renderInventory() {
 }
 
 async function deleteProduct(productId, name) {
-    if (!confirm(`Delete "${name}"? This can't be undone.`)) return;
+    if (!confirm(`Delete "${name}"?\n\nIts wholesale record and any cart entries are deleted with it. This can't be undone.`)) return;
     try {
         const res = await fetch(`/api/admin/products/${productId}`, {
             method: 'DELETE',

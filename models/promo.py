@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from sqlalchemy import false as sa_false
 from . import db
 
 # Admin enters <input type="datetime-local"> values in Bangladesh time (UTC+6, no DST).
@@ -158,7 +159,7 @@ class PromoProduct(db.Model):
 
     # TIER only. is_premium rows use the campaign's premium_offset, or their
     # own custom_ladder (e.g. "699,599,499") when one is set.
-    is_premium = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    is_premium = db.Column(db.Boolean, nullable=False, default=False, server_default=sa_false())
     custom_ladder = db.Column(db.String(120), nullable=True)
 
     promo = db.relationship("Promo", back_populates="products")

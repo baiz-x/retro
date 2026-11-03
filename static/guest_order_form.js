@@ -35,8 +35,7 @@
     channelBtns.forEach(function (btn) {
       var active = btn.dataset.channel === channel;
       btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-      btn.classList.toggle('bg-navy', active);
-      btn.classList.toggle('text-gold', active);
+      btn.classList.toggle('is-active', active);
     });
     handleInput.placeholder = CHANNELS[channel].placeholder;
     handleInput.setAttribute('inputmode', CHANNELS[channel].inputmode);
@@ -45,12 +44,6 @@
 
   channelBtns.forEach(function (btn) {
     btn.addEventListener('click', function () { selectChannel(btn.dataset.channel); });
-  });
-  // Paint the default (WhatsApp) selection without stealing focus on load.
-  channelBtns.forEach(function (btn) {
-    var active = btn.dataset.channel === channelInput.value;
-    btn.classList.toggle('bg-navy', active);
-    btn.classList.toggle('text-gold', active);
   });
 
   form.addEventListener('submit', function (e) {

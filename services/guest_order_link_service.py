@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from types import SimpleNamespace
 
 from flask import current_app
+from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
 from models import db, GuestOrderLink, Product, Order, OrderItem
@@ -490,7 +491,7 @@ def create_moderator_link(label, days):
 def list_moderator_links():
     rows = ModeratorLink.query.order_by(ModeratorLink.created_at.desc()).all()
     counts = dict(
-        db.session.query(GuestOrderLink.moderator_link_id, db.func.count(GuestOrderLink.id))
+        db.session.query(GuestOrderLink.moderator_link_id, func.count(GuestOrderLink.id))
         .filter(GuestOrderLink.moderator_link_id.isnot(None))
         .group_by(GuestOrderLink.moderator_link_id).all()
     )
