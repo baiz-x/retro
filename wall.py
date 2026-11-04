@@ -59,8 +59,7 @@ ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     'retro-7wxo.onrender.com',
-    'markazussunnahbd.com',
-    'www.markazussunnahbd.com'
+    'retrofit-bd.onrender.com'
 ]
 TRUSTED_CRAWLERS = ["facebookexternalhit", "facebookcatalog", "googlebot", "bingbot"]
 TARGET_URLS = [
