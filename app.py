@@ -198,6 +198,9 @@ def robots():
     ]
     return Response("\n".join(lines), mimetype="text/plain")
 
+@app.route("/loaderio-b56e3579db63746abfa1a85af6050675.txt")
+def loader ():
+    return render_template("loader.txt")
 
 @app.route('/sitemap.xml')
 def sitemap():
