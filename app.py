@@ -200,7 +200,7 @@ def robots():
 
 @app.route("/loaderio-b56e3579db63746abfa1a85af6050675.txt")
 def loader ():
-    return render_template("loader.txt")
+    return render_template("loaderio-b56e3579db63746abfa1a85af6050675.txt")
 
 @app.route('/sitemap.xml')
 def sitemap():
