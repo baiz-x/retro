@@ -198,9 +198,12 @@ def robots():
     ]
     return Response("\n".join(lines), mimetype="text/plain")
 
+# Handle all required extensions and paths for Loader.io verification
 @app.route("/loaderio-b56e3579db63746abfa1a85af6050675.txt")
-def loader():
-    return "loaderio-b56e3579db63746abfa1a85af6050675"
+@app.route("/loaderio-b56e3579db63746abfa1a85af6050675.html")
+@app.route("/loaderio-b56e3579db63746abfa1a85af6050675/")
+def loaderio_verify():
+  return "loaderio-b56e3579db63746abfa1a85af6050675"
 
 @app.route('/sitemap.xml')
 def sitemap():
