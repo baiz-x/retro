@@ -58,7 +58,7 @@ csrf = CSRFProtect()
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
-    'retro-7wxo.onrender.com',
+    'retrofitbd.store',
     'retrofit-bd.onrender.com'
 ]
 TRUSTED_CRAWLERS = ["facebookexternalhit", "facebookcatalog", "googlebot", "bingbot"]
