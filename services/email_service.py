@@ -1,20 +1,15 @@
 import os
-import smtplib
 import logging
-from email.message import EmailMessage
+import requests
 
 logger = logging.getLogger(__name__)
 
-# All SMTP config comes from environment variables — nothing is
-# hardcoded here. For Gmail: SMTP_USERNAME is the full gmail address,
-# SMTP_PASSWORD must be a 16-character Google "App Password"
-# (myaccount.google.com/apppasswords), not the normal account password
-# — Gmail rejects plain SMTP auth with the real password.
-SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USERNAME = os.getenv("SMTP_USERNAME")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
-SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", SMTP_USERNAME)
+# Config comes from environment variables (.env) — nothing is
+# hardcoded here. RESEND_FROM_EMAIL must be an address on a domain you
+# have verified in the Resend dashboard (e.g. "no-reply@yourdomain.com").
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL")
+RESEND_API_URL = "https://api.resend.com/emails"
 
 # tODO(Hasan): no site/brand name exists anywhere in the files I've
 # seen — replace this placeholder with your real site name. It shows
@@ -94,8 +89,8 @@ def _build_html_body(code):
 
 def send_verification_email(to_email, code):
     """
-    Sends the verification code as a multipart/alternative message
-    (plain-text version + HTML version). Clients that can render HTML
+    Sends the verification code via the Resend HTTP API with both an
+    HTML version and a plain-text version. Clients that can render HTML
     show the styled version; everything else falls back to plain text.
     Raises EmailSendError on any failure — callers decide how to
     surface that (e.g. still return "check your email" to avoid
@@ -105,33 +100,44 @@ def send_verification_email(to_email, code):
     only. Actual inbox-vs-spam placement is determined mainly by
     sending-domain authentication (SPF, DKIM, DMARC DNS records) and
     sender reputation — neither of which can be set from application
-    code. Gmail SMTP (smtp.gmail.com) also inherently carries higher
-    spam risk for transactional mail than a dedicated provider or an
-    authenticated custom domain. See the standalone note on switching
-    to a custom domain.
+    code. Verify your sending domain in the Resend dashboard and add
+    the DNS records it gives you; without a verified domain, Resend
+    only allows its onboarding sender and only to your own account email.
     """
-    if not SMTP_USERNAME or not SMTP_PASSWORD:
-        # Fail loudly in logs — a silently-missing SMTP config would
+    if not RESEND_API_KEY or not RESEND_FROM_EMAIL:
+        # Fail loudly in logs — a silently-missing config would
         # otherwise look like "email was sent" to every caller.
-        logger.error("SMTP_USERNAME or SMTP_PASSWORD not set in environment")
+        logger.error("RESEND_API_KEY or RESEND_FROM_EMAIL not set in environment")
         raise EmailSendError("Email service is not configured")
 
-    msg = EmailMessage()
-    msg["Subject"] = "Your verification code"
-    msg["From"] = f"{SITE_NAME} <{SMTP_FROM_EMAIL}>"
-    msg["To"] = to_email
-    msg.set_content(
-        f"Your verification code is: {code}\n\n"
-        f"This code expires in 10 minutes. If you didn't request this, "
-        f"you can safely ignore this email."
-    )
-    msg.add_alternative(_build_html_body(code), subtype="html")
+    payload = {
+        "from": f"{SITE_NAME} <{RESEND_FROM_EMAIL}>",
+        "to": [to_email],
+        "subject": "Your verification code",
+        "html": _build_html_body(code),
+        "text": (
+            f"Your verification code is: {code}\n\n"
+            f"This code expires in 10 minutes. If you didn't request this, "
+            f"you can safely ignore this email."
+        ),
+    }
 
     try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as server:
-            server.starttls()
-            server.login(SMTP_USERNAME, SMTP_PASSWORD)
-            server.send_message(msg)
-    except smtplib.SMTPException as e:
-        logger.error(f"Failed to send verification email to {to_email}: {e}", exc_info=True)
+        resp = requests.post(
+            RESEND_API_URL,
+            json=payload,
+            headers={"Authorization": f"Bearer {RESEND_API_KEY}"},
+            timeout=10,
+        )
+        resp.raise_for_status()
+    except requests.RequestException as e:
+        # Resend returns a JSON body explaining the failure (unverified
+        # domain, bad key, etc.) — include it in the log, never in the
+        # error raised to callers.
+        response = getattr(e, "response", None)
+        detail = response.text if response is not None else ""
+        logger.error(
+            f"Failed to send verification email to {to_email}: {e} {detail}",
+            exc_info=True,
+        )
         raise EmailSendError("Could not send verification email") from e
