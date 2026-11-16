@@ -28,6 +28,18 @@ class User(db.Model):
     verification_code = db.Column(db.String(6), nullable=True)
     verification_code_expires_at = db.Column(db.DateTime, nullable=True)
 
+    # Wrong-guess counter for the current verification code. Reset to 0
+    # whenever a fresh code is issued; once it reaches
+    # MAX_VERIFICATION_ATTEMPTS (auth_service.py) the code is dead and a
+    # new one must be requested.
+    verification_attempts = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+
+    # Password reset. Only the SHA-256 hash of the emailed token is
+    # stored (never the raw token), so a DB leak doesn't hand out live
+    # reset links. Both fields are cleared on successful reset.
+    reset_token_hash = db.Column(db.String(64), nullable=True, index=True)
+    reset_token_expires_at = db.Column(db.DateTime, nullable=True)
+
     # Optional social contact info, e.g. for order-related outreach.
     social_platform = db.Column(db.String(40), nullable=True)  # WhatsApp, Instagram, Facebook, TikTok
     social_handle = db.Column(db.String(100), nullable=True)
@@ -57,5 +69,6 @@ class User(db.Model):
             "social_handle": self.social_handle,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+
 
 

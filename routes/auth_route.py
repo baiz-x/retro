@@ -1,6 +1,6 @@
 import logging
 from functools import wraps
-from flask import Blueprint, request, jsonify, session
+from flask import Blueprint, request, jsonify, session, render_template
 from models import User
 from services.auth_service import (
     register_user,
@@ -11,6 +11,8 @@ from services.auth_service import (
     update_profile_fields,
     request_email_change,
     change_password,
+    request_password_reset,
+    reset_password_with_token,
 )
 
 logger = logging.getLogger(__name__)
@@ -95,7 +97,18 @@ def login():
         user, error, error_code = authenticate_user(email, password)
         if error:
             body = {"status": "error", "message": error}
-            if error_code:
+            if error_code == "unverified":
+                # Correct password, unverified account: send a fresh code
+                # (resend_verification_code applies the 60s cooldown) and
+                # hand the email back so login.js can jump straight to the
+                # verification step on the signup page.
+                sent, send_error = resend_verification_code(email)
+                if sent:
+                    body["error_code"] = "unverified"
+                    body["data"] = {"email": email}
+                else:
+                    body["message"] = send_error
+            elif error_code:
                 body["error_code"] = error_code
             return jsonify(body), 401
 
@@ -160,6 +173,60 @@ def resend_code():
         }), 200
     except Exception as e:
         logger.error(f"Unexpected error in resend_code: {str(e)}", exc_info=True)
+        return jsonify({"status": "error", "message": "An internal error occurred"}), 500
+
+
+@auth_bp.route("/forgot-password", methods=["POST"])
+def forgot_password():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"status": "error", "message": "Missing request body"}), 400
+
+        email = (data.get("email") or "").strip().lower()
+
+        success, error = request_password_reset(email)
+        if not success:
+            return jsonify({"status": "error", "message": error}), 400
+
+        # Always the same message whether or not the email exists —
+        # see request_password_reset's docstring on enumeration.
+        return jsonify({
+            "status": "success",
+            "message": "If an account exists for that email, we've sent a password reset link.",
+        }), 200
+    except Exception as e:
+        logger.error(f"Unexpected error in forgot_password: {str(e)}", exc_info=True)
+        return jsonify({"status": "error", "message": "An internal error occurred"}), 500
+
+
+@auth_bp.route("/reset-password", methods=["GET"])
+def reset_password_page():
+    # The page itself never sees or validates the token server-side —
+    # reset_password.js reads it from the URL and sends it with the new
+    # password to the POST route below.
+    return render_template("reset_password.html")
+
+
+@auth_bp.route("/reset-password", methods=["POST"])
+def reset_password():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"status": "error", "message": "Missing request body"}), 400
+
+        token = data.get("token") or ""
+        new_password = data.get("new_password") or ""
+
+        user, error = reset_password_with_token(token, new_password)
+        if error:
+            return jsonify({"status": "error", "message": error}), 400
+
+        # Deliberately no login here — the person goes back to the
+        # login page and signs in with the new password.
+        return jsonify({"status": "success", "message": "Password updated"}), 200
+    except Exception as e:
+        logger.error(f"Unexpected error in reset_password: {str(e)}", exc_info=True)
         return jsonify({"status": "error", "message": "An internal error occurred"}), 500
 
 
@@ -296,5 +363,6 @@ def me():
         return jsonify({"status": "error", "message": "Not logged in"}), 401
 
     return jsonify({"status": "success", "data": user.to_dict()}), 200
+
 
 

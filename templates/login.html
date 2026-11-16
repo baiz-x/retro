@@ -40,13 +40,6 @@
 
     <div id="formError" class="auth-error hidden" role="alert"></div>
 
-    <!-- Shown only when a login attempt fails because the account is
-         unverified (auth_service.authenticate_user error_code
-         "unverified"). Hidden the rest of the time. -->
-    <button type="button" id="resendCodeBtn" class="auth-optional-toggle w-full justify-center hidden">
-      Resend verification code
-    </button>
-
     <form id="loginForm" class="space-y-4" novalidate>
       <label class="block">
         <span class="auth-label">Email</span>
@@ -63,8 +56,36 @@
         </div>
       </label>
 
+      <div style="text-align:right; margin-top:-0.25rem;">
+        <button type="button" id="forgotLink" class="text-sm text-sage-600 font-semibold hover:text-sage-700" style="background:none;border:none;padding:0;cursor:pointer;">Forgot password?</button>
+      </div>
+
       <button type="submit" id="submitBtn" class="pdp-add-btn w-full mt-2">
         <span id="submitLabel">Log In</span>
+      </button>
+    </form>
+
+    <!-- Forgot-password panel: swapped in place of loginForm by login.js
+         (no page navigation). The reset itself happens on its own page
+         (/auth/reset-password), reached from the emailed link. -->
+    <form id="forgotForm" class="space-y-4 hidden" novalidate>
+      <p class="text-sm text-slate-500/70 text-center">
+        Enter your email and we'll send you a link to reset your password.
+      </p>
+
+      <label class="block">
+        <span class="auth-label">Email</span>
+        <input id="forgotEmail" name="forgotEmail" type="email" class="auth-input" autocomplete="email" required />
+      </label>
+
+      <p id="forgotSent" class="text-sm text-sage-600 font-semibold text-center hidden"></p>
+
+      <button type="submit" id="forgotSubmitBtn" class="pdp-add-btn w-full mt-2">
+        <span id="forgotSubmitLabel">Send Reset Link</span>
+      </button>
+
+      <button type="button" id="forgotBackBtn" class="auth-optional-toggle w-full justify-center">
+        Back to log in
       </button>
     </form>
 
@@ -78,4 +99,5 @@
 <script src="/static/login.js"></script>
 </body>
 </html>
+
 

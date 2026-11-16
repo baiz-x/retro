@@ -88,30 +88,22 @@
         <textarea id="address" name="address" rows="3" class="auth-input resize-none" placeholder="House, Road, Area, City" required></textarea>
       </label>
 
-      <!-- Optional social contact, per plan.md's social_platform/social_handle
-           fields on User — collapsed behind a toggle so it doesn't crowd the
-           form for people who'd rather skip it. -->
-      <button type="button" id="socialToggle" class="auth-optional-toggle" aria-expanded="false">
-        <span>Add a social contact (optional)</span>
-        <i data-lucide="chevron-down" class="w-4 h-4"></i>
-      </button>
-      <div id="socialFields" class="auth-optional-fields">
-        <div class="grid grid-cols-2 gap-3 pt-3">
-          <label class="block">
-            <span class="auth-label">Platform</span>
-            <select id="social_platform" name="social_platform" class="auth-input">
-              <option value="">None</option>
-              <option value="WhatsApp">WhatsApp</option>
-              <option value="Instagram">Instagram</option>
-              <option value="Facebook">Facebook</option>
-              <option value="TikTok">TikTok</option>
-            </select>
-          </label>
-          <label class="block">
-            <span class="auth-label">Handle</span>
-            <input id="social_handle" name="social_handle" type="text" class="auth-input" placeholder="@yourhandle" autocomplete="off" />
-          </label>
-        </div>
+      <!-- Social contact (required): platform + handle, always visible. -->
+      <div class="grid grid-cols-2 gap-3">
+        <label class="block">
+          <span class="auth-label">Platform</span>
+          <select id="social_platform" name="social_platform" class="auth-input" required>
+            <option value="" disabled selected>Select</option>
+            <option value="WhatsApp">WhatsApp</option>
+            <option value="Instagram">Instagram</option>
+            <option value="Facebook">Facebook</option>
+            <option value="TikTok">TikTok</option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="auth-label">Handle</span>
+          <input id="social_handle" name="social_handle" type="text" class="auth-input" placeholder="@yourhandle" autocomplete="off" maxlength="100" required />
+        </label>
       </div>
 
       <div class="flex gap-3 mt-2">
@@ -173,4 +165,5 @@
 <script src="/static/signup.js"></script>
 </body>
 </html>
+
 

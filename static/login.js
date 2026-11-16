@@ -1,13 +1,17 @@
-/* login.js — depends on auth.js (csrfFetch, showAuthError, setSubmitBusy)
-   being loaded first. */
+/* login.js — depends on auth.js (csrfFetch, showAuthError, hideAuthError,
+   setSubmitBusy) being loaded first. */
 
 const loginForm = document.getElementById('loginForm');
-const resendCodeBtn = document.getElementById('resendCodeBtn');
+const forgotForm = document.getElementById('forgotForm');
+const forgotLink = document.getElementById('forgotLink');
+const forgotBackBtn = document.getElementById('forgotBackBtn');
+const forgotEmail = document.getElementById('forgotEmail');
+const forgotSent = document.getElementById('forgotSent');
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   hideAuthError();
-  resendCodeBtn.classList.add('hidden');
 
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
@@ -28,11 +32,24 @@ loginForm.addEventListener('submit', async (e) => {
     const payload = await res.json();
 
     if (payload.status !== 'success') {
+      // Correct password but unverified account: the server has already
+      // sent a fresh code, so go straight to the code-entry step on the
+      // signup page. The email travels via sessionStorage (not the URL)
+      // so it doesn't end up in server logs or browser history.
+      if (payload.error_code === 'unverified' && payload.data && payload.data.email) {
+        try {
+          sessionStorage.setItem('pendingVerifyEmail', payload.data.email);
+        } catch (storageErr) {
+          console.error('sessionStorage unavailable:', storageErr);
+        }
+        const params = new URLSearchParams(window.location.search);
+        const next = params.get('next');
+        window.location.href = '/signup?verify=1' + (next ? '&next=' + encodeURIComponent(next) : '');
+        return;
+      }
+
       showAuthError(payload.message || 'Could not log in. Please try again.');
       setSubmitBusy(false, '', 'Log In');
-      if (payload.error_code === 'unverified') {
-        resendCodeBtn.classList.remove('hidden');
-      }
       return;
     }
 
@@ -50,38 +67,58 @@ loginForm.addEventListener('submit', async (e) => {
   }
 });
 
-resendCodeBtn.addEventListener('click', async () => {
-  // The login form already collects an email address, so reuse
-  // whatever's currently typed there rather than asking again.
-  const email = document.getElementById('email').value.trim();
-  if (!email) {
-    showAuthError('Enter your email above first, then tap resend.');
+/* ---------------- Forgot password (inline panel) ---------------- */
+forgotLink.addEventListener('click', () => {
+  hideAuthError();
+  // Carry over whatever was already typed into the login email field.
+  forgotEmail.value = document.getElementById('email').value.trim();
+  forgotSent.classList.add('hidden');
+  setSubmitBusy(false, '', 'Send Reset Link', 'forgotSubmitBtn', 'forgotSubmitLabel');
+  loginForm.classList.add('hidden');
+  forgotForm.classList.remove('hidden');
+  forgotEmail.focus();
+});
+
+forgotBackBtn.addEventListener('click', () => {
+  hideAuthError();
+  forgotForm.classList.add('hidden');
+  loginForm.classList.remove('hidden');
+});
+
+forgotForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  hideAuthError();
+
+  const email = forgotEmail.value.trim();
+  if (!EMAIL_RE.test(email)) {
+    showAuthError('Please enter a valid email address.');
     return;
   }
 
-  hideAuthError();
-  resendCodeBtn.disabled = true;
-  const originalText = resendCodeBtn.textContent;
-  resendCodeBtn.textContent = 'Sending...';
+  setSubmitBusy(true, 'Sending...', 'Send Reset Link', 'forgotSubmitBtn', 'forgotSubmitLabel');
 
   try {
-    const res = await csrfFetch('/auth/resend-code', {
+    const res = await csrfFetch('/auth/forgot-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),
     });
     const payload = await res.json();
-    if (payload.status === 'success') {
-      showAuthError(payload.message || 'If that email needs verification, a new code has been sent.');
-    } else {
-      showAuthError(payload.message || 'Could not resend the code. Please try again.');
+
+    if (payload.status !== 'success') {
+      showAuthError(payload.message || 'Could not send the reset link. Please try again.');
+      setSubmitBusy(false, '', 'Send Reset Link', 'forgotSubmitBtn', 'forgotSubmitLabel');
+      return;
     }
+
+    forgotSent.textContent = payload.message;
+    forgotSent.classList.remove('hidden');
+    // Stays disabled until the person leaves and re-opens this panel.
+    setSubmitBusy(true, 'Link sent', 'Send Reset Link', 'forgotSubmitBtn', 'forgotSubmitLabel');
   } catch (err) {
-    console.error('Resend failed:', err);
+    console.error('Forgot password failed:', err);
     showAuthError('Connection error. Please check your internet and try again.');
-  } finally {
-    resendCodeBtn.disabled = false;
-    resendCodeBtn.textContent = originalText;
+    setSubmitBusy(false, '', 'Send Reset Link', 'forgotSubmitBtn', 'forgotSubmitLabel');
   }
 });
 

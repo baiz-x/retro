@@ -80,13 +80,40 @@ document.getElementById('step2BackBtn').addEventListener('click', () => {
 });
 
 /* ---------------- Step 2: Phone / Address / Social -> submit ---------------- */
+// Matches VERIFICATION_RESEND_COOLDOWN_SECONDS in services/auth_service.py.
+const RESEND_COOLDOWN_SECONDS = 60;
+let resendTimer = null;
+
+function startResendCooldown(seconds) {
+  clearInterval(resendTimer);
+  let remaining = seconds;
+  resendCodeBtn.disabled = true;
+
+  const tick = () => {
+    if (remaining <= 0) {
+      clearInterval(resendTimer);
+      resendCodeBtn.disabled = false;
+      resendCodeBtn.textContent = 'Resend code';
+      return;
+    }
+    resendCodeBtn.textContent = `Resend code in ${remaining}s`;
+    remaining -= 1;
+  };
+  tick();
+  resendTimer = setInterval(tick, 1000);
+}
+
 function showVerifyStep(email) {
   pendingEmail = email;
   verifyEmailDisplay.textContent = email;
+  // step1Form is hidden too: when arriving from the login page
+  // (?verify=1) step 1 is still on screen, since no wizard step ran.
+  step1Form.classList.add('hidden');
   step2Form.classList.add('hidden');
   loginLink.classList.add('hidden');
   verifyForm.classList.remove('hidden');
   setStep(3);
+  startResendCooldown(RESEND_COOLDOWN_SECONDS);
   document.getElementById('verification_code').focus();
 }
 
@@ -107,6 +134,14 @@ step2Form.addEventListener('submit', async (e) => {
     showAuthError('Address is required.');
     return;
   }
+  if (!socialPlatform) {
+    showAuthError('Please select a social media platform.');
+    return;
+  }
+  if (!socialHandle) {
+    showAuthError('Social media handle is required.');
+    return;
+  }
 
   setSubmitBusy(true, 'Creating account...', 'Create Account');
 
@@ -120,8 +155,8 @@ step2Form.addEventListener('submit', async (e) => {
         password: step1Data.password,
         phone_number: phoneNumber,
         address,
-        social_platform: socialPlatform || null,
-        social_handle: socialHandle || null,
+        social_platform: socialPlatform,
+        social_handle: socialHandle,
       }),
     });
     const payload = await res.json();
@@ -185,7 +220,6 @@ verifyForm.addEventListener('submit', async (e) => {
 resendCodeBtn.addEventListener('click', async () => {
   hideAuthError();
   resendCodeBtn.disabled = true;
-  const originalText = resendCodeBtn.textContent;
   resendCodeBtn.textContent = 'Sending...';
 
   try {
@@ -195,17 +229,40 @@ resendCodeBtn.addEventListener('click', async () => {
       body: JSON.stringify({ email: pendingEmail }),
     });
     const payload = await res.json();
+
     if (payload.status !== 'success') {
       showAuthError(payload.message || 'Could not resend the code. Please try again.');
+      resendCodeBtn.disabled = false;
+      resendCodeBtn.textContent = 'Resend code';
+      return;
     }
+    startResendCooldown(RESEND_COOLDOWN_SECONDS);
   } catch (err) {
     console.error('Resend failed:', err);
     showAuthError('Connection error. Please check your internet and try again.');
-  } finally {
     resendCodeBtn.disabled = false;
-    resendCodeBtn.textContent = originalText;
+    resendCodeBtn.textContent = 'Resend code';
   }
 });
 
 setStep(1);
+
+/* ---------------- Arriving from the login page ----------------
+   login.js sends unverified users here as /signup?verify=1 after the
+   server has already emailed them a fresh code, stashing the address in
+   sessionStorage. Jump straight to the code-entry step. If the stash is
+   missing (e.g. page refreshed) the normal signup form simply shows. */
+(function resumeVerificationFromLogin() {
+  const params = new URLSearchParams(window.location.search);
+  if (!params.get('verify')) return;
+
+  let email = null;
+  try {
+    email = sessionStorage.getItem('pendingVerifyEmail');
+    sessionStorage.removeItem('pendingVerifyEmail');
+  } catch (err) {
+    console.error('sessionStorage unavailable:', err);
+  }
+  if (email) showVerifyStep(email);
+})();
 

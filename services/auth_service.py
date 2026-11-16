@@ -1,13 +1,18 @@
 import re
+import hashlib
 import secrets
 from datetime import datetime, timedelta
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from models import db, User, CartItem
-from services.email_service import send_verification_email, EmailSendError
+from services.email_service import send_verification_email, send_password_reset_email, EmailSendError
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 MIN_PASSWORD_LENGTH = 8
 VERIFICATION_CODE_TTL_MINUTES = 10
+VERIFICATION_RESEND_COOLDOWN_SECONDS = 60
+MAX_VERIFICATION_ATTEMPTS = 5
+PASSWORD_RESET_TOKEN_TTL_MINUTES = 30
+PASSWORD_RESET_COOLDOWN_SECONDS = 60
 
 
 def validate_name(name):
@@ -41,6 +46,58 @@ def _generate_verification_code():
     return f"{secrets.randbelow(1_000_000):06d}"
 
 
+def _cooldown_active(expires_at, ttl_minutes, cooldown_seconds):
+    """
+    True if something was issued less than `cooldown_seconds` ago.
+    "Issued at" is derived as expires_at - ttl, so no extra DB column
+    is needed to track when a code/token was last sent.
+    """
+    if not expires_at:
+        return False
+    issued_at = expires_at - timedelta(minutes=ttl_minutes)
+    return datetime.utcnow() < issued_at + timedelta(seconds=cooldown_seconds)
+
+
+def _issue_verification_code(user):
+    """
+    Generates a fresh 6-digit code for `user`, resets the wrong-guess
+    counter, and emails it. Returns (ok, error).
+
+    If a code was issued less than VERIFICATION_RESEND_COOLDOWN_SECONDS
+    ago, nothing is sent and (True, None) is returned — deliberately
+    indistinguishable from a real send, so callers (signup, login,
+    resend) don't leak anything and the earlier code stays valid.
+
+    If the email fails to send, the code is cleared again so the
+    cooldown doesn't block an immediate retry for a code that never
+    reached anyone.
+    """
+    if _cooldown_active(user.verification_code_expires_at,
+                        VERIFICATION_CODE_TTL_MINUTES,
+                        VERIFICATION_RESEND_COOLDOWN_SECONDS):
+        return True, None
+
+    code = _generate_verification_code()
+    user.verification_code = code
+    user.verification_code_expires_at = datetime.utcnow() + timedelta(minutes=VERIFICATION_CODE_TTL_MINUTES)
+    user.verification_attempts = 0
+    db.session.commit()
+
+    try:
+        send_verification_email(user.email, code)
+    except EmailSendError:
+        user.verification_code = None
+        user.verification_code_expires_at = None
+        db.session.commit()
+        return False, "Could not send verification email. Please try again."
+
+    return True, None
+
+
+def _hash_token(token):
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
 def validate_password_strength(password):
     if not password or len(password) < MIN_PASSWORD_LENGTH:
         return False, f"Password must be at least {MIN_PASSWORD_LENGTH} characters"
@@ -63,11 +120,15 @@ def register_user(name, phone_number, email, address, password, social_platform=
     (unique constraint on email) to close the race-condition window
     between check and insert.
 
-    If a matching email already exists but was never verified, signup
-    is blocked (not silently resumed) — the caller is told to use
-    "resend code" on the login page instead, per product decision, so
-    a duplicate submit doesn't quietly regenerate codes for an address
-    someone else may have mistyped.
+    If a matching email already exists but was never verified, the
+    stored details (name, phone, address, password, social) are left
+    untouched and the newly submitted ones are ignored. A fresh code
+    is sent (subject to the resend cooldown, see
+    _issue_verification_code) and the existing user is returned, so
+    the frontend jumps straight to the code-entry step — the response
+    is identical to a brand-new signup, so it reveals nothing new about
+    the email. Trade-off: someone who mistyped their password at their
+    first signup keeps that password until they use forgot-password.
     """
     valid, err = validate_name(name)
     if not valid:
@@ -91,14 +152,13 @@ def register_user(name, phone_number, email, address, password, social_platform=
     try:
         existing = User.query.filter_by(email=email).first()
         if existing and not existing.is_verified:
-            return None, (
-                "An account with this email is already pending verification. "
-                "Please use \"resend code\" on the login page."
-            )
+            ok, err = _issue_verification_code(existing)
+            if not ok:
+                return None, err
+            return existing, None
         if existing:
             return None, "An account with this email already exists"
 
-        code = _generate_verification_code()
         user = User(
             name=name.strip(),
             phone_number=phone_number,
@@ -107,21 +167,17 @@ def register_user(name, phone_number, email, address, password, social_platform=
             social_platform=social_platform or None,
             social_handle=social_handle or None,
             is_verified=False,
-            verification_code=code,
-            verification_code_expires_at=datetime.utcnow() + timedelta(minutes=VERIFICATION_CODE_TTL_MINUTES),
         )
         user.set_password(password)
 
         db.session.add(user)
         db.session.commit()
 
-        try:
-            send_verification_email(email, code)
-        except EmailSendError:
-            # The account row exists and is correctly unverified either
-            # way; the person can retry via "resend code" on login.
-            # We still surface an error here so signup doesn't silently
-            # report success while no email actually went out.
+        # The account row exists and is correctly unverified either
+        # way; if the email fails the person can retry by submitting
+        # signup again (or logging in) — both resend a code.
+        ok, err = _issue_verification_code(user)
+        if not ok:
             return None, "Could not send verification email. Please try again or contact support."
 
         return user, None
@@ -138,12 +194,17 @@ def verify_email_code(email, code):
     Checks the submitted code against the pending user's stored code
     and expiry. On success, marks the account verified and clears the
     code fields so it can't be replayed. Returns (user, error).
+
+    Wrong guesses are counted per code; after MAX_VERIFICATION_ATTEMPTS
+    the code is locked (even the correct code is refused) until a new
+    one is issued. The row is locked (SELECT ... FOR UPDATE) for the
+    duration so parallel requests can't race past the limit.
     """
     if not email or not code:
         return None, "Email and verification code are required"
 
     try:
-        user = User.query.filter_by(email=email).first()
+        user = User.query.filter_by(email=email).with_for_update().first()
         # Same generic-error approach as authenticate_user: don't reveal
         # whether the email exists.
         if not user:
@@ -155,15 +216,23 @@ def verify_email_code(email, code):
         if not user.verification_code or not user.verification_code_expires_at:
             return None, "Invalid or expired verification code"
 
+        if user.verification_attempts >= MAX_VERIFICATION_ATTEMPTS:
+            return None, "Too many incorrect attempts. Please request a new code."
+
         if datetime.utcnow() > user.verification_code_expires_at:
             return None, "Verification code has expired. Please request a new one."
 
-        if not secrets.compare_digest(user.verification_code, code):
+        if not secrets.compare_digest(user.verification_code.encode("utf-8"), code.encode("utf-8")):
+            user.verification_attempts += 1
+            db.session.commit()
+            if user.verification_attempts >= MAX_VERIFICATION_ATTEMPTS:
+                return None, "Too many incorrect attempts. Please request a new code."
             return None, "Invalid or expired verification code"
 
         user.is_verified = True
         user.verification_code = None
         user.verification_code_expires_at = None
+        user.verification_attempts = 0
         db.session.commit()
         return user, None
     except SQLAlchemyError as e:
@@ -176,9 +245,10 @@ def resend_verification_code(email):
     Regenerates and re-sends a verification code for an existing,
     unverified account. Returns (success: bool, error). Deliberately
     returns success=True even when no matching unverified account
-    exists, so this endpoint can't be used to enumerate registered
-    emails — the real outcome only differs in whether an email
-    actually goes out, not in the response.
+    exists, or when the resend cooldown is still active, so this
+    endpoint can't be used to enumerate registered emails — the real
+    outcome only differs in whether an email actually goes out, not in
+    the response.
     """
     if not email:
         return False, "Email is required"
@@ -188,17 +258,7 @@ def resend_verification_code(email):
         if not user or user.is_verified:
             return True, None
 
-        code = _generate_verification_code()
-        user.verification_code = code
-        user.verification_code_expires_at = datetime.utcnow() + timedelta(minutes=VERIFICATION_CODE_TTL_MINUTES)
-        db.session.commit()
-
-        try:
-            send_verification_email(email, code)
-        except EmailSendError:
-            return False, "Could not send verification email. Please try again."
-
-        return True, None
+        return _issue_verification_code(user)
     except SQLAlchemyError as e:
         db.session.rollback()
         return False, f"Database error: {str(e)}"
@@ -328,11 +388,17 @@ def request_email_change(user_id, new_email, current_password):
         user.is_verified = False
         user.verification_code = code
         user.verification_code_expires_at = datetime.utcnow() + timedelta(minutes=VERIFICATION_CODE_TTL_MINUTES)
+        user.verification_attempts = 0
         db.session.commit()
 
         try:
             send_verification_email(new_email, code)
         except EmailSendError:
+            # Clear the code so the resend cooldown doesn't block a
+            # retry for a code that never went out.
+            user.verification_code = None
+            user.verification_code_expires_at = None
+            db.session.commit()
             # The email column is already changed and is_verified is
             # already False at this point — same as register_user's
             # equivalent case, we don't roll that back (the row is
@@ -384,6 +450,97 @@ def change_password(user_id, current_password, new_password):
         return None, f"Database error: {str(e)}"
 
 
+def request_password_reset(email):
+    """
+    Starts a password reset: generates a single-use random token,
+    stores only its SHA-256 hash with an expiry, and emails the person
+    a link containing the raw token. Returns (success: bool, error).
+
+    Like resend_verification_code, returns success=True when the email
+    isn't registered or the cooldown is still active, so the endpoint
+    can't be used to enumerate accounts. Requesting a new link
+    replaces (invalidates) any earlier unused one. Works for
+    unverified accounts too — see reset_password_with_token.
+    """
+    valid, err = validate_email(email)
+    if not valid:
+        return False, err
+
+    try:
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            return True, None
+
+        if _cooldown_active(user.reset_token_expires_at,
+                            PASSWORD_RESET_TOKEN_TTL_MINUTES,
+                            PASSWORD_RESET_COOLDOWN_SECONDS):
+            return True, None
+
+        token = secrets.token_urlsafe(32)
+        user.reset_token_hash = _hash_token(token)
+        user.reset_token_expires_at = datetime.utcnow() + timedelta(minutes=PASSWORD_RESET_TOKEN_TTL_MINUTES)
+        db.session.commit()
+
+        try:
+            send_password_reset_email(user.email, token, PASSWORD_RESET_TOKEN_TTL_MINUTES)
+        except EmailSendError:
+            user.reset_token_hash = None
+            user.reset_token_expires_at = None
+            db.session.commit()
+            return False, "Could not send reset email. Please try again."
+
+        return True, None
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return False, f"Database error: {str(e)}"
+
+
+def reset_password_with_token(token, new_password):
+    """
+    Completes a password reset. Looks the user up by the hash of the
+    submitted token, checks expiry, sets the new password, and burns
+    the token (single use). Returns (user, error).
+
+    A successful reset also marks the email verified and clears any
+    pending verification code: the person just proved they control the
+    inbox by clicking a link sent to it, so making them verify again
+    would be redundant. It does NOT log them in — they go back to the
+    login page.
+
+    The token is 256 bits of randomness, so guessing is infeasible and
+    no attempt counter is needed here (unlike the 6-digit
+    verification code).
+    """
+    invalid_msg = "This reset link is invalid or has expired. Please request a new one."
+
+    if not token or not isinstance(token, str):
+        return None, invalid_msg
+
+    valid, err = validate_password_strength(new_password)
+    if not valid:
+        return None, err
+
+    try:
+        user = User.query.filter_by(reset_token_hash=_hash_token(token)).with_for_update().first()
+        if (not user
+                or not user.reset_token_expires_at
+                or datetime.utcnow() > user.reset_token_expires_at):
+            return None, invalid_msg
+
+        user.set_password(new_password)
+        user.reset_token_hash = None
+        user.reset_token_expires_at = None
+        user.is_verified = True
+        user.verification_code = None
+        user.verification_code_expires_at = None
+        user.verification_attempts = 0
+        db.session.commit()
+        return user, None
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        return None, f"Database error: {str(e)}"
+
+
 def migrate_guest_cart_to_user(guest_id, user_id):
     """
     Re-parents every cart line from a guest_id to a logged-in user_id,
@@ -404,5 +561,6 @@ def migrate_guest_cart_to_user(guest_id, user_id):
     except SQLAlchemyError:
         db.session.rollback()
         raise
+
 
 
