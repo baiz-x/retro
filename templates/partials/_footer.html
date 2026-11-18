@@ -1,5 +1,7 @@
 <!-- ============================================================
      Shared footer — single source of truth for every page.
+     Also loads static/i18n.js (English/Bangla switcher) so every
+     page that includes this footer gets the language switch.
      ============================================================ -->
 <footer class="bg-slate-800 border-t border-slate-700 pt-14 pb-28 lg:pb-10">
   <div class="max-w-7xl mx-auto px-4 sm:px-6">
@@ -9,37 +11,37 @@
           <img src="/static/img/retrofit-bd-logo.webp" alt="RetroFit BD logo" width="28" height="28" class="object-contain" />
           <span class="font-display text-lg tracking-wider text-cream-50">RETROFIT BD</span>
         </a>
-        <p class="text-sm text-cream-50/60 max-w-xs leading-relaxed">Bangladesh's go-to shop for premium club and national team football jerseys, retro drops, and matchday gear — delivering to Dhaka and nationwide.</p>
+        <p class="text-sm text-cream-50/60 max-w-xs leading-relaxed" data-bn="প্রিমিয়াম ক্লাব আর ন্যাশনাল টিমের ফুটবল জার্সি, রেট্রো ড্রপ আর ম্যাচডে গিয়ারের জন্য বাংলাদেশের সেরা শপ — ঢাকাসহ সারা দেশে ডেলিভারি।">Bangladesh's go-to shop for premium club and national team football jerseys, retro drops, and matchday gear — delivering to Dhaka and nationwide.</p>
       </div>
 
       <div>
-        <h4 class="text-xs font-bold uppercase tracking-widest text-sage-300 mb-4">Shop</h4>
+        <h4 class="text-xs font-bold uppercase tracking-widest text-sage-300 mb-4" data-bn="শপ">Shop</h4>
         <ul class="space-y-2.5 text-sm text-cream-50/70">
-          <li><a href="/products" class="hover:text-cream-50 transition-colors">All Products</a></li>
-          <li><a href="/products?category=new-gen" class="hover:text-cream-50 transition-colors">New Season 26/27</a></li>
-          <li><a href="/products?category=Clearance" class="hover:text-cream-50 transition-colors">Clearance Sale</a></li>
+          <li><a href="/products" data-bn="সব প্রোডাক্ট" class="hover:text-cream-50 transition-colors">All Products</a></li>
+          <li><a href="/products?category=new-gen" data-bn="নিউ সিজন 26/27" class="hover:text-cream-50 transition-colors">New Season 26/27</a></li>
+          <li><a href="/products?category=Clearance" data-bn="ক্লিয়ারেন্স সেল" class="hover:text-cream-50 transition-colors">Clearance Sale</a></li>
         </ul>
       </div>
 
       <div>
-        <h4 class="text-xs font-bold uppercase tracking-widest text-sage-300 mb-4">Support</h4>
+        <h4 class="text-xs font-bold uppercase tracking-widest text-sage-300 mb-4" data-bn="সাপোর্ট">Support</h4>
         <ul class="space-y-2.5 text-sm text-cream-50/70">
-          <li><a href="#" class="hover:text-cream-50 transition-colors">Track Your Order</a></li>
-          <li><a href="#" class="hover:text-cream-50 transition-colors">Shipping Policy</a></li>
-          <li><a href="#" class="hover:text-cream-50 transition-colors">Contact Us</a></li>
+          <li><a href="#" data-bn="অর্ডার ট্র্যাক করুন" class="hover:text-cream-50 transition-colors">Track Your Order</a></li>
+          <li><a href="#" data-bn="শিপিং পলিসি" class="hover:text-cream-50 transition-colors">Shipping Policy</a></li>
+          <li><a href="#" data-bn="যোগাযোগ করুন" class="hover:text-cream-50 transition-colors">Contact Us</a></li>
         </ul>
       </div>
     </div>
 
     <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 text-xs text-cream-50/50">
-      <p>© 2026 RetroFit BD. All rights reserved. Football jerseys delivered across Bangladesh.</p>
+      <p data-bn="© 2026 RetroFit BD। সর্বস্বত্ব সংরক্ষিত। সারা বাংলাদেশে ফুটবল জার্সি ডেলিভারি।">© 2026 RetroFit BD. All rights reserved. Football jerseys delivered across Bangladesh.</p>
       <div class="flex items-center gap-5">
-        <a href="#" class="hover:text-cream-50 transition-colors">Privacy Policy</a>
-        <a href="#" class="hover:text-cream-50 transition-colors">Terms of Service</a>
-        <a href="#" class="hover:text-cream-50 transition-colors">Refund Policy</a>
+        <a href="#" data-bn="প্রাইভেসি পলিসি" class="hover:text-cream-50 transition-colors">Privacy Policy</a>
+        <a href="#" data-bn="টার্মস অফ সার্ভিস" class="hover:text-cream-50 transition-colors">Terms of Service</a>
+        <a href="#" data-bn="রিফান্ড পলিসি" class="hover:text-cream-50 transition-colors">Refund Policy</a>
       </div>
     </div>
   </div>
 </footer>
 
-
+<script src="/static/i18n.js"></script>

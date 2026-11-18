@@ -14,10 +14,13 @@
   var handleInput = document.getElementById('contact_handle');
   var channelBtns = document.querySelectorAll('.contact-channel-btn');
 
+  // English/Bangla (static/i18n.js): text this file writes at runtime goes through rfT().
+  var rfT = function (en, bn) { return window.RFi18n ? window.RFi18n.t(en, bn) : en; };
+
   var CHANNELS = {
-    whatsapp:  { placeholder: 'Your WhatsApp number', inputmode: 'tel' },
-    facebook:  { placeholder: 'Your Facebook username', inputmode: 'text' },
-    instagram: { placeholder: 'Your Instagram username', inputmode: 'text' }
+    whatsapp:  { placeholder: 'Your WhatsApp number', bn: 'আপনার হোয়াটসঅ্যাপ নম্বর', inputmode: 'tel' },
+    facebook:  { placeholder: 'Paste your Facebook link or username', bn: 'আপনার ফেসবুক প্রোফাইল লিংক বা ইউজারনেম দিন', inputmode: 'text' },
+    instagram: { placeholder: 'Paste your Instagram link or username', bn: 'আপনার ইনস্টাগ্রাম প্রোফাইল লিংক বা ইউজারনেম দিন', inputmode: 'text' }
   };
 
   function csrfToken() {
@@ -30,21 +33,34 @@
     errorEl.classList.remove('hidden');
   }
 
-  function selectChannel(channel) {
+  // Paints everything that depends on the chosen channel (chip state, input
+  // placeholder, and which "how to copy your link" steps are visible).
+  function renderChannel(channel) {
     channelInput.value = channel;
     channelBtns.forEach(function (btn) {
       var active = btn.dataset.channel === channel;
       btn.setAttribute('aria-pressed', active ? 'true' : 'false');
       btn.classList.toggle('is-active', active);
     });
-    handleInput.placeholder = CHANNELS[channel].placeholder;
+    handleInput.placeholder = rfT(CHANNELS[channel].placeholder, CHANNELS[channel].bn);
     handleInput.setAttribute('inputmode', CHANNELS[channel].inputmode);
+    document.querySelectorAll('[data-channel-help]').forEach(function (el) {
+      el.classList.toggle('hidden', el.dataset.channelHelp !== channel);
+    });
+  }
+
+  function selectChannel(channel) {
+    renderChannel(channel);
     handleInput.focus();
   }
 
   channelBtns.forEach(function (btn) {
     btn.addEventListener('click', function () { selectChannel(btn.dataset.channel); });
   });
+
+  // First paint + whenever the language flips (the placeholder is JS-owned text).
+  renderChannel(channelInput.value || 'whatsapp');
+  document.addEventListener('rf:langchange', function () { renderChannel(channelInput.value); });
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();
@@ -62,14 +78,14 @@
     };
 
     if (!payload.contact_handle) {
-      showError('Please tell us how to reach you (WhatsApp, Facebook or Instagram).');
+      showError(rfT('Please tell us how to reach you (WhatsApp, Facebook or Instagram).', 'আপনার সাথে কীভাবে যোগাযোগ করব সেটা জানান (হোয়াটসঅ্যাপ, ফেসবুক বা ইনস্টাগ্রাম)।'));
       handleInput.focus();
       return;
     }
 
     submitBtn.disabled = true;
     var originalLabel = submitBtn.textContent;
-    submitBtn.textContent = 'Placing order…';
+    submitBtn.textContent = rfT('Placing order…', 'অর্ডার হচ্ছে…');
 
     fetch('/api/guest-order-links/' + encodeURIComponent(form.dataset.token) + '/submit', {
       method: 'POST',
@@ -84,13 +100,13 @@
           successEl.classList.remove('hidden');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
-          showError(result.body.message || 'Could not place your order. Please try again.');
+          showError(result.body.message || rfT('Could not place your order. Please try again.', 'অর্ডার করা যায়নি। আবার চেষ্টা করুন।'));
           submitBtn.disabled = false;
           submitBtn.textContent = originalLabel;
         }
       })
       .catch(function () {
-        showError('Network problem. Please check your connection and try again.');
+        showError(rfT('Network problem. Please check your connection and try again.', 'নেটওয়ার্ক সমস্যা। কানেকশন চেক করে আবার চেষ্টা করুন।'));
         submitBtn.disabled = false;
         submitBtn.textContent = originalLabel;
       });

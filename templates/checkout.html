@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Checkout — RetroFit BD</title>
+<title data-bn="চেকআউট — RetroFit BD">Checkout — RetroFit BD</title>
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#657d69" />
 <meta name="csrf-token" content="{{ csrf_token() }}" />
@@ -21,7 +21,7 @@
 {% include "partials/_icon_sprite.html" %}
 
 <!-- ============ TOP ANNOUNCEMENT BAR — same as every other page ============ -->
-<div class="bg-sage-300 text-sage-950 text-center text-[11px] sm:text-xs font-semibold tracking-wide py-2 px-4">
+<div data-bn="সব প্রিপেইড অর্ডারে ডেলিভারি ফ্রি" class="bg-sage-300 text-sage-950 text-center text-[11px] sm:text-xs font-semibold tracking-wide py-2 px-4">
   Free delivery on all prepaid orders
 </div>
 
@@ -29,9 +29,9 @@
 
 <main class="max-w-3xl mx-auto px-4 sm:px-6 pt-8 sm:pt-12 pb-24 lg:pb-12">
   <div class="text-center mb-10">
-    <h1 class="font-display text-3xl sm:text-4xl text-slate-800 uppercase tracking-wide mb-4">Complete Order</h1>
-    <p class="text-slate-500/70 text-sm">Review your details and confirm your reservation.</p>
-    <p class="text-[11px] font-bold uppercase tracking-widest text-slate-500/60 flex items-center justify-center gap-2 mt-4">
+    <h1 data-bn="অর্ডার কমপ্লিট করুন" class="font-display text-3xl sm:text-4xl text-slate-800 uppercase tracking-wide mb-4">Complete Order</h1>
+    <p data-bn="আপনার তথ্য দেখে নিয়ে রিজার্ভেশন কনফার্ম করুন।" class="text-slate-500/70 text-sm">Review your details and confirm your reservation.</p>
+    <p data-bn="সিকিউর চেকআউট" class="text-[11px] font-bold uppercase tracking-widest text-slate-500/60 flex items-center justify-center gap-2 mt-4">
       <svg class="w-3.5 h-3.5" aria-hidden="true"><use href="#icon-lock"></use></svg>
       Secure Checkout
     </p>
@@ -44,8 +44,8 @@
        checkout.js toggled visible/hidden after an async /auth/me
        call. Logged-in users never get this in the markup at all. -->
   <div id="guestBanner" class="checkout-guest-banner">
-    <span>Have an account? Logging in fills your details in automatically next time.</span>
-    <a href="/login?next=/checkout" class="font-bold underline whitespace-nowrap">Log In</a>
+    <span data-bn="অ্যাকাউন্ট আছে? লগইন করলে পরের বার আপনার তথ্য নিজে থেকেই বসে যাবে।">Have an account? Logging in fills your details in automatically next time.</span>
+    <a data-bn="লগইন" href="/login?next=/checkout" class="font-bold underline whitespace-nowrap">Log In</a>
   </div>
   {% endif %}
 
@@ -54,10 +54,10 @@
     <!-- ============ CARD 1 — YOUR ITEMS ============ -->
     <div class="checkout-card bg-cream-50 border border-sand-200 shadow-sm">
       <div id="orderItemsSummary">
-        <h2 class="text-[11px] font-bold uppercase tracking-widest text-slate-500/70 mb-4">Your Items</h2>
+        <h2 data-bn="আপনার আইটেম" class="text-[11px] font-bold uppercase tracking-widest text-slate-500/70 mb-4">Your Items</h2>
         <div id="orderItemsList" class="space-y-4"></div>
         <div class="summary-total-row mt-2">
-          <span class="text-sm text-slate-500">Subtotal</span>
+          <span data-bn="সাবটোটাল" class="text-sm text-slate-500">Subtotal</span>
           <strong id="orderSubtotal" class="text-lg text-slate-800">৳0</strong>
         </div>
       </div>
@@ -71,14 +71,14 @@
          code typed here opens the spin popup instead of discounting
          anything directly. -->
     <div class="checkout-card bg-cream-50 border border-sand-200 shadow-sm">
-      <h2 class="text-[11px] font-bold uppercase tracking-widest text-slate-500/70 mb-4">Promo Code</h2>
+      <h2 data-bn="প্রোমো কোড" class="text-[11px] font-bold uppercase tracking-widest text-slate-500/70 mb-4">Promo Code</h2>
       <div class="flex gap-2">
-        <input type="text" id="promo_code_input" name="promo_code" class="checkout-input flex-1 uppercase" placeholder="Enter code" autocomplete="off" />
-        <button type="button" id="applyPromoBtn" class="shrink-0 bg-slate-800 text-cream-50 font-bold uppercase text-xs tracking-widest px-5 rounded-full hover:bg-slate-700 transition-colors">Apply</button>
+        <input data-bn-placeholder="কোড দিন" type="text" id="promo_code_input" name="promo_code" class="checkout-input flex-1 uppercase" placeholder="Enter code" autocomplete="off" />
+        <button data-bn="অ্যাপ্লাই" type="button" id="applyPromoBtn" class="shrink-0 bg-slate-800 text-cream-50 font-bold uppercase text-xs tracking-widest px-5 rounded-full hover:bg-slate-700 transition-colors">Apply</button>
       </div>
       <p id="promoMessage" class="text-xs mt-2 hidden"></p>
       <div id="promoDiscountRow" class="summary-total-row mt-2 hidden">
-        <span class="text-sm text-sage-600 font-semibold">Discount</span>
+        <span data-bn="ডিসকাউন্ট" class="text-sm text-sage-600 font-semibold">Discount</span>
         <strong id="promoDiscountAmount" class="text-lg text-sage-600">−৳0</strong>
       </div>
     </div>
@@ -95,15 +95,15 @@
     </style>
     <div id="wheelPopupOverlay" class="hidden fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4">
       <div class="bg-cream-50 rounded-2xl p-6 max-w-xs w-full text-center shadow-xl">
-        <h3 class="font-display text-2xl uppercase tracking-wide text-slate-800 mb-4">Spin To Win</h3>
+        <h3 data-bn="স্পিন করে জিতুন" class="font-display text-2xl uppercase tracking-wide text-slate-800 mb-4">Spin To Win</h3>
         <div id="wheelPopupStage" class="mb-4">
           <div id="wheelPopupPointer"></div>
           <div id="wheelPopupCanvas"></div>
           <div id="wheelPopupHub"></div>
         </div>
         <p id="wheelPopupResult" class="text-sm font-semibold text-slate-800 mb-4 hidden"></p>
-        <button type="button" id="wheelPopupSpinBtn" class="w-full bg-sage-400 text-cream-50 font-bold uppercase text-xs tracking-widest py-3 rounded-full hover:bg-sage-500 active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed">Spin</button>
-        <button type="button" id="wheelPopupCloseBtn" class="w-full mt-2 text-xs text-slate-500 uppercase tracking-widest font-bold py-2">Close</button>
+        <button data-bn="স্পিন" type="button" id="wheelPopupSpinBtn" class="w-full bg-sage-400 text-cream-50 font-bold uppercase text-xs tracking-widest py-3 rounded-full hover:bg-sage-500 active:scale-[0.98] transition disabled:opacity-50 disabled:cursor-not-allowed">Spin</button>
+        <button data-bn="বন্ধ করুন" type="button" id="wheelPopupCloseBtn" class="w-full mt-2 text-xs text-slate-500 uppercase tracking-widest font-bold py-2">Close</button>
       </div>
     </div>
 
@@ -114,27 +114,27 @@
          at sm: and would leave sub_city as an orphaned 3rd card on a
          2-column grid. -->
     <div class="checkout-card bg-cream-50 border border-sand-200 shadow-sm">
-      <h2 class="text-[11px] font-bold uppercase tracking-widest text-slate-500/70 mb-4">1. Delivery Zone</h2>
+      <h2 data-bn="1. ডেলিভারি জোন" class="text-[11px] font-bold uppercase tracking-widest text-slate-500/70 mb-4">1. Delivery Zone</h2>
       <div class="payment-method-row">
         <label class="select-card" data-zone-card="inside_dhaka">
           <input type="radio" name="shipping_zone" value="inside_dhaka" checked />
           <div>
-            <span class="select-card-title">Inside Dhaka</span>
-            <p class="select-card-sub">৳70 · 2–3 business days</p>
+            <span data-bn="ঢাকার ভেতরে" class="select-card-title">Inside Dhaka</span>
+            <p data-bn="৳70 · 2–3 কর্মদিবস" class="select-card-sub">৳70 · 2–3 business days</p>
           </div>
         </label>
         <label class="select-card" data-zone-card="sub_city">
           <input type="radio" name="shipping_zone" value="sub_city" />
           <div>
-            <span class="select-card-title">Sub City</span>
-            <p class="select-card-sub">৳70 · 2–4 business days</p>
+            <span data-bn="সাব সিটি" class="select-card-title">Sub City</span>
+            <p data-bn="৳70 · 2–4 কর্মদিবস" class="select-card-sub">৳70 · 2–4 business days</p>
           </div>
         </label>
         <label class="select-card" data-zone-card="outside_dhaka">
           <input type="radio" name="shipping_zone" value="outside_dhaka" />
           <div>
-            <span class="select-card-title">Outside Dhaka</span>
-            <p class="select-card-sub">৳140 · 3–5 business days</p>
+            <span data-bn="ঢাকার বাইরে" class="select-card-title">Outside Dhaka</span>
+            <p data-bn="৳140 · 3–5 কর্মদিবস" class="select-card-sub">৳140 · 3–5 business days</p>
           </div>
         </label>
       </div>
@@ -146,28 +146,28 @@
          above, 3 compact options in one row (payment-method-row grid,
          same as Card 3 below). -->
     <div class="checkout-card bg-cream-50 border border-sand-200 shadow-sm">
-      <h2 class="text-[11px] font-bold uppercase tracking-widest text-slate-500/70 mb-1">2. Delivery Charge</h2>
+      <h2 data-bn="2. ডেলিভারি চার্জ" class="text-[11px] font-bold uppercase tracking-widest text-slate-500/70 mb-1">2. Delivery Charge</h2>
       <p class="text-xs text-slate-500/60 mb-4" id="paymentTypeHint">Delivery fee is added to your total, payable on arrival.</p>
       <div class="payment-method-row">
         <label class="select-card" data-ptype-card="postpaid">
           <input type="radio" name="payment_type" value="postpaid" checked />
           <div>
-            <span class="select-card-title">Pay on Delivery</span>
-            <p class="select-card-sub">Delivery fee added to total</p>
+            <span data-bn="ডেলিভারির সময় পে" class="select-card-title">Pay on Delivery</span>
+            <p data-bn="ডেলিভারি ফি টোটালে যোগ হবে" class="select-card-sub">Delivery fee added to total</p>
           </div>
         </label>
         <label class="select-card" data-ptype-card="prepaid">
           <input type="radio" name="payment_type" value="prepaid" />
           <div>
-            <span class="select-card-title">Prepaid</span>
-            <p class="select-card-sub">Delivery already settled</p>
+            <span data-bn="প্রিপেইড" class="select-card-title">Prepaid</span>
+            <p data-bn="ডেলিভারি চার্জ আগেই দেওয়া" class="select-card-sub">Delivery already settled</p>
           </div>
         </label>
         <label class="select-card" data-ptype-card="included">
           <input type="radio" name="payment_type" value="included" />
           <div>
-            <span class="select-card-title">Included</span>
-            <p class="select-card-sub">Folded into item total</p>
+            <span data-bn="ইনক্লুডেড" class="select-card-title">Included</span>
+            <p data-bn="আইটেম টোটালের ভেতরেই ধরা" class="select-card-sub">Folded into item total</p>
           </div>
         </label>
       </div>
@@ -182,37 +182,37 @@
          its own icon so it reads as a distinct payment option, not
          a cropped grid cell. -->
     <div class="checkout-card bg-cream-50 border border-sand-200 shadow-sm">
-      <h2 class="text-[11px] font-bold uppercase tracking-widest text-slate-500/70 mb-4">3. Payment Method</h2>
+      <h2 data-bn="3. পেমেন্ট মেথড" class="text-[11px] font-bold uppercase tracking-widest text-slate-500/70 mb-4">3. Payment Method</h2>
       <div class="payment-method-row">
         <label class="select-card" data-method-card="bkash">
           <input type="radio" name="payment_method" value="bkash" checked />
           <svg class="w-5 h-5 text-sage-500 shrink-0" aria-hidden="true"><use href="#icon-zap"></use></svg>
-          <span class="select-card-title">bKash</span>
+          <span data-bn="বিকাশ" class="select-card-title">bKash</span>
         </label>
         <label class="select-card" data-method-card="nagad">
           <input type="radio" name="payment_method" value="nagad" />
           <svg class="w-5 h-5 text-sage-500 shrink-0" aria-hidden="true"><use href="#icon-zap"></use></svg>
-          <span class="select-card-title">Nagad</span>
+          <span data-bn="নগদ" class="select-card-title">Nagad</span>
         </label>
         <label class="select-card" data-method-card="cod">
           <input type="radio" name="payment_method" value="cod" />
           <svg class="w-5 h-5 text-sage-500 shrink-0" aria-hidden="true"><use href="#icon-truck"></use></svg>
-          <span class="select-card-title">Cash on Delivery</span>
+          <span data-bn="ক্যাশ অন ডেলিভারি" class="select-card-title">Cash on Delivery</span>
         </label>
       </div>
 
       <!-- bKash instructions -->
       <div class="payment-instructions" data-instructions="bkash">
         <div class="payment-instructions-inner">
-          <p class="text-[10px] font-bold text-slate-500/70 uppercase tracking-widest mb-1">bKash Merchant Payment</p>
+          <p data-bn="বিকাশ মার্চেন্ট পেমেন্ট" class="text-[10px] font-bold text-slate-500/70 uppercase tracking-widest mb-1">bKash Merchant Payment</p>
           <p class="payment-merchant-number mb-2">01819040383</p>
           <ol>
-            <li>Go to your bKash app or dial *247#</li>
-            <li>Choose <strong>"Payment"</strong></li>
-            <li>Enter Merchant Account Number: <strong>01819040383</strong></li>
-            <li>Enter the total amount shown below</li>
-            <li>Enter your bKash PIN to confirm</li>
-            <li>Copy the <strong>Transaction ID</strong> from the confirmation message and paste it below</li>
+            <li data-bn="আপনার বিকাশ অ্যাপে যান অথবা *247# ডায়াল করুন">Go to your bKash app or dial *247#</li>
+            <li data-bn="বেছে নিন">Choose <strong data-bn="&quot;পেমেন্ট&quot;">"Payment"</strong></li>
+            <li data-bn="মার্চেন্ট অ্যাকাউন্ট নম্বর দিন:">Enter Merchant Account Number: <strong>01819040383</strong></li>
+            <li data-bn="নিচে দেখানো টোটাল অ্যামাউন্ট দিন">Enter the total amount shown below</li>
+            <li data-bn="কনফার্ম করতে আপনার বিকাশ পিন দিন">Enter your bKash PIN to confirm</li>
+            <li data-bn-html="কনফার্মেশন মেসেজ থেকে <strong>ট্রানজ্যাকশন আইডি</strong> কপি করে নিচে পেস্ট করুন">Copy the <strong>Transaction ID</strong> from the confirmation message and paste it below</li>
           </ol>
         </div>
       </div>
@@ -220,15 +220,15 @@
       <!-- Nagad instructions -->
       <div class="payment-instructions" data-instructions="nagad">
         <div class="payment-instructions-inner">
-          <p class="text-[10px] font-bold text-slate-500/70 uppercase tracking-widest mb-1">Nagad Merchant Payment</p>
+          <p data-bn="নগদ মার্চেন্ট পেমেন্ট" class="text-[10px] font-bold text-slate-500/70 uppercase tracking-widest mb-1">Nagad Merchant Payment</p>
           <p class="payment-merchant-number mb-2">01819040383</p>
           <ol>
-            <li>Go to your Nagad app or dial *167#</li>
-            <li>Choose <strong>"Payment"</strong></li>
-            <li>Enter Merchant Account Number: <strong>01819040383</strong></li>
-            <li>Enter the total amount shown below</li>
-            <li>Enter your Nagad PIN to confirm</li>
-            <li>Copy the <strong>Transaction ID</strong> from the confirmation message and paste it below</li>
+            <li data-bn="আপনার নগদ অ্যাপে যান অথবা *167# ডায়াল করুন">Go to your Nagad app or dial *167#</li>
+            <li data-bn="বেছে নিন">Choose <strong data-bn="&quot;পেমেন্ট&quot;">"Payment"</strong></li>
+            <li data-bn="মার্চেন্ট অ্যাকাউন্ট নম্বর দিন:">Enter Merchant Account Number: <strong>01819040383</strong></li>
+            <li data-bn="নিচে দেখানো টোটাল অ্যামাউন্ট দিন">Enter the total amount shown below</li>
+            <li data-bn="কনফার্ম করতে আপনার নগদ পিন দিন">Enter your Nagad PIN to confirm</li>
+            <li data-bn-html="কনফার্মেশন মেসেজ থেকে <strong>ট্রানজ্যাকশন আইডি</strong> কপি করে নিচে পেস্ট করুন">Copy the <strong>Transaction ID</strong> from the confirmation message and paste it below</li>
           </ol>
         </div>
       </div>
@@ -236,13 +236,13 @@
       <!-- COD instructions -->
       <div class="payment-instructions" data-instructions="cod">
         <div class="payment-instructions-inner">
-          <p class="text-[10px] font-bold text-slate-500/70 uppercase tracking-widest mb-1">Cash on Delivery</p>
-          <p class="mb-2">Pay the item total in cash when your order arrives. To confirm your reservation, please send the <strong>shipping fee</strong> as an advance via bKash or Nagad to:</p>
+          <p data-bn="ক্যাশ অন ডেলিভারি" class="text-[10px] font-bold text-slate-500/70 uppercase tracking-widest mb-1">Cash on Delivery</p>
+          <p data-bn-html="অর্ডার হাতে পেয়ে আইটেমের টোটাল ক্যাশে দিন। রিজার্ভেশন কনফার্ম করতে অ্যাডভান্স হিসেবে <strong>শিপিং ফি</strong> বিকাশ বা নগদে এই নম্বরে পাঠান:" class="mb-2">Pay the item total in cash when your order arrives. To confirm your reservation, please send the <strong>shipping fee</strong> as an advance via bKash or Nagad to:</p>
           <p class="payment-merchant-number mb-2">01819040383</p>
           <ol>
-            <li>Send the shipping fee shown below to the number above</li>
-            <li>Copy the <strong>Transaction ID</strong> from the confirmation message and paste it below</li>
-            <li>Pay the remaining item total in cash on delivery</li>
+            <li data-bn="নিচে দেখানো শিপিং ফি উপরের নম্বরে পাঠান">Send the shipping fee shown below to the number above</li>
+            <li data-bn-html="কনফার্মেশন মেসেজ থেকে <strong>ট্রানজ্যাকশন আইডি</strong> কপি করে নিচে পেস্ট করুন">Copy the <strong>Transaction ID</strong> from the confirmation message and paste it below</li>
+            <li data-bn="বাকি আইটেম টোটাল ডেলিভারির সময় ক্যাশে দিন">Pay the remaining item total in cash on delivery</li>
           </ol>
         </div>
       </div>
@@ -253,7 +253,7 @@
           <input type="tel" id="payment_number" name="payment_number" class="checkout-input" placeholder="01XXXXXXXXX" />
         </label>
         <label class="block">
-          <span class="checkout-label">Transaction ID</span>
+          <span data-bn="ট্রানজ্যাকশন আইডি" class="checkout-label">Transaction ID</span>
           <input type="text" id="transaction_id" name="transaction_id" class="checkout-input" placeholder="8JDNE9..." />
         </label>
       </div>
@@ -261,20 +261,20 @@
 
     <!-- ============ CARD 4 — DELIVERY DETAILS ============ -->
     <div class="checkout-card bg-cream-50 border border-sand-200 shadow-sm">
-      <h2 class="text-[11px] font-bold uppercase tracking-widest text-slate-500/70 mb-4">4. Delivery Details</h2>
+      <h2 data-bn="4. ডেলিভারি ডিটেইলস" class="text-[11px] font-bold uppercase tracking-widest text-slate-500/70 mb-4">4. Delivery Details</h2>
       <div class="space-y-4">
         <label class="block">
-          <span class="checkout-label">Full Name</span>
-          <input type="text" id="customer_name" name="customer_name" class="checkout-input" placeholder="Enter your full name" required />
+          <span data-bn="পুরো নাম" class="checkout-label">Full Name</span>
+          <input data-bn-placeholder="আপনার পুরো নাম লিখুন" type="text" id="customer_name" name="customer_name" class="checkout-input" placeholder="Enter your full name" required />
         </label>
         <label class="block">
-          <span class="checkout-label">Phone Number</span>
+          <span data-bn="ফোন নম্বর" class="checkout-label">Phone Number</span>
           <input type="tel" id="phone" name="phone" class="checkout-input" placeholder="01XXXXXXXXX" required />
-          <p id="phoneError" class="checkout-error-text hidden">Please enter a valid phone number.</p>
+          <p data-bn="সঠিক ফোন নম্বর দিন।" id="phoneError" class="checkout-error-text hidden">Please enter a valid phone number.</p>
         </label>
         <label class="block">
-          <span class="checkout-label">Delivery Address</span>
-          <textarea id="address" name="address" rows="3" class="checkout-input resize-none" placeholder="House, Road, Area, City" required></textarea>
+          <span data-bn="ডেলিভারি ঠিকানা" class="checkout-label">Delivery Address</span>
+          <textarea data-bn-placeholder="বাসা, রোড, এলাকা, শহর" id="address" name="address" rows="3" class="checkout-input resize-none" placeholder="House, Road, Area, City" required></textarea>
         </label>
       </div>
     </div>
@@ -286,11 +286,11 @@
          and the footer follows immediately after. -->
     <div class="checkout-card bg-cream-50 border border-sand-200 shadow-sm">
       <div class="summary-total-row !border-t-0 !pt-0 mb-6">
-        <span class="text-[10px] uppercase tracking-widest font-bold text-slate-500/70 block mb-1">Total Amount</span>
+        <span data-bn="টোটাল অ্যামাউন্ট" class="text-[10px] uppercase tracking-widest font-bold text-slate-500/70 block mb-1">Total Amount</span>
         <span id="orderGrandTotal" class="font-display text-3xl text-slate-800 leading-none">৳0</span>
       </div>
       <button type="submit" id="submitBtn" class="w-full bg-sage-400 text-cream-50 font-bold uppercase text-xs tracking-widest py-4 rounded-full hover:bg-sage-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
-        <span id="submitLabel">Place Order</span>
+        <span data-bn="অর্ডার করুন" id="submitLabel">Place Order</span>
       </button>
     </div>
   </form>

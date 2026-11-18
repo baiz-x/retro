@@ -1,5 +1,14 @@
 const API_BASE = '/api';
 
+/* i18n: returns the Bangla string when the Bangla switch is on (see static/i18n.js).
+   Used for text this file writes at runtime; static markup uses data-bn attributes. */
+const rfT = (en, bn) => (window.RFi18n ? window.RFi18n.t(en, bn) : en);
+
+const AXIS_BN = { size: 'সাইজ', color: 'কালার' };
+function axisLabel(axis) {
+  return AXIS_BN[axis] ? `<span data-bn="${AXIS_BN[axis]}">${escapeHtml(axis)}</span>` : escapeHtml(axis);
+}
+
 function csrfFetch(url, options = {}) {
   const token = document.querySelector('meta[name="csrf-token"]').content;
   options.headers = { ...(options.headers || {}), 'X-CSRFToken': token };
@@ -87,18 +96,18 @@ async function loadOrderSummary() {
       let customLine = '';
       if (custom.name || custom.number) {
         const parts = [];
-        if (custom.name) parts.push(`Name: ${escapeHtml(custom.name)}`);
-        if (custom.number) parts.push(`No: ${escapeHtml(custom.number)}`);
+        if (custom.name) parts.push(`<span data-bn="নাম">Name</span>: ${escapeHtml(custom.name)}`);
+        if (custom.number) parts.push(`<span data-bn="নম্বর">No</span>: ${escapeHtml(custom.number)}`);
         customLine = `<p class="text-xs text-sage-600 font-semibold">${parts.join(' · ')}</p>`;
       }
       const variantLine = Object.entries(item.selected_variants || {})
-        .map(([axis, value]) => `${escapeHtml(axis)}: ${escapeHtml(value)}`)
+        .map(([axis, value]) => `${axisLabel(axis)}: ${escapeHtml(value)}`)
         .join(' · ');
 
       return `
         <div class="flex items-start justify-between gap-4 text-sm">
           <div class="min-w-0">
-            <p class="font-semibold text-slate-800 truncate">${escapeHtml(item.product_name || 'Product')} <span class="text-slate-500/70 font-normal">×${item.quantity}</span></p>
+            <p class="font-semibold text-slate-800 truncate">${item.product_name ? escapeHtml(item.product_name) : '<span data-bn="প্রোডাক্ট">Product</span>'} <span class="text-slate-500/70 font-normal">×${item.quantity}</span></p>
             ${variantLine ? `<p class="text-xs text-slate-500/70">${variantLine}</p>` : ''}
             ${customLine}
           </div>
@@ -159,11 +168,21 @@ const PAYMENT_TYPE_HINTS = {
   prepaid: "Delivery fee isn't added — you've settled it separately.",
   included: 'Delivery fee is folded into your item total already.',
 };
+const PAYMENT_TYPE_HINTS_BN = {
+  postpaid: 'ডেলিভারি ফি আপনার টোটালে যোগ হবে, অর্ডার হাতে পেয়ে দিতে হবে।',
+  prepaid: 'ডেলিভারি ফি যোগ হবে না — আপনি আলাদাভাবে আগেই দিয়ে দিয়েছেন।',
+  included: 'ডেলিভারি ফি আইটেম টোটালের ভেতরেই ধরা আছে।',
+};
+function renderPaymentTypeHint() {
+  const checked = document.querySelector('input[name="payment_type"]:checked');
+  if (!checked || !paymentTypeHint) return;
+  paymentTypeHint.textContent = rfT(PAYMENT_TYPE_HINTS[checked.value] || '', PAYMENT_TYPE_HINTS_BN[checked.value] || '');
+}
 document.querySelectorAll('input[name="payment_type"]').forEach(input => {
   input.addEventListener('change', () => {
     document.querySelectorAll('[data-ptype-card]').forEach(card => card.classList.remove('active'));
     input.closest('[data-ptype-card]').classList.add('active');
-    paymentTypeHint.textContent = PAYMENT_TYPE_HINTS[input.value] || '';
+    renderPaymentTypeHint();
     updateGrandTotal();
   });
 });
@@ -181,7 +200,9 @@ function setActivePaymentMethod(method) {
   // COD still requires a transaction id/number — for the shipping-fee
   // advance payment, not the full order total (see
   // order_service.validate_payment_details). Label reflects that.
-  paymentNumberLabel.textContent = method === 'cod' ? 'Payment Number (for advance)' : 'Payment Number';
+  paymentNumberLabel.textContent = method === 'cod'
+    ? rfT('Payment Number (for advance)', 'পেমেন্ট নম্বর (অ্যাডভান্সের জন্য)')
+    : rfT('Payment Number', 'পেমেন্ট নম্বর');
 }
 
 document.querySelectorAll('input[name="payment_method"]').forEach(input => {
@@ -240,14 +261,14 @@ function showSuccessMessage(order) {
 
   showStatus(`
     <div class="checkout-status-panel checkout-status-success">
-      <h3 class="font-display text-2xl uppercase tracking-wide mb-2">Order Confirmed</h3>
-      <p class="mb-4 text-sm">Thank you, <strong>${escapeHtml(order.customer_name)}</strong>. Your order has been placed.</p>
+      <h3 data-bn="অর্ডার কনফার্মড" class="font-display text-2xl uppercase tracking-wide mb-2">Order Confirmed</h3>
+      <p class="mb-4 text-sm"><span data-bn="ধন্যবাদ,">Thank you,</span> <strong>${escapeHtml(order.customer_name)}</strong><span data-bn="। আপনার অর্ডার হয়ে গেছে।">. Your order has been placed.</span></p>
       <div class="checkout-status-receipt text-left text-xs space-y-2 mb-6">
-        <p><strong>Order ID:</strong> #${escapeHtml(order.order_id)}</p>
+        <p><strong data-bn="অর্ডার আইডি:">Order ID:</strong> #${escapeHtml(order.order_id)}</p>
         <ul class="list-disc ml-4">${itemsList}</ul>
-        <p class="checkout-status-receipt-total">Total: ${formatTaka(order.total)}</p>
+        <p class="checkout-status-receipt-total"><span data-bn="মোট:">Total:</span> ${formatTaka(order.total)}</p>
       </div>
-      <a href="/" class="checkout-status-home-btn">Back to Home</a>
+      <a href="/" data-bn="হোমে ফিরে যান" class="checkout-status-home-btn">Back to Home</a>
     </div>
   `);
 }
@@ -274,7 +295,7 @@ checkoutForm.addEventListener('submit', async (e) => {
   const payload = Object.fromEntries(formData.entries());
 
   submitBtn.disabled = true;
-  submitLabel.textContent = 'Processing Order...';
+  submitLabel.textContent = rfT('Processing Order...', 'অর্ডার প্রসেস হচ্ছে...');
 
   try {
     const res = await csrfFetch(`${API_BASE}/checkout`, {
@@ -287,14 +308,14 @@ checkoutForm.addEventListener('submit', async (e) => {
     if (result.status === 'success') {
       showSuccessMessage(result.data);
     } else {
-      showErrorMessage(result.message || 'Something went wrong.');
+      showErrorMessage(result.message || rfT('Something went wrong.', 'কিছু একটা সমস্যা হয়েছে।'));
       submitBtn.disabled = false;
-      submitLabel.textContent = 'Place Order';
+      submitLabel.textContent = rfT('Place Order', 'অর্ডার করুন');
     }
   } catch (err) {
-    showErrorMessage('Connection error. Please check your internet and try again.');
+    showErrorMessage(rfT('Connection error. Please check your internet and try again.', 'কানেকশন সমস্যা। ইন্টারনেট চেক করে আবার চেষ্টা করুন।'));
     submitBtn.disabled = false;
-    submitLabel.textContent = 'Place Order';
+    submitLabel.textContent = rfT('Place Order', 'অর্ডার করুন');
   }
 });
 
@@ -405,7 +426,7 @@ async function previewPromo(typedCode) {
       orderSubtotalEl.textContent = formatTaka(
         appliedDiscountTotal > 0 && d.original_subtotal ? d.original_subtotal : currentSubtotal
       );
-      if (typedCode) showPromoMessage(result.message || 'Invalid code.', true);
+      if (typedCode) showPromoMessage(result.message || rfT('Invalid code.', 'কোডটা ঠিক নেই।'), true);
       else promoMessageEl.classList.add('hidden');
       updateGrandTotal();
       return;
@@ -593,14 +614,14 @@ async function openWheelPopup(rawCode) {
   wheelPopupResult.classList.add('hidden');
   wheelPopupSpinBtn.disabled = false;
   wheelPopupSpinBtn.classList.remove('hidden');
-  wheelPopupSpinBtn.textContent = 'Spin';
+  wheelPopupSpinBtn.textContent = rfT('Spin', 'স্পিন');
   wheelPopupOverlay.classList.remove('hidden');
 
   try {
     const res = await fetch(`${API_BASE}/wheel/info?code=${encodeURIComponent(rawCode)}`);
     if (res.status === 401) {
       wheelPopupCanvas.innerHTML = '';
-      wheelPopupResult.textContent = 'Please log in to spin this wheel.';
+      wheelPopupResult.textContent = rfT('Please log in to spin this wheel.', 'স্পিন করতে আগে লগইন করুন।');
       wheelPopupResult.classList.remove('hidden');
       wheelPopupSpinBtn.classList.add('hidden');
       return;
@@ -608,7 +629,7 @@ async function openWheelPopup(rawCode) {
     const result = await res.json();
     if (result.status !== 'success') {
       wheelPopupCanvas.innerHTML = '';
-      wheelPopupResult.textContent = result.message || 'Invalid wheel code.';
+      wheelPopupResult.textContent = result.message || rfT('Invalid wheel code.', 'হুইল কোডটা ঠিক নেই।');
       wheelPopupResult.classList.remove('hidden');
       wheelPopupSpinBtn.classList.add('hidden');
       return;
@@ -617,20 +638,20 @@ async function openWheelPopup(rawCode) {
     const { segments, is_live, error, already_spun } = result.data;
     if (!is_live) {
       wheelPopupCanvas.innerHTML = '';
-      wheelPopupResult.textContent = error || 'This wheel is not available.';
+      wheelPopupResult.textContent = error || rfT('This wheel is not available.', 'এই হুইলটা এখন পাওয়া যাচ্ছে না।');
       wheelPopupResult.classList.remove('hidden');
       wheelPopupSpinBtn.classList.add('hidden');
       return;
     }
     if (!segments || segments.length === 0) {
       wheelPopupCanvas.innerHTML = '';
-      wheelPopupResult.textContent = 'This wheel has no prizes set up yet.';
+      wheelPopupResult.textContent = rfT('This wheel has no prizes set up yet.', 'এই হুইলে এখনো কোনো প্রাইজ সেট করা হয়নি।');
       wheelPopupResult.classList.remove('hidden');
       wheelPopupSpinBtn.classList.add('hidden');
       return;
     }
     if (already_spun) {
-      wheelPopupResult.textContent = "You've already spun this wheel.";
+      wheelPopupResult.textContent = rfT("You've already spun this wheel.", 'আপনি এই হুইল আগেই স্পিন করে ফেলেছেন।');
       wheelPopupResult.classList.remove('hidden');
       wheelPopupSpinBtn.classList.add('hidden');
     }
@@ -650,7 +671,7 @@ if (wheelPopupSpinBtn) {
   wheelPopupSpinBtn.addEventListener('click', async () => {
     if (!activeWheelCode) return;
     wheelPopupSpinBtn.disabled = true;
-    wheelPopupSpinBtn.textContent = 'Spinning...';
+    wheelPopupSpinBtn.textContent = rfT('Spinning...', 'স্পিন হচ্ছে...');
 
     try {
       const res = await csrfFetch(`${API_BASE}/wheel/spin`, {
@@ -661,7 +682,7 @@ if (wheelPopupSpinBtn) {
       const result = await res.json();
 
       if (result.status !== 'success') {
-        wheelPopupResult.textContent = result.message || 'Something went wrong.';
+        wheelPopupResult.textContent = result.message || rfT('Something went wrong.', 'কিছু একটা সমস্যা হয়েছে।');
         wheelPopupResult.classList.remove('hidden');
         wheelPopupSpinBtn.classList.add('hidden');
         return;
@@ -681,21 +702,33 @@ if (wheelPopupSpinBtn) {
       setTimeout(() => {
         wheelPopupSpinBtn.classList.add('hidden');
         if (prize_code) {
-          wheelPopupResult.innerHTML = `🎉 You won ${escapeHtml(label)}!<br>Code: <strong>${escapeHtml(prize_code)}</strong> (valid 24h)`;
+          wheelPopupResult.innerHTML = rfT(
+            `🎉 You won ${escapeHtml(label)}!<br>Code: <strong>${escapeHtml(prize_code)}</strong> (valid 24h)`,
+            `🎉 অভিনন্দন! আপনি ${escapeHtml(label)} জিতেছেন!<br>কোড: <strong>${escapeHtml(prize_code)}</strong> (24 ঘণ্টা বৈধ)`
+          );
           promoCodeInput.value = prize_code;
           previewPromo(prize_code);
         } else {
-          wheelPopupResult.textContent = `Result: ${label}. Better luck on the next drop!`;
+          wheelPopupResult.textContent = rfT(`Result: ${label}. Better luck on the next drop!`, `রেজাল্ট: ${label}। পরের ড্রপে ভাগ্য সহায় হোক!`);
         }
         wheelPopupResult.classList.remove('hidden');
       }, 4300);
     } catch (err) {
-      wheelPopupResult.textContent = 'Connection error. Please try again.';
+      wheelPopupResult.textContent = rfT('Connection error. Please try again.', 'কানেকশন সমস্যা। আবার চেষ্টা করুন।');
       wheelPopupResult.classList.remove('hidden');
       wheelPopupSpinBtn.disabled = false;
-      wheelPopupSpinBtn.textContent = 'Spin';
+      wheelPopupSpinBtn.textContent = rfT('Spin', 'স্পিন');
     }
   });
 }
 
-
+/* ================= LANGUAGE SWITCH (English / Bangla) =================
+   Text this file owns (delivery-fee hint, payment-number label) is rewritten
+   here whenever the language flips; everything else swaps via data-bn. */
+function refreshI18nLabels() {
+  renderPaymentTypeHint();
+  const checkedMethod = document.querySelector('input[name="payment_method"]:checked');
+  if (checkedMethod) setActivePaymentMethod(checkedMethod.value);
+}
+document.addEventListener('rf:langchange', refreshI18nLabels);
+if (window.RFi18n && window.RFi18n.get() === 'bn') refreshI18nLabels();

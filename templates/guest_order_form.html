@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Confirm Your Order | RetroFit BD</title>
+<title data-bn="অর্ডার কনফার্ম করুন | RetroFit BD">Confirm Your Order | RetroFit BD</title>
 <meta name="robots" content="noindex, nofollow" />
 <meta name="csrf-token" content="{{ csrf_token() }}" />
 
@@ -15,37 +15,47 @@
 <link rel="stylesheet" href="/static/cart.css">
 <style>
   /* Guest order page — own CSS so spacing/borders never depend on which utility
-     classes the site's compiled stylesheet contains. */
-  .gl-summary { background:#fbf8f2; border:1px solid #e3dccd; border-radius:20px; padding:14px; margin-bottom:24px; }
-  .gl-line { display:flex; align-items:center; gap:14px; background:#fff; border:1px solid #e8e1d3; border-radius:16px; padding:10px 12px 10px 10px; }
+     classes the site's compiled stylesheet contains. Colours come ONLY from the
+     index.css design tokens (sage / sand / cream / slate / clay). */
+  .gl-summary { background:var(--sand-50); border:1px solid var(--sand-200); border-radius:20px; padding:14px; margin-bottom:24px; }
+  .gl-line { display:flex; align-items:center; gap:14px; background:var(--cream-50); border:1px solid var(--sand-200); border-radius:16px; padding:10px 12px 10px 10px; }
   .gl-line + .gl-line { margin-top:10px; }
-  .gl-line img { width:68px; height:68px; flex:none; object-fit:cover; border-radius:12px; background:#f1ece1; margin:0; }
+  .gl-line img { width:68px; height:68px; flex:none; object-fit:cover; border-radius:12px; background:var(--sand-100); margin:0; }
   .gl-line-body { flex:1; min-width:0; }
-  .gl-line-name { font-weight:700; font-size:14px; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .gl-line-meta { font-size:12px; color:#64748b; margin-top:3px; }
+  .gl-line-name { font-weight:700; font-size:14px; color:var(--slate-800); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .gl-line-meta { font-size:12px; color:var(--slate-500); margin-top:3px; }
   .gl-line-price { flex:none; text-align:right; }
-  .gl-old { font-size:11px; color:#94a3b8; text-decoration:line-through; }
-  .gl-price { font-weight:700; font-size:14px; color:#1e293b; }
-  .gl-totals { margin-top:14px; padding-top:6px; border-top:1px dashed #d4ccba; }
-  .gl-totals > div { display:flex; justify-content:space-between; font-size:14px; color:#475569; padding:5px 2px; }
-  .gl-totals .gl-discount { color:#2f7a4f; font-weight:600; }
-  .gl-totals .gl-total { font-weight:800; font-size:17px; color:#1e293b; border-top:1px solid #d4ccba; margin-top:6px; padding-top:11px; }
+  .gl-old { font-size:11px; color:var(--slate-300); text-decoration:line-through; }
+  .gl-price { font-weight:700; font-size:14px; color:var(--slate-800); }
+  .gl-totals { margin-top:14px; padding-top:6px; border-top:1px dashed var(--sand-300); }
+  .gl-totals > div { display:flex; justify-content:space-between; font-size:14px; color:var(--slate-700); padding:5px 2px; }
+  .gl-totals .gl-discount { color:var(--sage-600); font-weight:600; }
+  .gl-totals .gl-total { font-weight:800; font-size:17px; color:var(--slate-800); border-top:1px solid var(--sand-300); margin-top:6px; padding-top:11px; }
 
   .gl-contact { margin-bottom:4px; }
-  .gl-contact-note { font-size:12px; color:#64748b; margin:2px 0 10px; }
+  .gl-contact-note { font-size:12px; line-height:1.5; color:var(--slate-500); margin:2px 0 10px; }
+  .gl-contact-note strong { color:var(--slate-800); }
   .gl-chips { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:12px; }
-  .gl-chip { appearance:none; -webkit-appearance:none; cursor:pointer; background:#fff; color:#334155;
-             border:2px solid #cfc7b6; border-radius:14px; padding:14px 4px; font:700 13px/1.1 inherit; font-family:inherit;
+  .gl-chip { appearance:none; -webkit-appearance:none; cursor:pointer; background:var(--cream-50); color:var(--slate-700);
+             border:2px solid var(--sand-300); border-radius:14px; padding:14px 4px;
+             font-family:var(--font-body); font-weight:700; font-size:13px; line-height:1.1;
              transition:border-color .15s, background .15s, color .15s, transform .08s; }
   .gl-chip:active { transform:scale(.97); }
-  .gl-chip.is-active { background:#1e293b; border-color:#1e293b; color:#fff; }
+  .gl-chip.is-active { background:var(--sage-400); border-color:var(--sage-500); color:var(--cream-50); }
+
+  .gl-help { margin-top:10px; background:var(--sand-50); border:1px solid var(--sand-200); border-radius:12px; padding:10px 12px; }
+  .gl-help summary { cursor:pointer; font-size:12px; font-weight:700; color:var(--sage-600); }
+  .gl-help summary:hover { color:var(--sage-700); }
+  .gl-help-steps { margin:8px 0 0; padding-left:1.1rem; font-size:12px; line-height:1.55; color:var(--slate-700); list-style:decimal; }
+  .gl-help-steps li + li { margin-top:4px; }
 
   .gl-btn-primary { display:block; width:100%; appearance:none; -webkit-appearance:none; cursor:pointer;
-             background:#1e293b; color:#fff; border:2px solid #0f172a; border-radius:16px; padding:18px 20px;
-             font:800 14px/1 inherit; font-family:inherit; letter-spacing:.14em; text-transform:uppercase;
-             box-shadow:0 5px 0 #0b1220, 0 10px 20px rgba(15,23,42,.18); transition:transform .08s, box-shadow .08s, opacity .15s; }
-  .gl-btn-primary:active { transform:translateY(4px); box-shadow:0 1px 0 #0b1220, 0 4px 10px rgba(15,23,42,.18); }
-  .gl-btn-primary:focus-visible, .gl-chip:focus-visible { outline:3px solid #d4af37; outline-offset:2px; }
+             background:var(--sage-400); color:var(--cream-50); border:2px solid var(--sage-500); border-radius:16px; padding:18px 20px;
+             font-family:var(--font-body); font-weight:800; font-size:14px; line-height:1; letter-spacing:.14em; text-transform:uppercase;
+             box-shadow:0 5px 0 var(--sage-600), 0 10px 20px rgba(23,29,25,.18); transition:transform .08s, box-shadow .08s, background .15s, opacity .15s; }
+  .gl-btn-primary:hover { background:var(--sage-500); }
+  .gl-btn-primary:active { transform:translateY(4px); box-shadow:0 1px 0 var(--sage-600), 0 4px 10px rgba(23,29,25,.18); }
+  .gl-btn-primary:focus-visible, .gl-chip:focus-visible { outline:3px solid var(--sage-300); outline-offset:2px; }
   .gl-btn-primary:disabled { opacity:.6; cursor:default; }
 </style>
 </head>
@@ -65,15 +75,15 @@
        looking page instead of a raw 404/500. -->
   <div class="checkout-card bg-cream-50 border border-sand-200 shadow-sm text-center py-12">
     <svg class="w-10 h-10 mx-auto mb-4 text-slate-500/40" aria-hidden="true"><use href="#icon-x"></use></svg>
-    <h1 class="font-display text-2xl uppercase tracking-wide mb-2">Link Unavailable</h1>
+    <h1 data-bn="লিংকটি পাওয়া যাচ্ছে না" class="font-display text-2xl uppercase tracking-wide mb-2">Link Unavailable</h1>
     <p class="text-sm text-slate-500/70">{{ error }}</p>
-    <p class="text-xs text-slate-500/50 mt-4">Please contact us directly to place your order.</p>
+    <p data-bn="অর্ডার করতে সরাসরি আমাদের সাথে যোগাযোগ করুন।" class="text-xs text-slate-500/50 mt-4">Please contact us directly to place your order.</p>
   </div>
 
   {% else %}
   <!-- ============ ORDER FORM ============ -->
-  <h1 class="font-display text-3xl sm:text-4xl uppercase tracking-wide mb-1">Confirm Your Order</h1>
-  <p class="text-sm text-slate-500/80 mb-8">Fill in your details below to place your order.</p>
+  <h1 data-bn="অর্ডার কনফার্ম করুন" class="font-display text-3xl sm:text-4xl uppercase tracking-wide mb-1">Confirm Your Order</h1>
+  <p data-bn="অর্ডার করতে নিচে আপনার তথ্য দিন।" class="text-sm text-slate-500/80 mb-8">Fill in your details below to place your order.</p>
 
   {% if view %}
   <!-- Order summary — fixed by whoever made the link (admin/moderator), not editable here. -->
@@ -83,7 +93,7 @@
       <img src="{{ l.image or '' }}" alt="">
       <div class="gl-line-body">
         <div class="gl-line-name">{{ l.name }}</div>
-        <div class="gl-line-meta">{% if l.variant %}{{ l.variant }} &middot; {% endif %}Qty {{ l.quantity }}</div>
+        <div class="gl-line-meta">{% if l.variant %}{{ l.variant }} &middot; {% endif %}<span data-bn="পরিমাণ">Qty</span> {{ l.quantity }}</div>
       </div>
       <div class="gl-line-price">
         {% if l.unit_price != l.original_unit_price %}<div class="gl-old">৳{{ "%.0f"|format(l.original_unit_price * l.quantity) }}</div>{% endif %}
@@ -92,10 +102,10 @@
     </div>
     {% endfor %}
     <div class="gl-totals">
-      <div><span>Subtotal</span><span>৳{{ "%.0f"|format(view.subtotal + view.discount_total) }}</span></div>
-      {% if view.discount_total > 0 %}<div class="gl-discount"><span>Discount</span><span>&minus;৳{{ "%.0f"|format(view.discount_total) }}</span></div>{% endif %}
-      {% if view.payment_type == 'postpaid' %}<div><span>Delivery charge</span><span>৳{{ "%.0f"|format(view.shipping_fee) }}</span></div>{% endif %}
-      <div class="gl-total"><span>Total to pay</span><span>৳{{ "%.0f"|format(view.total) }}</span></div>
+      <div><span data-bn="সাবটোটাল">Subtotal</span><span>৳{{ "%.0f"|format(view.subtotal + view.discount_total) }}</span></div>
+      {% if view.discount_total > 0 %}<div class="gl-discount"><span data-bn="ডিসকাউন্ট">Discount</span><span>&minus;৳{{ "%.0f"|format(view.discount_total) }}</span></div>{% endif %}
+      {% if view.payment_type == 'postpaid' %}<div><span data-bn="ডেলিভারি চার্জ">Delivery charge</span><span>৳{{ "%.0f"|format(view.shipping_fee) }}</span></div>{% endif %}
+      <div class="gl-total"><span data-bn="মোট দিতে হবে">Total to pay</span><span>৳{{ "%.0f"|format(view.total) }}</span></div>
     </div>
   </div>
   {% else %}
@@ -114,39 +124,56 @@
   <form id="guestOrderForm" class="space-y-6" data-token="{{ link.token }}">
     <div class="checkout-card bg-cream-50 border border-sand-200 shadow-sm space-y-4">
       <label class="block">
-        <span class="checkout-label">Full Name</span>
-        <input type="text" id="customer_name" name="customer_name" class="checkout-input" placeholder="Enter your full name" required />
+        <span data-bn="পুরো নাম" class="checkout-label">Full Name</span>
+        <input data-bn-placeholder="আপনার পুরো নাম লিখুন" type="text" id="customer_name" name="customer_name" class="checkout-input" placeholder="Enter your full name" required />
       </label>
       <label class="block">
-        <span class="checkout-label">Phone Number</span>
+        <span data-bn="ফোন নম্বর" class="checkout-label">Phone Number</span>
         <input type="tel" id="phone" name="phone" class="checkout-input" placeholder="01XXXXXXXXX" required />
       </label>
       <label class="block">
-        <span class="checkout-label">Location</span>
-        <input type="text" id="address" name="address" class="checkout-input" placeholder="House, Road, Area" required />
+        <span data-bn="লোকেশন" class="checkout-label">Location</span>
+        <input data-bn-placeholder="বাসা, রোড, এলাকা" type="text" id="address" name="address" class="checkout-input" placeholder="House, Road, Area" required />
       </label>
       <label class="block">
-        <span class="checkout-label">Thana</span>
-        <input type="text" id="thana" name="thana" class="checkout-input" placeholder="e.g. Mirpur" required />
+        <span data-bn="থানা" class="checkout-label">Thana</span>
+        <input data-bn-placeholder="যেমন: মিরপুর" type="text" id="thana" name="thana" class="checkout-input" placeholder="e.g. Mirpur" required />
       </label>
 
       <div class="gl-contact">
-        <span class="checkout-label">How can we reach you? <span class="text-red-600">*</span></span>
-        <p class="gl-contact-note">We'll message you here when your parcel arrives.</p>
-        <div class="gl-chips" id="contactChannelGroup" role="radiogroup" aria-label="Contact channel">
+        <span data-bn="আপনার সাথে কীভাবে যোগাযোগ করব?" class="checkout-label">How can we reach you? <span class="text-clay">*</span></span>
+        <p class="gl-contact-note"><strong data-bn="কেন দরকার:">Why we need this:</strong> <span data-bn="আপনার পার্সেল পৌঁছালে আমরা এখানেই মেসেজ করব। এটা না থাকলে আমরা আপনার সাথে যোগাযোগ করতে পারব না, তাই এটা বাধ্যতামূলক।">we message you here when your parcel arrives. Without it we can't reach you, so it's required.</span></p>
+        <div data-bn-aria-label="যোগাযোগের মাধ্যম" class="gl-chips" id="contactChannelGroup" role="radiogroup" aria-label="Contact channel">
           <button type="button" class="gl-chip contact-channel-btn is-active" data-channel="whatsapp" aria-pressed="true">WhatsApp</button>
           <button type="button" class="gl-chip contact-channel-btn" data-channel="facebook" aria-pressed="false">Facebook</button>
           <button type="button" class="gl-chip contact-channel-btn" data-channel="instagram" aria-pressed="false">Instagram</button>
         </div>
         <input type="hidden" id="contact_channel" name="contact_channel" value="whatsapp" />
         <input type="text" id="contact_handle" name="contact_handle" class="checkout-input" placeholder="Your WhatsApp number" inputmode="tel" autocomplete="off" required />
+        <details class="gl-help">
+          <summary data-bn="আপনার লিংক কীভাবে কপি করবেন?">How do I copy my link?</summary>
+          <ol class="gl-help-steps" data-channel-help="whatsapp">
+            <li data-bn="হোয়াটসঅ্যাপে যে নম্বর ব্যবহার করেন সেটা লিখুন, যেমন 01XXXXXXXXX।">Type the number you use on WhatsApp, e.g. 01XXXXXXXXX.</li>
+            <li data-bn="ওই নম্বরে যেন হোয়াটসঅ্যাপ চালু থাকে, নইলে আমাদের মেসেজ পৌঁছাবে না।">Make sure WhatsApp is active on that number so our message reaches you.</li>
+          </ol>
+          <ol class="gl-help-steps hidden" data-channel-help="facebook">
+            <li data-bn="ফেসবুক অ্যাপ খুলে আপনার প্রোফাইল পিকচারে ট্যাপ করুন।">Open the Facebook app and tap your profile picture.</li>
+            <li data-bn="প্রোফাইলে তিন ডটে (⋯) ট্যাপ করে Copy link চাপুন।">Tap the three dots (⋯) on your profile, then tap Copy link.</li>
+            <li data-bn="উপরের বক্সে পেস্ট করুন। চাইলে শুধু আপনার ইউজারনেমও লিখতে পারেন।">Paste it in the box above. You can also just type your username.</li>
+          </ol>
+          <ol class="gl-help-steps hidden" data-channel-help="instagram">
+            <li data-bn="ইনস্টাগ্রাম খুলে আপনার প্রোফাইলে যান (নিচে ডান কোণে)।">Open Instagram and go to your profile (bottom-right).</li>
+            <li data-bn="Share profile এ ট্যাপ করে Copy link চাপুন।">Tap Share profile, then tap Copy link.</li>
+            <li data-bn="উপরের বক্সে পেস্ট করুন। চাইলে শুধু আপনার ইউজারনেমও লিখতে পারেন।">Paste it in the box above. You can also just type your username.</li>
+          </ol>
+        </details>
       </div>
 
       {% if sizes %}
       <label class="block">
-        <span class="checkout-label">Size</span>
+        <span data-bn="সাইজ" class="checkout-label">Size</span>
         <select id="size" name="size" class="checkout-input" required>
-          <option value="" disabled selected>Select your size</option>
+          <option data-bn="আপনার সাইজ বেছে নিন" value="" disabled selected>Select your size</option>
           {% for s in sizes %}
           <option value="{{ s }}">{{ s }}</option>
           {% endfor %}
@@ -157,18 +184,18 @@
       {% endif %}
     </div>
 
-    <button type="submit" id="guestSubmitBtn" class="gl-btn-primary">
+    <button data-bn="অর্ডার কনফার্ম করুন" type="submit" id="guestSubmitBtn" class="gl-btn-primary">
       Confirm Order
     </button>
-    <p id="guestFormError" class="hidden text-center text-xs text-red-600"></p>
+    <p id="guestFormError" class="hidden text-center text-xs text-clay"></p>
   </form>
 
   <!-- ============ SUCCESS STATE (shown after submit, hidden initially) ============ -->
   <div id="guestSuccessState" class="hidden checkout-card bg-cream-50 border border-sand-200 shadow-sm text-center py-12">
     <svg class="w-10 h-10 mx-auto mb-4 text-sage-500" aria-hidden="true"><use href="#icon-package-check"></use></svg>
-    <h2 class="font-display text-2xl uppercase tracking-wide mb-2">Order Confirmed</h2>
-    <p class="text-sm text-slate-500/70">Order ID: <strong id="guestOrderIdDisplay"></strong></p>
-    <p class="text-xs text-slate-500/50 mt-4">We'll be in touch soon. Thank you!</p>
+    <h2 data-bn="অর্ডার কনফার্মড" class="font-display text-2xl uppercase tracking-wide mb-2">Order Confirmed</h2>
+    <p data-bn="অর্ডার আইডি:" class="text-sm text-slate-500/70">Order ID: <strong id="guestOrderIdDisplay"></strong></p>
+    <p data-bn="শিগগিরই আমরা যোগাযোগ করব। ধন্যবাদ!" class="text-xs text-slate-500/50 mt-4">We'll be in touch soon. Thank you!</p>
   </div>
   {% endif %}
 

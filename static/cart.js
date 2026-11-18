@@ -1,5 +1,14 @@
 const API_BASE = '/api';
 
+/* i18n: returns the Bangla string when the Bangla switch is on (see static/i18n.js).
+   Used for text this file writes at runtime; static markup uses data-bn attributes. */
+const rfT = (en, bn) => (window.RFi18n ? window.RFi18n.t(en, bn) : en);
+
+const AXIS_BN = { size: 'সাইজ', color: 'কালার' };
+function axisLabel(axis) {
+  return AXIS_BN[axis] ? `<span data-bn="${AXIS_BN[axis]}">${escapeHtml(axis)}</span>` : escapeHtml(axis);
+}
+
 /* Same CSRF pattern established in product.js/auth.js — reads the
    <meta name="csrf-token"> tag rendered by cart.html and attaches it
    to every mutating request. */
@@ -45,15 +54,15 @@ function formatTaka(amount) {
    "this line is personalized" at a glance. */
 function renderLineMeta(item) {
   const variantTags = Object.entries(item.selected_variants || {})
-    .map(([axis, value]) => `<span class="cart-line-tag">${escapeHtml(axis)}: ${escapeHtml(value)}</span>`)
+    .map(([axis, value]) => `<span class="cart-line-tag">${axisLabel(axis)}: ${escapeHtml(value)}</span>`)
     .join('');
 
   const customization = item.customization || {};
   let customTag = '';
   if (customization.name || customization.number) {
     const parts = [];
-    if (customization.name) parts.push(`NAME: ${escapeHtml(customization.name)}`);
-    if (customization.number) parts.push(`NO: ${escapeHtml(customization.number)}`);
+    if (customization.name) parts.push(`<span data-bn="নাম">NAME</span>: ${escapeHtml(customization.name)}`);
+    if (customization.number) parts.push(`<span data-bn="নম্বর">NO</span>: ${escapeHtml(customization.number)}`);
     customTag = `<span class="cart-line-custom">${parts.join(' · ')}</span>`;
   }
 
@@ -79,20 +88,20 @@ function renderLine(item) {
       <div class="flex-1 min-w-0">
         <div class="flex items-start justify-between gap-4">
           <div class="min-w-0">
-            <h3 class="font-bold text-sm text-slate-800 truncate">${escapeHtml(item.product_name || 'Product')}</h3>
+            <h3 class="font-bold text-sm text-slate-800 truncate">${item.product_name ? escapeHtml(item.product_name) : '<span data-bn="প্রোডাক্ট">Product</span>'}</h3>
             ${renderLineMeta(item)}
           </div>
-          <button class="cart-line-remove shrink-0" data-action="remove" data-cart-item-id="${item.id}" aria-label="Remove item">
+          <button class="cart-line-remove shrink-0" data-action="remove" data-cart-item-id="${item.id}" aria-label="Remove item" data-bn-aria-label="আইটেম সরান">
             <i data-lucide="x" class="w-4 h-4"></i>
           </button>
         </div>
         <div class="flex items-end justify-between mt-4">
           <div class="cart-line-qty-stepper">
-            <button class="cart-line-qty-btn" data-action="decrement" data-cart-item-id="${item.id}" aria-label="Decrease quantity">
+            <button class="cart-line-qty-btn" data-action="decrement" data-cart-item-id="${item.id}" aria-label="Decrease quantity" data-bn-aria-label="পরিমাণ কমান">
               <i data-lucide="minus" class="w-3.5 h-3.5"></i>
             </button>
             <span class="cart-line-qty-value">${item.quantity}</span>
-            <button class="cart-line-qty-btn" data-action="increment" data-cart-item-id="${item.id}" aria-label="Increase quantity">
+            <button class="cart-line-qty-btn" data-action="increment" data-cart-item-id="${item.id}" aria-label="Increase quantity" data-bn-aria-label="পরিমাণ বাড়ান">
               <i data-lucide="plus" class="w-3.5 h-3.5"></i>
             </button>
           </div>
@@ -208,12 +217,12 @@ async function changeQuantity(cartItemId, delta) {
     } else {
       // Rejected (e.g. stock limit) — only now does the person see a
       // rollback, with an explanation for why.
-      showCartError(payload.message || 'Could not update quantity');
+      showCartError(payload.message || rfT('Could not update quantity', 'পরিমাণ আপডেট করা যায়নি'));
       await loadCart();
     }
   } catch (err) {
     console.error('Failed to update quantity:', err);
-    showCartError('Connection error — quantity was not updated');
+    showCartError(rfT('Connection error — quantity was not updated', 'কানেকশন সমস্যা — পরিমাণ আপডেট হয়নি'));
     await loadCart();
   }
 }
@@ -257,7 +266,7 @@ cartLines.addEventListener('click', (e) => {
 });
 
 clearBtn.addEventListener('click', () => {
-  if (confirm('Remove everything from your bag?')) clearCart();
+  if (confirm(rfT('Remove everything from your bag?', 'ব্যাগ থেকে সবকিছু সরিয়ে ফেলবেন?'))) clearCart();
 });
 
 /* ---------------- Mobile menu ----------------

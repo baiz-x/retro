@@ -32,6 +32,10 @@ function hydrateIcons(root = document) {
    shared mobile-menu button. */
 const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
+/* i18n: returns the Bangla string when the Bangla switch is on (see static/i18n.js).
+   Used for text this file writes at runtime; static markup uses data-bn attributes. */
+const rfT = (en, bn) => (window.RFi18n ? window.RFi18n.t(en, bn) : en);
+
 async function postJSON(url, body) {
   const res = await fetch(url, {
     method: 'POST',
@@ -134,8 +138,8 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="product-media relative rounded-xl overflow-hidden bg-sand-100 aspect-[3/4]">
             <img src="${photos[0]}" alt="${product.name || 'Product'}" class="img-a w-full h-full object-cover" loading="lazy" />
             ${photos[1] ? `<img src="${photos[1]}" alt="" class="img-b w-full h-full object-cover" loading="lazy" />` : ''}
-            ${outOfStock ? `<span class="absolute top-2 left-2 bg-slate-800/85 text-cream-50 text-[10px] font-bold px-2 py-0.5 rounded-full">Out of Stock</span>` : ''}
-            ${!outOfStock ? `<button class="add-btn absolute bottom-2 right-2 bg-cream-50 text-slate-800 text-[10px] font-bold uppercase tracking-wide px-3 py-1.5 rounded-full hover:bg-sage-400 hover:text-cream-50 transition-colors" data-name="${product.name || ''}">Add</button>` : ''}
+            ${outOfStock ? `<span class="absolute top-2 left-2 bg-slate-800/85 text-cream-50 text-[10px] font-bold px-2 py-0.5 rounded-full" data-bn="স্টকে নেই">Out of Stock</span>` : ''}
+            ${!outOfStock ? `<button class="add-btn absolute bottom-2 right-2 bg-cream-50 text-slate-800 text-[10px] font-bold uppercase tracking-wide px-3 py-1.5 rounded-full hover:bg-sage-400 hover:text-cream-50 transition-colors" data-name="${product.name || ''}" data-bn="অ্যাড">Add</button>` : ''}
           </div>
           <div class="mt-2.5">
             <p class="text-sm text-slate-800 font-medium leading-snug line-clamp-2">${product.name || 'Untitled product'}</p>
@@ -166,8 +170,8 @@ document.addEventListener('DOMContentLoaded', () => {
           cartCount++;
           el.textContent = cartCount;
         });
-        btn.textContent = 'Added';
-        setTimeout(() => { btn.textContent = 'Add'; }, 900);
+        btn.textContent = rfT('Added', 'অ্যাড হয়েছে');
+        setTimeout(() => { btn.textContent = rfT('Add', 'অ্যাড'); }, 900);
       });
     });
   };

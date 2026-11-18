@@ -19,6 +19,10 @@ hydrateIcons();
 
 const API_BASE = '/api';
 
+/* i18n: returns the Bangla string when the Bangla switch is on (see static/i18n.js).
+   Used for text this file writes at runtime; static markup uses data-bn attributes. */
+const rfT = (en, bn) => (window.RFi18n ? window.RFi18n.t(en, bn) : en);
+
 /* CSRF: every mutating request (POST/PATCH/DELETE) must carry the
    X-CSRFToken header for flask-wtf's CSRFProtect to accept it — see
    the <meta name="csrf-token"> tag in product.html's <head>. GET
@@ -161,6 +165,18 @@ document.getElementById('galleryThumbs').addEventListener('click', e => {
    product gets the real 3-state note, including a neutral-empty state
    once stock is comfortably above the low-stock threshold.
    --------------------------------------------------------------------- */
+function stockNoteBn(en) {
+  if (en === 'Pre-Order — all products will be sourced after order') return 'প্রি-অর্ডার — অর্ডারের পর সব প্রোডাক্ট সোর্স করা হবে';
+  if (en === 'Out of stock') return 'স্টকে নেই';
+  const m = en.match(/^Order fast, low quantity — (\d+) left$/);
+  if (m) return `তাড়াতাড়ি অর্ডার করুন, স্টক কম — মাত্র ${m[1]}টি বাকি`;
+  return en;
+}
+function setStockNoteText(el, en) {
+  el.dataset.enText = en;
+  el.textContent = rfT(en, stockNoteBn(en));
+}
+
 function updateStockNote() {
   const noteEl = document.getElementById('infoStockNote');
   const mobileNoteEl = document.getElementById('mobileCtaStockNote');
@@ -172,8 +188,8 @@ function updateStockNote() {
     const text = 'Pre-Order — all products will be sourced after order';
     noteEl.classList.add('pdp-stock-preorder');
     mobileNoteEl.classList.add('pdp-stock-preorder');
-    noteEl.textContent = text;
-    mobileNoteEl.textContent = text;
+    setStockNoteText(noteEl, text);
+    setStockNoteText(mobileNoteEl, text);
     return;
   }
 
@@ -192,8 +208,8 @@ function updateStockNote() {
     // extra text, per Hasan's confirmed design.
     text = '';
   }
-  noteEl.textContent = text;
-  mobileNoteEl.textContent = text;
+  setStockNoteText(noteEl, text);
+  setStockNoteText(mobileNoteEl, text);
 }
 
 /* ---------------------------------------------------------------------
@@ -209,7 +225,7 @@ document.getElementById('sizePills').addEventListener('click', e => {
     p.classList.toggle('pdp-pill-active', active);
     p.setAttribute('aria-checked', active);
   });
-  document.getElementById('sizeSelectedLabel').textContent = `Selected: ${selectedSize}`;
+  document.getElementById('sizeSelectedLabel').textContent = `${rfT('Selected', 'বেছে নিয়েছেন')}: ${selectedSize}`;
   document.getElementById('selectionHint').classList.add('hidden');
   refreshColorAvailability();
   updateStockNote();
@@ -261,7 +277,7 @@ document.getElementById('colorPills').addEventListener('click', e => {
     p.classList.toggle('pdp-pill-active', active);
     p.setAttribute('aria-checked', active);
   });
-  document.getElementById('colorSelectedLabel').textContent = `Selected: ${selectedColor}`;
+  document.getElementById('colorSelectedLabel').textContent = `${rfT('Selected', 'বেছে নিয়েছেন')}: ${selectedColor}`;
   updateStockNote();
   updateAddToCartState();
 });
@@ -319,12 +335,12 @@ document.getElementById('qtyPlusBtn').addEventListener('click', () => {
      both regardless of is_preorder.
    --------------------------------------------------------------------- */
 function cartBtnLabel() {
-  return isOutOfStock(product) ? 'Out of Stock' : 'Cart';
+  return isOutOfStock(product) ? rfT('Out of Stock', 'স্টকে নেই') : rfT('Cart', 'কার্ট');
 }
 function orderBtnLabel(mobile) {
-  if (isOutOfStock(product)) return 'Out of Stock';
-  if (product.is_preorder) return mobile ? 'Reserve' : 'Reserve this item';
-  return mobile ? 'Order' : 'Order this item';
+  if (isOutOfStock(product)) return rfT('Out of Stock', 'স্টকে নেই');
+  if (product.is_preorder) return mobile ? rfT('Reserve', 'রিজার্ভ') : rfT('Reserve this item', 'এই আইটেম রিজার্ভ করুন');
+  return mobile ? rfT('Order', 'অর্ডার') : rfT('Order this item', 'এই আইটেম অর্ডার করুন');
 }
 
 /* ---------------------------------------------------------------------
@@ -439,27 +455,27 @@ async function addToCart() {
   const label = document.getElementById('addToCartLabel');
 
   [btn, mobileBtn].forEach(b => { b.disabled = true; });
-  setBtnLabel(label, 'Adding...');
+  setBtnLabel(label, rfT('Adding...', 'যোগ হচ্ছে...'));
 
   try {
     const payload = await postAddToCart();
 
     if (payload.status !== 'success') {
-      setBtnLabel(label, payload.message || 'Could not add');
+      setBtnLabel(label, payload.message || rfT('Could not add', 'যোগ করা যায়নি'));
       setTimeout(restoreCartLabels, 1800);
       [btn, mobileBtn].forEach(b => { b.disabled = isOutOfStock(product); });
       return;
     }
 
     setCartCountBadges(payload.data.total_items);
-    setBtnLabel(label, 'Added');
+    setBtnLabel(label, rfT('Added', 'যোগ হয়েছে'));
     setTimeout(() => {
       restoreCartLabels();
       [btn, mobileBtn].forEach(b => { b.disabled = isOutOfStock(product); });
     }, 900);
   } catch (err) {
     console.error('Add to cart failed:', err);
-    setBtnLabel(label, 'Connection error');
+    setBtnLabel(label, rfT('Connection error', 'কানেকশন সমস্যা'));
     setTimeout(restoreCartLabels, 1800);
     [btn, mobileBtn].forEach(b => { b.disabled = isOutOfStock(product); });
   }
@@ -479,15 +495,15 @@ async function orderNow() {
   const mobileBtn = document.getElementById('mobileOrderNowBtn');
 
   [btn, mobileBtn].forEach(b => { if (b) b.disabled = true; });
-  setBtnLabel(document.getElementById('orderNowLabel'), 'Adding...');
-  setBtnLabel(document.getElementById('mobileOrderNowLabel'), 'Adding...');
+  setBtnLabel(document.getElementById('orderNowLabel'), rfT('Adding...', 'যোগ হচ্ছে...'));
+  setBtnLabel(document.getElementById('mobileOrderNowLabel'), rfT('Adding...', 'যোগ হচ্ছে...'));
 
   try {
     const payload = await postAddToCart();
 
     if (payload.status !== 'success') {
-      setBtnLabel(document.getElementById('orderNowLabel'), payload.message || 'Could not add');
-      setBtnLabel(document.getElementById('mobileOrderNowLabel'), payload.message || 'Could not add');
+      setBtnLabel(document.getElementById('orderNowLabel'), payload.message || rfT('Could not add', 'যোগ করা যায়নি'));
+      setBtnLabel(document.getElementById('mobileOrderNowLabel'), payload.message || rfT('Could not add', 'যোগ করা যায়নি'));
       setTimeout(restoreOrderLabels, 1800);
       [btn, mobileBtn].forEach(b => { if (b) b.disabled = isOutOfStock(product); });
       return;
@@ -516,8 +532,8 @@ async function orderNow() {
     }
   } catch (err) {
     console.error('Order failed:', err);
-    setBtnLabel(document.getElementById('orderNowLabel'), 'Connection error');
-    setBtnLabel(document.getElementById('mobileOrderNowLabel'), 'Connection error');
+    setBtnLabel(document.getElementById('orderNowLabel'), rfT('Connection error', 'কানেকশন সমস্যা'));
+    setBtnLabel(document.getElementById('mobileOrderNowLabel'), rfT('Connection error', 'কানেকশন সমস্যা'));
     setTimeout(restoreOrderLabels, 1800);
     [btn, mobileBtn].forEach(b => { if (b) b.disabled = isOutOfStock(product); });
   }
@@ -536,9 +552,9 @@ document.getElementById('mobileOrderNowBtn').addEventListener('click', orderNow)
    FAQ field exists on the Product model — same as before SSR.
    --------------------------------------------------------------------- */
 const faqData = [
-  { q: 'How long does shipping take?', a: 'We offer free express shipping nationwide. Expected delivery is within 9–15 working days from the date of order.' },
-  { q: 'Do you offer Cash on Delivery (COD)?', a: 'Yes, we support COD. To secure your order and prevent fraudulent requests, all COD deliveries require a small advance payment at checkout.' },
-  { q: 'Can I track my order?', a: 'Absolutely. Once your order has been dispatched from our warehouse, you\'ll receive tracking information via email and SMS.' },
+  { q: 'How long does shipping take?', bq: 'ডেলিভারি পেতে কত সময় লাগে?', ba: 'সারা দেশে আমরা ফ্রি এক্সপ্রেস শিপিং দিই। অর্ডারের তারিখ থেকে 9–15 কর্মদিবসের মধ্যে ডেলিভারি পাওয়া যায়।', a: 'We offer free express shipping nationwide. Expected delivery is within 9–15 working days from the date of order.' },
+  { q: 'Do you offer Cash on Delivery (COD)?', bq: 'ক্যাশ অন ডেলিভারি (COD) আছে?', ba: 'হ্যাঁ, COD আছে। অর্ডার কনফার্ম রাখতে আর ফেক অর্ডার ঠেকাতে চেকআউটের সময় সব COD ডেলিভারিতে অল্প কিছু অ্যাডভান্স দিতে হয়।', a: 'Yes, we support COD. To secure your order and prevent fraudulent requests, all COD deliveries require a small advance payment at checkout.' },
+  { q: 'Can I track my order?', bq: 'অর্ডার ট্র্যাক করা যায়?', ba: 'অবশ্যই। আমাদের ওয়্যারহাউস থেকে অর্ডার পাঠানো হলে ইমেইল আর SMS-এ ট্র্যাকিং তথ্য পেয়ে যাবেন।', a: 'Absolutely. Once your order has been dispatched from our warehouse, you\'ll receive tracking information via email and SMS.' },
 ];
 
 function renderAccordionFaq() {
@@ -546,11 +562,11 @@ function renderAccordionFaq() {
   faqList.innerHTML = faqData.map((item, i) => `
     <div class="faq-item">
       <button class="faq-toggle w-full flex items-center justify-between gap-4 py-4 text-left" data-index="pdp-${i}" aria-expanded="false">
-        <span class="font-semibold text-slate-800 text-sm">${item.q}</span>
+        <span data-bn="${item.bq}" class="font-semibold text-slate-800 text-sm">${item.q}</span>
         <i data-lucide="chevron-down" class="faq-chevron w-4 h-4 text-sage-500 shrink-0"></i>
       </button>
       <div class="faq-answer" id="faq-answer-pdp-${i}">
-        <p class="text-sm text-slate-500/80 leading-relaxed pb-4 pr-8">${item.a}</p>
+        <p data-bn="${item.ba}" class="text-sm text-slate-500/80 leading-relaxed pb-4 pr-8">${item.a}</p>
       </div>
     </div>
   `).join('');
@@ -608,7 +624,7 @@ function productCard(p) {
         <div class="product-media relative rounded-xl overflow-hidden bg-sand-100 aspect-[3/4]">
           <img src="${p.img}" alt="${p.name}" class="img-a w-full h-full object-cover" loading="lazy" />
           ${p.img2 ? `<img src="${p.img2}" alt="" class="img-b w-full h-full object-cover" loading="lazy" />` : ''}
-          ${p.oos ? `<span class="absolute top-2 left-2 bg-slate-800/85 text-cream-50 text-[10px] font-bold px-2 py-0.5 rounded-full">Out of Stock</span>` : ''}
+          ${p.oos ? `<span class="absolute top-2 left-2 bg-slate-800/85 text-cream-50 text-[10px] font-bold px-2 py-0.5 rounded-full" data-bn="স্টকে নেই">Out of Stock</span>` : ''}
         </div>
         <div class="mt-2.5">
           <p class="text-sm text-slate-800 font-medium leading-snug line-clamp-2">${p.name}</p>
@@ -767,6 +783,24 @@ updateAddToCartState();
 renderAccordionFaq();
 loadDiscovery();
 refreshCartCountBadge();
+
+/* ---- English / Bangla: re-render the text this file owns (stock note, button labels, "Selected: …") ----
+   Static markup swaps via data-bn (static/i18n.js). The stock note is server-rendered, so it is
+   translated from its English text (kept in data-en-text) rather than recomputed from `product`. */
+function refreshI18nLabels() {
+  ['infoStockNote', 'mobileCtaStockNote'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.dataset.enText === undefined) el.dataset.enText = el.textContent.trim();
+    if (el.dataset.enText) el.textContent = rfT(el.dataset.enText, stockNoteBn(el.dataset.enText));
+  });
+  updateAddToCartState();
+  if (selectedSize) document.getElementById('sizeSelectedLabel').textContent = `${rfT('Selected', 'বেছে নিয়েছেন')}: ${selectedSize}`;
+  if (selectedColor) document.getElementById('colorSelectedLabel').textContent = `${rfT('Selected', 'বেছে নিয়েছেন')}: ${selectedColor}`;
+}
+document.addEventListener('rf:langchange', refreshI18nLabels);
+if (window.RFi18n && window.RFi18n.get() === 'bn') refreshI18nLabels();
+
 hydrateIcons();
 
 

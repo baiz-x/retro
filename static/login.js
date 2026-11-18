@@ -17,11 +17,11 @@ loginForm.addEventListener('submit', async (e) => {
   const password = document.getElementById('password').value;
 
   if (!email || !password) {
-    showAuthError('Please enter both your email and password.');
+    showAuthError(rfT('Please enter both your email and password.', 'ইমেইল আর পাসওয়ার্ড দুটোই দিন।'));
     return;
   }
 
-  setSubmitBusy(true, 'Logging in...', 'Log In');
+  setSubmitBusy(true, rfT('Logging in...', 'লগইন হচ্ছে...'), rfT('Log In', 'লগইন'));
 
   try {
     const res = await csrfFetch('/auth/login', {
@@ -48,8 +48,8 @@ loginForm.addEventListener('submit', async (e) => {
         return;
       }
 
-      showAuthError(payload.message || 'Could not log in. Please try again.');
-      setSubmitBusy(false, '', 'Log In');
+      showAuthError(payload.message || rfT('Could not log in. Please try again.', 'লগইন করা যায়নি। আবার চেষ্টা করুন।'));
+      setSubmitBusy(false, '', rfT('Log In', 'লগইন'));
       return;
     }
 
@@ -62,8 +62,8 @@ loginForm.addEventListener('submit', async (e) => {
     window.location.href = redirectTo;
   } catch (err) {
     console.error('Login failed:', err);
-    showAuthError('Connection error. Please check your internet and try again.');
-    setSubmitBusy(false, '', 'Log In');
+    showAuthError(rfT('Connection error. Please check your internet and try again.', 'কানেকশন সমস্যা। ইন্টারনেট চেক করে আবার চেষ্টা করুন।'));
+    setSubmitBusy(false, '', rfT('Log In', 'লগইন'));
   }
 });
 
@@ -73,7 +73,7 @@ forgotLink.addEventListener('click', () => {
   // Carry over whatever was already typed into the login email field.
   forgotEmail.value = document.getElementById('email').value.trim();
   forgotSent.classList.add('hidden');
-  setSubmitBusy(false, '', 'Send Reset Link', 'forgotSubmitBtn', 'forgotSubmitLabel');
+  setSubmitBusy(false, '', rfT('Send Reset Link', 'রিসেট লিংক পাঠান'), 'forgotSubmitBtn', 'forgotSubmitLabel');
   loginForm.classList.add('hidden');
   forgotForm.classList.remove('hidden');
   forgotEmail.focus();
@@ -91,11 +91,11 @@ forgotForm.addEventListener('submit', async (e) => {
 
   const email = forgotEmail.value.trim();
   if (!EMAIL_RE.test(email)) {
-    showAuthError('Please enter a valid email address.');
+    showAuthError(rfT('Please enter a valid email address.', 'সঠিক একটা ইমেইল অ্যাড্রেস দিন।'));
     return;
   }
 
-  setSubmitBusy(true, 'Sending...', 'Send Reset Link', 'forgotSubmitBtn', 'forgotSubmitLabel');
+  setSubmitBusy(true, rfT('Sending...', 'পাঠানো হচ্ছে...'), rfT('Send Reset Link', 'রিসেট লিংক পাঠান'), 'forgotSubmitBtn', 'forgotSubmitLabel');
 
   try {
     const res = await csrfFetch('/auth/forgot-password', {
@@ -106,19 +106,19 @@ forgotForm.addEventListener('submit', async (e) => {
     const payload = await res.json();
 
     if (payload.status !== 'success') {
-      showAuthError(payload.message || 'Could not send the reset link. Please try again.');
-      setSubmitBusy(false, '', 'Send Reset Link', 'forgotSubmitBtn', 'forgotSubmitLabel');
+      showAuthError(payload.message || rfT('Could not send the reset link. Please try again.', 'রিসেট লিংক পাঠানো যায়নি। আবার চেষ্টা করুন।'));
+      setSubmitBusy(false, '', rfT('Send Reset Link', 'রিসেট লিংক পাঠান'), 'forgotSubmitBtn', 'forgotSubmitLabel');
       return;
     }
 
     forgotSent.textContent = payload.message;
     forgotSent.classList.remove('hidden');
     // Stays disabled until the person leaves and re-opens this panel.
-    setSubmitBusy(true, 'Link sent', 'Send Reset Link', 'forgotSubmitBtn', 'forgotSubmitLabel');
+    setSubmitBusy(true, rfT('Link sent', 'লিংক পাঠানো হয়েছে'), rfT('Send Reset Link', 'রিসেট লিংক পাঠান'), 'forgotSubmitBtn', 'forgotSubmitLabel');
   } catch (err) {
     console.error('Forgot password failed:', err);
-    showAuthError('Connection error. Please check your internet and try again.');
-    setSubmitBusy(false, '', 'Send Reset Link', 'forgotSubmitBtn', 'forgotSubmitLabel');
+    showAuthError(rfT('Connection error. Please check your internet and try again.', 'কানেকশন সমস্যা। ইন্টারনেট চেক করে আবার চেষ্টা করুন।'));
+    setSubmitBusy(false, '', rfT('Send Reset Link', 'রিসেট লিংক পাঠান'), 'forgotSubmitBtn', 'forgotSubmitLabel');
   }
 });
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Shop All Jerseys — RetroFit BD</title>
+<title data-bn="সব জার্সি শপ করুন — RetroFit BD">Shop All Jerseys — RetroFit BD</title>
 <meta name="description" content="Browse the full RetroFit BD catalog — club and national team jerseys, retro drops, and matchday gear. Filter by club, category, price, and edition." />
 <meta name="theme-color" content="#657d69" />
 <meta name="csrf-token" content="{{ csrf_token() }}" />
@@ -23,7 +23,7 @@
 {% include "partials/_icon_sprite.html" %}
 
 <!-- ============ TOP ANNOUNCEMENT BAR ============ -->
-<div class="bg-sage-300 text-sage-950 text-center text-[11px] sm:text-xs font-semibold tracking-wide py-2 px-4">
+<div data-bn="সব প্রিপেইড অর্ডারে ডেলিভারি ফ্রি" class="bg-sage-300 text-sage-950 text-center text-[11px] sm:text-xs font-semibold tracking-wide py-2 px-4">
   Free delivery on all prepaid orders
 </div>
 
@@ -33,12 +33,12 @@
 
   <!-- ============ PAGE HEADER ============ -->
   <section class="max-w-7xl mx-auto px-4 sm:px-6 pt-8 sm:pt-10 pb-4">
-    <h1 class="font-display text-3xl sm:text-4xl text-slate-800 uppercase tracking-wide">Shop All Jerseys</h1>
+    <h1 data-bn="সব জার্সি শপ করুন" class="font-display text-3xl sm:text-4xl text-slate-800 uppercase tracking-wide">Shop All Jerseys</h1>
     <div class="flex items-center justify-between mt-2 flex-wrap gap-2">
-      <p class="text-sage-600/80 text-sm">
+      <p data-bn="টি প্রোডাক্ট" class="text-sage-600/80 text-sm">
         <span id="productCount" class="font-semibold text-slate-800">0</span> products
       </p>
-      <button id="filtersBtnMobile" class="sm:hidden inline-flex items-center gap-1.5 text-sm font-semibold text-sage-600 hover:text-slate-800 transition-colors">
+      <button data-bn="ফিল্টার" id="filtersBtnMobile" class="sm:hidden inline-flex items-center gap-1.5 text-sm font-semibold text-sage-600 hover:text-slate-800 transition-colors">
         <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
         Filters
       </button>
@@ -52,49 +52,49 @@
       <!-- Desktop filter sidebar -->
       <aside class="hidden lg:block w-64 shrink-0">
         <div class="sticky top-24 bg-sand-50 border border-sage-200/60 rounded-2xl p-5">
-          <h3 class="font-display text-lg text-slate-800 uppercase tracking-wide mb-4">Filters</h3>
+          <h3 data-bn="ফিল্টার" class="font-display text-lg text-slate-800 uppercase tracking-wide mb-4">Filters</h3>
           <form id="filterFormDesktop" class="space-y-5">
             <div>
-              <label class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Club / Team</label>
-              <input type="text" name="club" placeholder="e.g. Real Madrid" class="w-full h-10 px-3 rounded-xl border border-sand-300 bg-cream-50 text-sm text-slate-800 placeholder:text-slate-500/50 focus:border-sage-400 outline-none" />
+              <label data-bn="ক্লাব / টিম" class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Club / Team</label>
+              <input data-bn-placeholder="যেমন: রিয়াল মাদ্রিদ" type="text" name="club" placeholder="e.g. Real Madrid" class="w-full h-10 px-3 rounded-xl border border-sand-300 bg-cream-50 text-sm text-slate-800 placeholder:text-slate-500/50 focus:border-sage-400 outline-none" />
             </div>
             <div>
-              <label class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Category</label>
+              <label data-bn="ক্যাটাগরি" class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Category</label>
               <select name="category" id="categorySelectDesktop" class="w-full h-10 px-3 rounded-xl border border-sand-300 bg-cream-50 text-sm text-slate-800 focus:border-sage-400 outline-none">
-                <option value="">Any category</option>
+                <option data-bn="যেকোনো ক্যাটাগরি" value="">Any category</option>
               </select>
             </div>
             <div>
-              <label class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Version</label>
+              <label data-bn="ভার্সন" class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Version</label>
               <select name="version" class="w-full h-10 px-3 rounded-xl border border-sand-300 bg-cream-50 text-sm text-slate-800 focus:border-sage-400 outline-none">
-                <option value="">Any version</option>
-                <option value="BD">BD</option>
-                <option value="BD Premium">BD Premium</option>
-                <option value="China">China</option>
-                <option value="Thai">Thai</option>
+                <option data-bn="যেকোনো ভার্সন" value="">Any version</option>
+                <option data-bn="বিডি" value="BD">BD</option>
+                <option data-bn="বিডি প্রিমিয়াম" value="BD Premium">BD Premium</option>
+                <option data-bn="চায়না" value="China">China</option>
+                <option data-bn="থাই" value="Thai">Thai</option>
               </select>
             </div>
             <div>
-              <label class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Price range (৳)</label>
+              <label data-bn="প্রাইস রেঞ্জ (৳)" class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Price range (৳)</label>
               <div class="grid grid-cols-2 gap-2">
-                <input type="number" name="min_price" min="0" placeholder="Min" class="w-full h-10 px-3 rounded-xl border border-sand-300 bg-cream-50 text-sm text-slate-800 placeholder:text-slate-500/50 focus:border-sage-400 outline-none" />
-                <input type="number" name="max_price" min="0" placeholder="Max" class="w-full h-10 px-3 rounded-xl border border-sand-300 bg-cream-50 text-sm text-slate-800 placeholder:text-slate-500/50 focus:border-sage-400 outline-none" />
+                <input data-bn-placeholder="সর্বনিম্ন" type="number" name="min_price" min="0" placeholder="Min" class="w-full h-10 px-3 rounded-xl border border-sand-300 bg-cream-50 text-sm text-slate-800 placeholder:text-slate-500/50 focus:border-sage-400 outline-none" />
+                <input data-bn-placeholder="সর্বোচ্চ" type="number" name="max_price" min="0" placeholder="Max" class="w-full h-10 px-3 rounded-xl border border-sand-300 bg-cream-50 text-sm text-slate-800 placeholder:text-slate-500/50 focus:border-sage-400 outline-none" />
               </div>
             </div>
             <div>
-              <label class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Edition</label>
+              <label data-bn="এডিশন" class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Edition</label>
               <select name="edition" class="w-full h-10 px-3 rounded-xl border border-sand-300 bg-cream-50 text-sm text-slate-800 focus:border-sage-400 outline-none">
-                <option value="">Any edition</option>
-                <option value="Player">Player</option>
-                <option value="Fan">Fan</option>
+                <option data-bn="যেকোনো এডিশন" value="">Any edition</option>
+                <option data-bn="প্লেয়ার" value="Player">Player</option>
+                <option data-bn="ফ্যান" value="Fan">Fan</option>
               </select>
             </div>
           </form>
           <div class="flex items-center gap-2 mt-5">
-            <button id="applyFiltersDesktop" class="flex-1 h-10 rounded-full bg-sage-400 text-cream-50 font-bold text-xs uppercase tracking-wide hover:bg-sage-500 transition-colors">
+            <button data-bn="অ্যাপ্লাই" id="applyFiltersDesktop" class="flex-1 h-10 rounded-full bg-sage-400 text-cream-50 font-bold text-xs uppercase tracking-wide hover:bg-sage-500 transition-colors">
               Apply
             </button>
-            <button id="clearFiltersDesktop" type="button" aria-label="Reset filters" class="w-10 h-10 shrink-0 rounded-full border border-sand-300 hover:bg-sand-100 flex items-center justify-center transition-colors">
+            <button data-bn-aria-label="ফিল্টার রিসেট করুন" id="clearFiltersDesktop" type="button" aria-label="Reset filters" class="w-10 h-10 shrink-0 rounded-full border border-sand-300 hover:bg-sand-100 flex items-center justify-center transition-colors">
               <i data-lucide="rotate-ccw" class="w-4 h-4 text-sage-700"></i>
             </button>
           </div>
@@ -128,14 +128,14 @@
 
         <!-- Empty state -->
         <div id="emptyState" class="hidden text-center py-20 border border-sand-200 rounded-2xl bg-sand-50">
-          <p class="font-display text-xl text-slate-800 uppercase tracking-wide mb-1">No jerseys match your search</p>
-          <p class="text-sage-600/70 text-sm">Try widening your filters or clearing them to see the full catalog.</p>
+          <p data-bn="আপনার সার্চের সাথে কোনো জার্সি মেলেনি" class="font-display text-xl text-slate-800 uppercase tracking-wide mb-1">No jerseys match your search</p>
+          <p data-bn="ফিল্টার একটু ঢিলা করুন বা মুছে দিয়ে পুরো ক্যাটালগ দেখুন।" class="text-sage-600/70 text-sm">Try widening your filters or clearing them to see the full catalog.</p>
         </div>
 
         <!-- Error state -->
         <div id="errorState" class="hidden text-center py-20 border border-sand-200 rounded-2xl bg-sand-50">
-          <p class="font-display text-xl text-slate-800 uppercase tracking-wide mb-1">Couldn't load the catalog</p>
-          <p class="text-sage-600/70 text-sm">Something went wrong reaching the server. Please try again.</p>
+          <p data-bn="ক্যাটালগ লোড করা যায়নি" class="font-display text-xl text-slate-800 uppercase tracking-wide mb-1">Couldn't load the catalog</p>
+          <p data-bn="সার্ভারে পৌঁছাতে সমস্যা হয়েছে। আবার চেষ্টা করুন।" class="text-sage-600/70 text-sm">Something went wrong reaching the server. Please try again.</p>
         </div>
 
       </div>
@@ -151,55 +151,55 @@
 
 <!-- ============ FILTER DRAWER (mobile) ============ -->
 <div id="filterOverlay" class="filter-overlay fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50"></div>
-<aside id="filterDrawer" class="filter-drawer fixed top-0 left-0 h-full w-full sm:w-[380px] bg-cream-50 z-50 flex flex-col" role="dialog" aria-modal="true" aria-label="Filters">
+<aside data-bn-aria-label="ফিল্টার" id="filterDrawer" class="filter-drawer fixed top-0 left-0 h-full w-full sm:w-[380px] bg-cream-50 z-50 flex flex-col" role="dialog" aria-modal="true" aria-label="Filters">
   <div class="flex items-center justify-between px-5 py-4 border-b border-sand-200">
-    <h2 class="font-display text-xl text-slate-800 uppercase tracking-wide">Filters</h2>
-    <button id="filterDrawerCloseBtn" aria-label="Close filters" class="p-2 text-slate-500/80 hover:text-slate-800">
+    <h2 data-bn="ফিল্টার" class="font-display text-xl text-slate-800 uppercase tracking-wide">Filters</h2>
+    <button data-bn-aria-label="ফিল্টার বন্ধ করুন" id="filterDrawerCloseBtn" aria-label="Close filters" class="p-2 text-slate-500/80 hover:text-slate-800">
       <i data-lucide="x" class="w-5 h-5"></i>
     </button>
   </div>
   <form id="filterFormMobile" class="flex-1 overflow-y-auto px-5 py-5 space-y-5">
     <div>
-      <label class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Club / Team</label>
-      <input type="text" name="club" placeholder="e.g. Real Madrid" class="w-full h-11 px-3 rounded-xl border border-sand-300 bg-sand-50 text-sm text-slate-800 placeholder:text-slate-500/50 focus:border-sage-400 outline-none" />
+      <label data-bn="ক্লাব / টিম" class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Club / Team</label>
+      <input data-bn-placeholder="যেমন: রিয়াল মাদ্রিদ" type="text" name="club" placeholder="e.g. Real Madrid" class="w-full h-11 px-3 rounded-xl border border-sand-300 bg-sand-50 text-sm text-slate-800 placeholder:text-slate-500/50 focus:border-sage-400 outline-none" />
     </div>
     <div>
-      <label class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Category</label>
+      <label data-bn="ক্যাটাগরি" class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Category</label>
       <select name="category" id="categorySelectMobile" class="w-full h-11 px-3 rounded-xl border border-sand-300 bg-sand-50 text-sm text-slate-800 focus:border-sage-400 outline-none">
-        <option value="">Any category</option>
+        <option data-bn="যেকোনো ক্যাটাগরি" value="">Any category</option>
       </select>
     </div>
     <div>
-      <label class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Version</label>
+      <label data-bn="ভার্সন" class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Version</label>
       <select name="version" class="w-full h-11 px-3 rounded-xl border border-sand-300 bg-sand-50 text-sm text-slate-800 focus:border-sage-400 outline-none">
-        <option value="">Any version</option>
-        <option value="BD">BD</option>
-        <option value="BD Premium">BD Premium</option>
-        <option value="China">China</option>
-        <option value="Thai">Thai</option>
+        <option data-bn="যেকোনো ভার্সন" value="">Any version</option>
+        <option data-bn="বিডি" value="BD">BD</option>
+        <option data-bn="বিডি প্রিমিয়াম" value="BD Premium">BD Premium</option>
+        <option data-bn="চায়না" value="China">China</option>
+        <option data-bn="থাই" value="Thai">Thai</option>
       </select>
     </div>
     <div>
-      <label class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Price range (৳)</label>
+      <label data-bn="প্রাইস রেঞ্জ (৳)" class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Price range (৳)</label>
       <div class="grid grid-cols-2 gap-2">
-        <input type="number" name="min_price" min="0" placeholder="Min" class="w-full h-11 px-3 rounded-xl border border-sand-300 bg-sand-50 text-sm text-slate-800 placeholder:text-slate-500/50 focus:border-sage-400 outline-none" />
-        <input type="number" name="max_price" min="0" placeholder="Max" class="w-full h-11 px-3 rounded-xl border border-sand-300 bg-sand-50 text-sm text-slate-800 placeholder:text-slate-500/50 focus:border-sage-400 outline-none" />
+        <input data-bn-placeholder="সর্বনিম্ন" type="number" name="min_price" min="0" placeholder="Min" class="w-full h-11 px-3 rounded-xl border border-sand-300 bg-sand-50 text-sm text-slate-800 placeholder:text-slate-500/50 focus:border-sage-400 outline-none" />
+        <input data-bn-placeholder="সর্বোচ্চ" type="number" name="max_price" min="0" placeholder="Max" class="w-full h-11 px-3 rounded-xl border border-sand-300 bg-sand-50 text-sm text-slate-800 placeholder:text-slate-500/50 focus:border-sage-400 outline-none" />
       </div>
     </div>
     <div>
-      <label class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Edition</label>
+      <label data-bn="এডিশন" class="block text-[11px] font-bold uppercase tracking-wide text-sage-700 mb-1.5">Edition</label>
       <select name="edition" class="w-full h-11 px-3 rounded-xl border border-sand-300 bg-sand-50 text-sm text-slate-800 focus:border-sage-400 outline-none">
-        <option value="">Any edition</option>
-        <option value="Player">Player</option>
-        <option value="Fan">Fan</option>
+        <option data-bn="যেকোনো এডিশন" value="">Any edition</option>
+        <option data-bn="প্লেয়ার" value="Player">Player</option>
+        <option data-bn="ফ্যান" value="Fan">Fan</option>
       </select>
     </div>
   </form>
   <div class="flex items-center gap-3 px-5 py-4 border-t border-sand-200 shrink-0">
-    <button id="applyFiltersMobile" class="flex-1 h-12 rounded-full bg-sage-400 text-cream-50 font-bold text-sm uppercase tracking-wide hover:bg-sage-500 transition-colors">
+    <button data-bn="ফিল্টার অ্যাপ্লাই করুন" id="applyFiltersMobile" class="flex-1 h-12 rounded-full bg-sage-400 text-cream-50 font-bold text-sm uppercase tracking-wide hover:bg-sage-500 transition-colors">
       Apply Filters
     </button>
-    <button id="clearFiltersMobile" type="button" aria-label="Reset filters" class="w-12 h-12 shrink-0 rounded-full border border-sand-300 hover:bg-sand-100 flex items-center justify-center transition-colors">
+    <button data-bn-aria-label="ফিল্টার রিসেট করুন" id="clearFiltersMobile" type="button" aria-label="Reset filters" class="w-12 h-12 shrink-0 rounded-full border border-sand-300 hover:bg-sand-100 flex items-center justify-center transition-colors">
       <i data-lucide="rotate-ccw" class="w-4 h-4 text-sage-700"></i>
     </button>
   </div>
@@ -207,10 +207,10 @@
 
 <!-- ============ CART DRAWER ============ -->
 <div id="cartOverlay" class="cart-overlay fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50"></div>
-<aside id="cartDrawer" class="cart-drawer fixed top-0 right-0 h-full w-full sm:w-[400px] bg-cream-50 z-50 flex flex-col" role="dialog" aria-modal="true" aria-label="Shopping bag">
+<aside data-bn-aria-label="শপিং ব্যাগ" id="cartDrawer" class="cart-drawer fixed top-0 right-0 h-full w-full sm:w-[400px] bg-cream-50 z-50 flex flex-col" role="dialog" aria-modal="true" aria-label="Shopping bag">
   <div class="flex items-center justify-between px-5 py-4 border-b border-sand-200">
-    <h2 class="font-display text-xl text-slate-800 uppercase tracking-wide">Your Bag</h2>
-    <button id="cartCloseBtn" aria-label="Close bag" class="p-2 text-slate-500/80 hover:text-slate-800">
+    <h2 data-bn="আপনার ব্যাগ" class="font-display text-xl text-slate-800 uppercase tracking-wide">Your Bag</h2>
+    <button data-bn-aria-label="ব্যাগ বন্ধ করুন" id="cartCloseBtn" aria-label="Close bag" class="p-2 text-slate-500/80 hover:text-slate-800">
       <i data-lucide="x" class="w-5 h-5"></i>
     </button>
   </div>
@@ -219,10 +219,10 @@
       <i data-lucide="shopping-bag" class="w-7 h-7 text-sage-500"></i>
     </div>
     <div>
-      <p class="font-semibold text-slate-800 mb-1">Your bag is empty</p>
-      <p class="text-sm text-slate-500/70">Looks like you haven't added any jerseys yet.</p>
+      <p data-bn="আপনার ব্যাগ খালি" class="font-semibold text-slate-800 mb-1">Your bag is empty</p>
+      <p data-bn="মনে হচ্ছে এখনো কোনো জার্সি অ্যাড করেননি।" class="text-sm text-slate-500/70">Looks like you haven't added any jerseys yet.</p>
     </div>
-    <button id="cartStartShoppingBtn" class="mt-2 bg-sage-400 text-cream-50 font-bold uppercase text-sm tracking-wide px-6 py-3 rounded-full hover:bg-sage-500 transition-colors">
+    <button data-bn="শপিং শুরু করুন" id="cartStartShoppingBtn" class="mt-2 bg-sage-400 text-cream-50 font-bold uppercase text-sm tracking-wide px-6 py-3 rounded-full hover:bg-sage-500 transition-colors">
       Start Shopping
     </button>
   </div>
@@ -230,19 +230,19 @@
 
 <!-- ============ SEARCH OVERLAY ============ -->
 <div id="searchOverlay" class="search-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-start justify-center px-4 pt-20 sm:pt-28">
-  <div class="search-panel w-full max-w-xl bg-cream-50 border border-sand-200 rounded-2xl p-5 sm:p-6" role="dialog" aria-modal="true" aria-label="Search the catalog">
+  <div data-bn-aria-label="প্রোডাক্ট সার্চ করুন" class="search-panel w-full max-w-xl bg-cream-50 border border-sand-200 rounded-2xl p-5 sm:p-6" role="dialog" aria-modal="true" aria-label="Search the catalog">
     <div class="flex items-center justify-between mb-4">
-      <h2 class="font-display text-xl text-slate-800 uppercase tracking-wide">Find your next jersey</h2>
-      <button id="searchCloseBtn" aria-label="Close search" class="p-1.5 text-slate-500/80 hover:text-slate-800">
+      <h2 data-bn="পছন্দের জার্সি খুঁজুন" class="font-display text-xl text-slate-800 uppercase tracking-wide">Find your next jersey</h2>
+      <button data-bn-aria-label="সার্চ বন্ধ করুন" id="searchCloseBtn" aria-label="Close search" class="p-1.5 text-slate-500/80 hover:text-slate-800">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
     </div>
-    <label for="searchInput" class="sr-only">Search the catalog</label>
+    <label data-bn="প্রোডাক্ট সার্চ করুন" for="searchInput" class="sr-only">Search the catalog</label>
     <div class="relative">
       <i data-lucide="search" class="w-4 h-4 text-slate-500/50 absolute left-4 top-1/2 -translate-y-1/2"></i>
-      <input id="searchInput" type="text" placeholder="Search the catalog" class="w-full bg-sand-100 border border-sand-200 rounded-full pl-11 pr-4 py-3 text-sm text-slate-800 placeholder:text-slate-500/50 focus:border-sage-400 outline-none" />
+      <input data-bn-placeholder="প্রোডাক্ট সার্চ করুন" id="searchInput" type="text" placeholder="Search the catalog" class="w-full bg-sand-100 border border-sand-200 rounded-full pl-11 pr-4 py-3 text-sm text-slate-800 placeholder:text-slate-500/50 focus:border-sage-400 outline-none" />
     </div>
-    <p class="text-xs text-slate-500/50 mt-3">Try searches like Messi, Barcelona, Argentina, or Real Madrid.</p>
+    <p data-bn="মেসি, বার্সেলোনা, আর্জেন্টিনা বা রিয়াল মাদ্রিদ লিখে সার্চ করে দেখুন।" class="text-xs text-slate-500/50 mt-3">Try searches like Messi, Barcelona, Argentina, or Real Madrid.</p>
   </div>
 </div>
 

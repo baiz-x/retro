@@ -36,4 +36,6 @@ class OrderItem(db.Model):
             "subtotal": round(self.price * self.quantity, 2),
             "selected_variants": self.selected_variants or {},
             "customization": self.customization or {},
+            # Live product image for the order-history page (the snapshot above has none).
+            "product_image": self.product.image if self.product else None,
         }

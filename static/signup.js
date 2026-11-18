@@ -29,8 +29,10 @@ let step1Data = null;
 // resend button both know which address they're acting on.
 let pendingEmail = null;
 
+let currentStep = 1;
 function setStep(stepNumber) {
-  stepLabel.textContent = `Step ${stepNumber} of 3`;
+  currentStep = stepNumber;
+  stepLabel.textContent = rfT(`Step ${stepNumber} of 3`, `ধাপ ${stepNumber} / 3`);
   stepDots.forEach((dot) => {
     const n = Number(dot.dataset.stepDot);
     dot.classList.toggle('active', n === stepNumber);
@@ -52,15 +54,15 @@ step1Form.addEventListener('submit', (e) => {
   // enforcement still happens server-side, this is just to avoid a
   // round trip for obviously-invalid input.
   if (!name) {
-    showAuthError('Please enter your name.');
+    showAuthError(rfT('Please enter your name.', 'আপনার নাম দিন।'));
     return;
   }
   if (!EMAIL_RE.test(email)) {
-    showAuthError('Please enter a valid email address.');
+    showAuthError(rfT('Please enter a valid email address.', 'সঠিক একটা ইমেইল অ্যাড্রেস দিন।'));
     return;
   }
   if (password.length < 8) {
-    showAuthError('Password must be at least 8 characters.');
+    showAuthError(rfT('Password must be at least 8 characters.', 'পাসওয়ার্ড কমপক্ষে 8 অক্ষরের হতে হবে।'));
     return;
   }
 
@@ -93,10 +95,10 @@ function startResendCooldown(seconds) {
     if (remaining <= 0) {
       clearInterval(resendTimer);
       resendCodeBtn.disabled = false;
-      resendCodeBtn.textContent = 'Resend code';
+      resendCodeBtn.textContent = rfT('Resend code', 'আবার কোড পাঠান');
       return;
     }
-    resendCodeBtn.textContent = `Resend code in ${remaining}s`;
+    resendCodeBtn.textContent = rfT(`Resend code in ${remaining}s`, `আবার কোড পাঠান (${remaining} সেকেন্ড)`);
     remaining -= 1;
   };
   tick();
@@ -127,23 +129,23 @@ step2Form.addEventListener('submit', async (e) => {
   const socialHandle = document.getElementById('social_handle').value.trim();
 
   if (!phoneNumber) {
-    showAuthError('Phone number is required.');
+    showAuthError(rfT('Phone number is required.', 'ফোন নম্বর দিতে হবে।'));
     return;
   }
   if (!address) {
-    showAuthError('Address is required.');
+    showAuthError(rfT('Address is required.', 'ঠিকানা দিতে হবে।'));
     return;
   }
   if (!socialPlatform) {
-    showAuthError('Please select a social media platform.');
+    showAuthError(rfT('Please select a social media platform.', 'একটা সোশ্যাল মিডিয়া প্ল্যাটফর্ম বেছে নিন।'));
     return;
   }
   if (!socialHandle) {
-    showAuthError('Social media handle is required.');
+    showAuthError(rfT('Social media handle is required.', 'সোশ্যাল মিডিয়া হ্যান্ডেল দিতে হবে।'));
     return;
   }
 
-  setSubmitBusy(true, 'Creating account...', 'Create Account');
+  setSubmitBusy(true, rfT('Creating account...', 'অ্যাকাউন্ট খোলা হচ্ছে...'), rfT('Create Account', 'অ্যাকাউন্ট খুলুন'));
 
   try {
     const res = await csrfFetch('/auth/signup', {
@@ -162,19 +164,19 @@ step2Form.addEventListener('submit', async (e) => {
     const payload = await res.json();
 
     if (payload.status !== 'pending_verification') {
-      showAuthError(payload.message || 'Could not create your account. Please try again.');
-      setSubmitBusy(false, '', 'Create Account');
+      showAuthError(payload.message || rfT('Could not create your account. Please try again.', 'অ্যাকাউন্ট খোলা যায়নি। আবার চেষ্টা করুন।'));
+      setSubmitBusy(false, '', rfT('Create Account', 'অ্যাকাউন্ট খুলুন'));
       return;
     }
 
     // Account is created but unverified server-side. Swap to the
     // inline code-entry step instead of redirecting anywhere.
-    setSubmitBusy(false, '', 'Create Account');
+    setSubmitBusy(false, '', rfT('Create Account', 'অ্যাকাউন্ট খুলুন'));
     showVerifyStep(payload.data.email);
   } catch (err) {
     console.error('Signup failed:', err);
-    showAuthError('Connection error. Please check your internet and try again.');
-    setSubmitBusy(false, '', 'Create Account');
+    showAuthError(rfT('Connection error. Please check your internet and try again.', 'কানেকশন সমস্যা। ইন্টারনেট চেক করে আবার চেষ্টা করুন।'));
+    setSubmitBusy(false, '', rfT('Create Account', 'অ্যাকাউন্ট খুলুন'));
   }
 });
 
@@ -185,11 +187,11 @@ verifyForm.addEventListener('submit', async (e) => {
 
   const code = document.getElementById('verification_code').value.trim();
   if (!/^[0-9]{6}$/.test(code)) {
-    showAuthError('Please enter the 6-digit code from your email.');
+    showAuthError(rfT('Please enter the 6-digit code from your email.', 'ইমেইলে পাঠানো 6 ডিজিটের কোডটা দিন।'));
     return;
   }
 
-  setSubmitBusy(true, 'Verifying...', 'Verify Email', 'verifySubmitBtn', 'verifySubmitLabel');
+  setSubmitBusy(true, rfT('Verifying...', 'ভেরিফাই হচ্ছে...'), rfT('Verify Email', 'ইমেইল ভেরিফাই করুন'), 'verifySubmitBtn', 'verifySubmitLabel');
 
   try {
     const res = await csrfFetch('/auth/verify-email', {
@@ -200,8 +202,8 @@ verifyForm.addEventListener('submit', async (e) => {
     const payload = await res.json();
 
     if (payload.status !== 'success') {
-      showAuthError(payload.message || 'Could not verify your email. Please try again.');
-      setSubmitBusy(false, '', 'Verify Email', 'verifySubmitBtn', 'verifySubmitLabel');
+      showAuthError(payload.message || rfT('Could not verify your email. Please try again.', 'ইমেইল ভেরিফাই করা যায়নি। আবার চেষ্টা করুন।'));
+      setSubmitBusy(false, '', rfT('Verify Email', 'ইমেইল ভেরিফাই করুন'), 'verifySubmitBtn', 'verifySubmitLabel');
       return;
     }
 
@@ -212,15 +214,15 @@ verifyForm.addEventListener('submit', async (e) => {
     window.location.href = redirectTo;
   } catch (err) {
     console.error('Verification failed:', err);
-    showAuthError('Connection error. Please check your internet and try again.');
-    setSubmitBusy(false, '', 'Verify Email', 'verifySubmitBtn', 'verifySubmitLabel');
+    showAuthError(rfT('Connection error. Please check your internet and try again.', 'কানেকশন সমস্যা। ইন্টারনেট চেক করে আবার চেষ্টা করুন।'));
+    setSubmitBusy(false, '', rfT('Verify Email', 'ইমেইল ভেরিফাই করুন'), 'verifySubmitBtn', 'verifySubmitLabel');
   }
 });
 
 resendCodeBtn.addEventListener('click', async () => {
   hideAuthError();
   resendCodeBtn.disabled = true;
-  resendCodeBtn.textContent = 'Sending...';
+  resendCodeBtn.textContent = rfT('Sending...', 'পাঠানো হচ্ছে...');
 
   try {
     const res = await csrfFetch('/auth/resend-code', {
@@ -231,21 +233,23 @@ resendCodeBtn.addEventListener('click', async () => {
     const payload = await res.json();
 
     if (payload.status !== 'success') {
-      showAuthError(payload.message || 'Could not resend the code. Please try again.');
+      showAuthError(payload.message || rfT('Could not resend the code. Please try again.', 'কোড আবার পাঠানো যায়নি। আবার চেষ্টা করুন।'));
       resendCodeBtn.disabled = false;
-      resendCodeBtn.textContent = 'Resend code';
+      resendCodeBtn.textContent = rfT('Resend code', 'আবার কোড পাঠান');
       return;
     }
     startResendCooldown(RESEND_COOLDOWN_SECONDS);
   } catch (err) {
     console.error('Resend failed:', err);
-    showAuthError('Connection error. Please check your internet and try again.');
+    showAuthError(rfT('Connection error. Please check your internet and try again.', 'কানেকশন সমস্যা। ইন্টারনেট চেক করে আবার চেষ্টা করুন।'));
     resendCodeBtn.disabled = false;
-    resendCodeBtn.textContent = 'Resend code';
+    resendCodeBtn.textContent = rfT('Resend code', 'আবার কোড পাঠান');
   }
 });
 
 setStep(1);
+// Re-render the step label (JS-owned text) when the language flips.
+document.addEventListener('rf:langchange', () => setStep(currentStep));
 
 /* ---------------- Arriving from the login page ----------------
    login.js sends unverified users here as /signup?verify=1 after the

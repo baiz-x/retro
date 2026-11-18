@@ -49,12 +49,12 @@
 <!-- ============ REVIEWS BANNER (unchanged from homepage) ============ -->
 <a href="#" class="flex items-center justify-center gap-2.5 bg-gradient-to-r from-sage-600 via-sage-500 to-sage-600 text-sand-50 text-center text-[11px] sm:text-xs font-bold uppercase tracking-wide py-2.5 px-4 hover:brightness-110 transition-all">
   <svg class="w-4 h-4 shrink-0" aria-hidden="true"><use href="#icon-instagram"></use></svg>
-  <span>Check out our customer reviews</span>
+  <span data-bn="আমাদের কাস্টমার রিভিউ দেখুন">Check out our customer reviews</span>
   <svg class="w-3.5 h-3.5 shrink-0" aria-hidden="true"><use href="#icon-chevron-right"></use></svg>
 </a>
 
 <!-- ============ TOP ANNOUNCEMENT BAR (unchanged from homepage) ============ -->
-<div class="bg-sage-300 text-sage-950 text-center text-[11px] sm:text-xs font-semibold tracking-wide py-2 px-4">
+<div data-bn="সব প্রিপেইড অর্ডারে ডেলিভারি ফ্রি" class="bg-sage-300 text-sage-950 text-center text-[11px] sm:text-xs font-semibold tracking-wide py-2 px-4">
   Free delivery on all prepaid orders
 </div>
 
@@ -66,8 +66,10 @@
        Product Name breadcrumb trail (cluttered, no real navigation
        value since the category link and product name blurred
        together). Just a single "back to shop" link, per Hasan. ============ -->
-  <nav class="max-w-6xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6" aria-label="Breadcrumb">
-    <a href="/products?product_type={{ product.product_type or '' }}" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500/70 hover:text-sage-600 transition-colors">
+  {% set bn_cat = {'jersey': 'জার্সি', 'boots': 'বুট', 'others': 'অন্যান্য'} %}
+  {% set bn_pill = {'Edition': 'এডিশন', 'Version': 'ভার্সন', 'Kit Type': 'কিট টাইপ', 'Kit': 'কিট', 'Type': 'টাইপ', 'Color': 'কালার', 'Colour': 'কালার', 'Team': 'টিম', 'Club': 'ক্লাব', 'Category': 'ক্যাটাগরি', 'Player': 'প্লেয়ার', 'Fan': 'ফ্যান', 'BD': 'বিডি', 'BD Premium': 'বিডি প্রিমিয়াম', 'China': 'চায়না', 'Thai': 'থাই', 'Home': 'হোম', 'Away': 'অ্যাওয়ে', 'Third': 'থার্ড', 'Retro': 'রেট্রো', 'Jersey': 'জার্সি', 'Boots': 'বুট', 'Others': 'অন্যান্য', 'Black': 'কালো', 'White': 'সাদা', 'Red': 'লাল', 'Blue': 'নীল', 'Green': 'সবুজ', 'Yellow': 'হলুদ'} %}
+  <nav data-bn-aria-label="নেভিগেশন পাথ" class="max-w-6xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6" aria-label="Breadcrumb">
+    <a data-bn="ফিরে যান: {{ bn_cat.get(product.product_type, 'শপ') }}" href="/products?product_type={{ product.product_type or '' }}" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500/70 hover:text-sage-600 transition-colors">
       <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
       Back to {{ {'jersey': 'Jerseys', 'boots': 'Boots', 'others': 'Others'}.get(product.product_type, 'Shop') }}
     </a>
@@ -108,16 +110,16 @@
         <div class="pdp-gallery">
           <div class="pdp-gallery-main relative rounded-2xl overflow-hidden bg-sand-100 aspect-square">
             <img id="galleryMainImg" src="{{ gallery_images[0] }}" alt="{{ product.name }}" class="w-full h-full object-cover" />
-            <span id="galleryOosBadge" class="{{ '' if out_of_stock else 'hidden' }} absolute top-3 left-3 bg-slate-800/85 text-cream-50 text-[11px] font-bold px-3 py-1 rounded-full">Out of Stock</span>
-            <button id="galleryPrevBtn" aria-label="Previous image" class="pdp-gallery-nav pdp-gallery-nav-prev" style="{{ 'display:none' if gallery_images|length <= 1 else '' }}">
+            <span data-bn="স্টকে নেই" id="galleryOosBadge" class="{{ '' if out_of_stock else 'hidden' }} absolute top-3 left-3 bg-slate-800/85 text-cream-50 text-[11px] font-bold px-3 py-1 rounded-full">Out of Stock</span>
+            <button data-bn-aria-label="আগের ছবি" id="galleryPrevBtn" aria-label="Previous image" class="pdp-gallery-nav pdp-gallery-nav-prev" style="{{ 'display:none' if gallery_images|length <= 1 else '' }}">
               <i data-lucide="chevron-left" class="w-5 h-5"></i>
             </button>
-            <button id="galleryNextBtn" aria-label="Next image" class="pdp-gallery-nav pdp-gallery-nav-next" style="{{ 'display:none' if gallery_images|length <= 1 else '' }}">
+            <button data-bn-aria-label="পরের ছবি" id="galleryNextBtn" aria-label="Next image" class="pdp-gallery-nav pdp-gallery-nav-next" style="{{ 'display:none' if gallery_images|length <= 1 else '' }}">
               <i data-lucide="chevron-right" class="w-5 h-5"></i>
             </button>
           </div>
           {% if gallery_images|length > 1 %}
-          <div id="galleryThumbs" class="pdp-gallery-thumbs no-scrollbar" role="tablist" aria-label="Product images">
+          <div data-bn-aria-label="প্রোডাক্টের ছবি" id="galleryThumbs" class="pdp-gallery-thumbs no-scrollbar" role="tablist" aria-label="Product images">
             {% for img in gallery_images %}
             <button class="pdp-gallery-thumb{{ ' active' if loop.first else '' }}" data-index="{{ loop.index0 }}" role="tab" aria-selected="{{ 'true' if loop.first else 'false' }}" aria-label="View image {{ loop.index }}">
               <img src="{{ img }}" alt="" loading="lazy" />
@@ -125,7 +127,7 @@
             {% endfor %}
           </div>
           {% else %}
-          <div id="galleryThumbs" class="pdp-gallery-thumbs no-scrollbar" role="tablist" aria-label="Product images"></div>
+          <div data-bn-aria-label="প্রোডাক্টের ছবি" id="galleryThumbs" class="pdp-gallery-thumbs no-scrollbar" role="tablist" aria-label="Product images"></div>
           {% endif %}
         </div>
 
@@ -145,8 +147,8 @@
                not chosen" to assistive tech. -->
           <div id="infoIdentityPills" class="flex flex-wrap gap-2 mb-5">
             {% for label, value in identity_pills %}
-            <span class="pdp-identity-pill" aria-disabled="true">
-              <span class="pdp-identity-pill-label">{{ label }}:</span> {{ value }}
+            <span data-bn="{{ bn_pill.get(value, value) }}" class="pdp-identity-pill" aria-disabled="true">
+              <span data-bn="{{ bn_pill.get(label, label) }}:" class="pdp-identity-pill-label">{{ label }}:</span> {{ value }}
             </span>
             {% endfor %}
           </div>
@@ -155,7 +157,7 @@
           {% if product.is_preorder %}
           <div class="pdp-preorder-banner">
             <i data-lucide="package-check" class="w-4 h-4 shrink-0 mt-0.5"></i>
-            <p>All items on this website are sold on a Pre-Order / Sourced-on-Demand basis. Orders placed are request reservations and will be sourced upon confirmation <span class="whitespace-nowrap">(Estimated delivery: 2–3 business days).</span></p>
+            <p data-bn-html="এই ওয়েবসাইটের সব আইটেম প্রি-অর্ডার / সোর্সড-অন-ডিমান্ড ভিত্তিতে বিক্রি হয়। আপনার অর্ডার আসলে রিকোয়েস্ট রিজার্ভেশন হিসেবে ধরা হয় আর কনফার্মেশনের পর সোর্স করা হয় <span class='whitespace-nowrap'>(আনুমানিক ডেলিভারি: 2–3 কর্মদিবস)।</span>">All items on this website are sold on a Pre-Order / Sourced-on-Demand basis. Orders placed are request reservations and will be sourced upon confirmation <span class="whitespace-nowrap">(Estimated delivery: 2–3 business days).</span></p>
           </div>
           {% endif %}
 
@@ -170,10 +172,10 @@
           <!-- ---------- SIZE PILLS ---------- -->
           <div id="sizeSection" class="mt-6 {{ '' if size_pills else 'hidden' }}">
             <div class="flex items-center justify-between mb-2.5">
-              <p class="text-xs font-bold uppercase tracking-widest text-slate-800">Size</p>
+              <p data-bn="সাইজ" class="text-xs font-bold uppercase tracking-widest text-slate-800">Size</p>
               <p id="sizeSelectedLabel" class="text-xs text-slate-500/70"></p>
             </div>
-            <div id="sizePills" class="pdp-pill-row" role="radiogroup" aria-label="Size">
+            <div data-bn-aria-label="সাইজ" id="sizePills" class="pdp-pill-row" role="radiogroup" aria-label="Size">
               {% for pill in size_pills %}
               <button type="button" class="pdp-pill{{ '' if pill.available else ' pdp-pill-disabled' }}" data-size="{{ pill.value }}" role="radio" aria-checked="false" {{ '' if pill.available else ('disabled aria-label="' ~ pill.value ~ ', out of stock"') }}>{{ pill.value }}</button>
               {% endfor %}
@@ -183,10 +185,10 @@
           <!-- ---------- COLOR PILLS (boots axis) ---------- -->
           <div id="colorSection" class="mt-6 {{ '' if color_pills else 'hidden' }}">
             <div class="flex items-center justify-between mb-2.5">
-              <p class="text-xs font-bold uppercase tracking-widest text-slate-800">Color</p>
+              <p data-bn="কালার" class="text-xs font-bold uppercase tracking-widest text-slate-800">Color</p>
               <p id="colorSelectedLabel" class="text-xs text-slate-500/70"></p>
             </div>
-            <div id="colorPills" class="pdp-pill-row" role="radiogroup" aria-label="Color">
+            <div data-bn-aria-label="কালার" id="colorPills" class="pdp-pill-row" role="radiogroup" aria-label="Color">
               {% for pill in color_pills %}
               <button type="button" class="pdp-pill{{ '' if pill.available else ' pdp-pill-disabled' }}" data-color="{{ pill.value }}" role="radio" aria-checked="false" {{ '' if pill.available else 'disabled' }}>
                 <span class="pdp-pill-swatch" data-color-name="{{ pill.value }}"></span>{{ pill.value }}
@@ -200,34 +202,34 @@
             <button id="personalizeToggle" type="button" class="pdp-personalize-toggle" aria-expanded="false">
               <span class="flex items-center gap-2.5">
                 <i data-lucide="shirt" class="w-4 h-4 text-sage-600"></i>
-                <span class="text-sm font-semibold text-slate-800">Add name &amp; number</span>
+                <span data-bn="নাম আর নম্বর যোগ করুন" class="text-sm font-semibold text-slate-800">Add name &amp; number</span>
               </span>
               <i data-lucide="chevron-down" class="pdp-personalize-chevron w-4 h-4 text-sage-500"></i>
             </button>
             <div id="personalizeFields" class="pdp-personalize-fields">
               <div class="grid grid-cols-2 gap-3 pt-4">
                 <label class="block">
-                  <span class="text-[11px] font-bold uppercase tracking-wide text-slate-500/70">Name <span class="font-normal normal-case">(max 10 characters)</span></span>
-                  <input id="personalizeName" type="text" maxlength="10" placeholder="e.g. RONALDO" class="pdp-input mt-1.5 uppercase" autocomplete="off" />
+                  <span data-bn="নাম" class="text-[11px] font-bold uppercase tracking-wide text-slate-500/70">Name <span data-bn="(সর্বোচ্চ 10 অক্ষর)" class="font-normal normal-case">(max 10 characters)</span></span>
+                  <input data-bn-placeholder="যেমন: RONALDO" id="personalizeName" type="text" maxlength="10" placeholder="e.g. RONALDO" class="pdp-input mt-1.5 uppercase" autocomplete="off" />
                 </label>
                 <label class="block">
-                  <span class="text-[11px] font-bold uppercase tracking-wide text-slate-500/70">Number <span class="font-normal normal-case">(max 2 digits)</span></span>
-                  <input id="personalizeNumber" type="text" inputmode="numeric" maxlength="2" placeholder="e.g. 07" class="pdp-input mt-1.5" autocomplete="off" />
+                  <span data-bn="নম্বর" class="text-[11px] font-bold uppercase tracking-wide text-slate-500/70">Number <span data-bn="(সর্বোচ্চ 2 ডিজিট)" class="font-normal normal-case">(max 2 digits)</span></span>
+                  <input data-bn-placeholder="যেমন: 07" id="personalizeNumber" type="text" inputmode="numeric" maxlength="2" placeholder="e.g. 07" class="pdp-input mt-1.5" autocomplete="off" />
                 </label>
               </div>
-              <p class="text-[11px] text-slate-500/60 mt-2">Personalization is prepared with your order request and confirmed with you before sourcing.</p>
+              <p data-bn="পার্সোনালাইজেশন আপনার অর্ডার রিকোয়েস্টের সাথে তৈরি হয় আর সোর্স করার আগে আপনার সাথে কনফার্ম করা হয়।" class="text-[11px] text-slate-500/60 mt-2">Personalization is prepared with your order request and confirmed with you before sourcing.</p>
             </div>
           </div>
 
           <!-- ---------- QUANTITY STEPPER ---------- -->
           <div class="mt-6">
-            <p class="text-xs font-bold uppercase tracking-widest text-slate-800 mb-2.5">Quantity</p>
+            <p data-bn="পরিমাণ" class="text-xs font-bold uppercase tracking-widest text-slate-800 mb-2.5">Quantity</p>
             <div class="pdp-qty-stepper">
-              <button id="qtyMinusBtn" type="button" aria-label="Decrease quantity" class="pdp-qty-btn">
+              <button data-bn-aria-label="পরিমাণ কমান" id="qtyMinusBtn" type="button" aria-label="Decrease quantity" class="pdp-qty-btn">
                 <i data-lucide="minus" class="w-4 h-4"></i>
               </button>
               <span id="qtyValue" class="pdp-qty-value">1</span>
-              <button id="qtyPlusBtn" type="button" aria-label="Increase quantity" class="pdp-qty-btn">
+              <button data-bn-aria-label="পরিমাণ বাড়ান" id="qtyPlusBtn" type="button" aria-label="Increase quantity" class="pdp-qty-btn">
                 <i data-lucide="plus" class="w-4 h-4"></i>
               </button>
             </div>
@@ -248,7 +250,7 @@
               <span id="orderNowLabel">{{ add_to_cart_label }}</span>
             </button>
           </div>
-          <p id="selectionHint" class="text-xs text-clay mt-2 hidden">Please select a size to continue.</p>
+          <p data-bn="এগোতে একটা সাইজ বেছে নিন।" id="selectionHint" class="text-xs text-clay mt-2 hidden">Please select a size to continue.</p>
 
           <!-- ---------- ACCORDION ---------- -->
           <div class="mt-9 pt-2">
@@ -256,7 +258,7 @@
 
               <div class="pdp-accordion-item">
                 <button class="pdp-accordion-toggle" data-index="0" aria-expanded="true">
-                  <span>Description</span>
+                  <span data-bn="ডেসক্রিপশন">Description</span>
                   <i data-lucide="chevron-down" class="pdp-accordion-chevron open w-5 h-5"></i>
                 </button>
                 <div class="pdp-accordion-panel open" id="accordion-panel-0">
@@ -266,22 +268,22 @@
 
               <div class="pdp-accordion-item">
                 <button class="pdp-accordion-toggle" data-index="1" aria-expanded="false">
-                  <span>Shipping Details</span>
+                  <span data-bn="শিপিং ডিটেইলস">Shipping Details</span>
                   <i data-lucide="chevron-down" class="pdp-accordion-chevron w-5 h-5"></i>
                 </button>
                 <div class="pdp-accordion-panel" id="accordion-panel-1">
                   <div class="text-sm text-slate-500/80 leading-relaxed pb-5 space-y-2.5">
-                    <p class="flex items-start gap-2"><i data-lucide="truck" class="w-4 h-4 shrink-0 mt-0.5 text-sage-500"></i><span>Inside Dhaka: <strong class="text-slate-800 font-semibold">৳60–80</strong></span></p>
-                    <p class="flex items-start gap-2"><i data-lucide="map-pin" class="w-4 h-4 shrink-0 mt-0.5 text-sage-500"></i><span>Outside Dhaka: <strong class="text-slate-800 font-semibold">৳120–160</strong> (extra charges may apply depending on weight)</span></p>
-                    <p class="flex items-start gap-2"><i data-lucide="gift" class="w-4 h-4 shrink-0 mt-0.5 text-sage-500"></i><span>Free delivery on orders over <strong class="text-slate-800 font-semibold">৳1,500</strong>, or during a special offer</span></p>
-                    <p class="text-xs text-slate-500/60 pt-1">*Offers are only applicable for a certain time.</p>
+                    <p class="flex items-start gap-2"><i data-lucide="truck" class="w-4 h-4 shrink-0 mt-0.5 text-sage-500"></i><span data-bn="ঢাকার ভেতরে:">Inside Dhaka: <strong class="text-slate-800 font-semibold">৳60–80</strong></span></p>
+                    <p class="flex items-start gap-2"><i data-lucide="map-pin" class="w-4 h-4 shrink-0 mt-0.5 text-sage-500"></i><span data-bn-html="ঢাকার বাইরে: <strong class='text-slate-800 font-semibold'>৳120–160</strong> (ওজন অনুযায়ী বাড়তি চার্জ লাগতে পারে)">Outside Dhaka: <strong class="text-slate-800 font-semibold">৳120–160</strong> (extra charges may apply depending on weight)</span></p>
+                    <p class="flex items-start gap-2"><i data-lucide="gift" class="w-4 h-4 shrink-0 mt-0.5 text-sage-500"></i><span data-bn-html="<strong class='text-slate-800 font-semibold'>৳1,500</strong>-এর বেশি অর্ডারে ডেলিভারি ফ্রি, অথবা স্পেশাল অফার চললে">Free delivery on orders over <strong class="text-slate-800 font-semibold">৳1,500</strong>, or during a special offer</span></p>
+                    <p data-bn="*অফার শুধু নির্দিষ্ট সময়ের জন্য প্রযোজ্য।" class="text-xs text-slate-500/60 pt-1">*Offers are only applicable for a certain time.</p>
                   </div>
                 </div>
               </div>
 
               <div class="pdp-accordion-item">
                 <button class="pdp-accordion-toggle" data-index="2" aria-expanded="false">
-                  <span>FAQ</span>
+                  <span data-bn="সচরাচর প্রশ্ন">FAQ</span>
                   <i data-lucide="chevron-down" class="pdp-accordion-chevron w-5 h-5"></i>
                 </button>
                 <div class="pdp-accordion-panel" id="accordion-panel-2">
@@ -299,8 +301,8 @@
     <!-- ============ MARQUEE (unchanged pattern from homepage) ============ -->
     <div class="marquee-wrap bg-sage-400 text-cream-50 overflow-hidden border-y border-sage-500/40 py-2.5">
       <div class="marquee-track whitespace-nowrap font-bold uppercase tracking-wide text-xs sm:text-sm">
-        <span class="mx-4">Join our community for latest drops and member-only discounts • FAST SHIPPING NATIONWIDE • Join our community for latest drops and member-only discounts • FAST SHIPPING NATIONWIDE •</span>
-        <span class="mx-4" aria-hidden="true">Join our community for latest drops and member-only discounts • FAST SHIPPING NATIONWIDE • Join our community for latest drops and member-only discounts • FAST SHIPPING NATIONWIDE •</span>
+        <span data-bn="লেটেস্ট ড্রপ আর মেম্বার-অনলি ডিসকাউন্টের জন্য আমাদের কমিউনিটিতে জয়েন করুন • সারা দেশে ফাস্ট শিপিং • লেটেস্ট ড্রপ আর মেম্বার-অনলি ডিসকাউন্টের জন্য আমাদের কমিউনিটিতে জয়েন করুন • সারা দেশে ফাস্ট শিপিং •" class="mx-4">Join our community for latest drops and member-only discounts • FAST SHIPPING NATIONWIDE • Join our community for latest drops and member-only discounts • FAST SHIPPING NATIONWIDE •</span>
+        <span data-bn="লেটেস্ট ড্রপ আর মেম্বার-অনলি ডিসকাউন্টের জন্য আমাদের কমিউনিটিতে জয়েন করুন • সারা দেশে ফাস্ট শিপিং • লেটেস্ট ড্রপ আর মেম্বার-অনলি ডিসকাউন্টের জন্য আমাদের কমিউনিটিতে জয়েন করুন • সারা দেশে ফাস্ট শিপিং •" class="mx-4" aria-hidden="true">Join our community for latest drops and member-only discounts • FAST SHIPPING NATIONWIDE • Join our community for latest drops and member-only discounts • FAST SHIPPING NATIONWIDE •</span>
       </div>
     </div>
 
@@ -308,10 +310,10 @@
     <section class="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
       <div class="flex items-end justify-between mb-6 sm:mb-8">
         <div>
-          <h2 id="discoveryTitle" class="font-display text-3xl sm:text-4xl text-slate-800 uppercase tracking-wide">You May Also Like</h2>
-          <p class="text-sage-600/80 text-sm mt-1.5">More from the same collection</p>
+          <h2 data-bn="এগুলোও ভালো লাগতে পারে" id="discoveryTitle" class="font-display text-3xl sm:text-4xl text-slate-800 uppercase tracking-wide">You May Also Like</h2>
+          <p data-bn="একই কালেকশনের আরও" class="text-sage-600/80 text-sm mt-1.5">More from the same collection</p>
         </div>
-        <span class="hidden sm:flex items-center gap-1.5 text-xs text-slate-500/70 font-medium shrink-0">
+        <span data-bn="সোয়াইপ করে দেখুন" class="hidden sm:flex items-center gap-1.5 text-xs text-slate-500/70 font-medium shrink-0">
           <i data-lucide="move-horizontal" class="w-3.5 h-3.5"></i> Swipe to discover
         </span>
       </div>
@@ -343,7 +345,7 @@
       <p id="mobileCtaStockNote" class="pdp-stock-note text-[11px] {{ stock_note_class }}">{{ stock_note_text }}</p>
     </div>
     <div class="flex gap-2">
-      <button id="mobileAddToCartBtn" class="pdp-add-btn pdp-add-btn-compact pdp-add-btn-secondary" aria-label="Add to cart" {{ 'disabled' if out_of_stock else '' }}>
+      <button data-bn-aria-label="কার্টে যোগ করুন" id="mobileAddToCartBtn" class="pdp-add-btn pdp-add-btn-compact pdp-add-btn-secondary" aria-label="Add to cart" {{ 'disabled' if out_of_stock else '' }}>
         <svg class="w-4 h-4" aria-hidden="true"><use href="#icon-shopping-bag"></use></svg>
       </button>
       <button id="mobileOrderNowBtn" class="pdp-add-btn pdp-add-btn-compact" {{ 'disabled' if out_of_stock else '' }}>
@@ -365,41 +367,41 @@
   <div class="bg-cream-50/95 backdrop-blur border-t border-sand-200 px-4 py-2.5 flex items-center justify-around">
     <a href="/" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1">
       <svg class="w-5 h-5" aria-hidden="true"><use href="#icon-home"></use></svg>
-      <span class="text-[10px] font-medium">Home</span>
+      <span data-bn="হোম" class="text-[10px] font-medium">Home</span>
     </a>
     <a href="/products" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1">
       <svg class="w-5 h-5" aria-hidden="true"><use href="#icon-shirt"></use></svg>
-      <span class="text-[10px] font-medium">Shop</span>
+      <span data-bn="শপ" class="text-[10px] font-medium">Shop</span>
     </a>
     <button id="mobileSearchBtn" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1">
       <svg class="w-5 h-5" aria-hidden="true"><use href="#icon-search"></use></svg>
-      <span class="text-[10px] font-medium">Search</span>
+      <span data-bn="সার্চ" class="text-[10px] font-medium">Search</span>
     </button>
     <a href="/cart" class="flex flex-col items-center gap-1 text-slate-500/70 px-3 py-1 relative">
       <span class="relative inline-flex">
         <svg class="w-5 h-5" aria-hidden="true"><use href="#icon-shopping-bag"></use></svg>
         <span id="cartCountMobile" class="cart-count-badge absolute bg-clay text-sand-50 text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">0</span>
       </span>
-      <span class="text-[10px] font-medium">Bag</span>
+      <span data-bn="ব্যাগ" class="text-[10px] font-medium">Bag</span>
     </a>
   </div>
 </div>
 
 <!-- ============ SEARCH OVERLAY — identical markup to index.html ============ -->
 <div id="searchOverlay" class="search-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-start justify-center px-4 pt-20 sm:pt-28">
-  <div class="search-panel w-full max-w-xl bg-cream-50 border border-sand-200 rounded-2xl p-5 sm:p-6" role="dialog" aria-modal="true" aria-label="Search the catalog">
+  <div data-bn-aria-label="প্রোডাক্ট সার্চ করুন" class="search-panel w-full max-w-xl bg-cream-50 border border-sand-200 rounded-2xl p-5 sm:p-6" role="dialog" aria-modal="true" aria-label="Search the catalog">
     <div class="flex items-center justify-between mb-4">
-      <h2 class="font-display text-xl text-slate-800 uppercase tracking-wide">Find your next jersey</h2>
-      <button id="searchCloseBtn" aria-label="Close search" class="p-1.5 text-slate-500/80 hover:text-slate-800">
+      <h2 data-bn="পছন্দের জার্সি খুঁজুন" class="font-display text-xl text-slate-800 uppercase tracking-wide">Find your next jersey</h2>
+      <button data-bn-aria-label="সার্চ বন্ধ করুন" id="searchCloseBtn" aria-label="Close search" class="p-1.5 text-slate-500/80 hover:text-slate-800">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
     </div>
-    <label for="searchInput" class="sr-only">Search the catalog</label>
+    <label data-bn="প্রোডাক্ট সার্চ করুন" for="searchInput" class="sr-only">Search the catalog</label>
     <div class="relative">
       <i data-lucide="search" class="w-4 h-4 text-slate-500/50 absolute left-4 top-1/2 -translate-y-1/2"></i>
-      <input id="searchInput" type="text" placeholder="Search the catalog" class="w-full bg-sand-100 border border-sand-200 rounded-full pl-11 pr-4 py-3 text-sm text-slate-800 placeholder:text-slate-500/50 focus:border-sage-400 outline-none" />
+      <input data-bn-placeholder="প্রোডাক্ট সার্চ করুন" id="searchInput" type="text" placeholder="Search the catalog" class="w-full bg-sand-100 border border-sand-200 rounded-full pl-11 pr-4 py-3 text-sm text-slate-800 placeholder:text-slate-500/50 focus:border-sage-400 outline-none" />
     </div>
-    <p class="text-xs text-slate-500/50 mt-3">Try searches like Messi, Barcelona, Argentina, or Real Madrid.</p>
+    <p data-bn="মেসি, বার্সেলোনা, আর্জেন্টিনা বা রিয়াল মাদ্রিদ লিখে সার্চ করে দেখুন।" class="text-xs text-slate-500/50 mt-3">Try searches like Messi, Barcelona, Argentina, or Real Madrid.</p>
   </div>
 </div>
 

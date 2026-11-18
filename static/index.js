@@ -36,8 +36,8 @@ function productCard(p) {
           <img src="${p.img}" alt="${p.name}" class="img-a w-full h-full object-cover" loading="lazy" />
           ${p.img2 ? `<img src="${p.img2}" alt="" class="img-b w-full h-full object-cover" loading="lazy" />` : ''}
           ${p.badge ? `<span class="absolute top-2 left-2 bg-clay text-cream-50 text-[10px] font-bold px-2 py-0.5 rounded-full">${p.badge}</span>` : ''}
-          ${p.oos ? `<span class="absolute top-2 left-2 bg-slate-800/85 text-cream-50 text-[10px] font-bold px-2 py-0.5 rounded-full">Out of Stock</span>` : ''}
-          ${!p.oos ? `<button class="add-btn absolute bottom-2 right-2 bg-cream-50 text-slate-800 text-[10px] font-bold uppercase tracking-wide px-3 py-1.5 rounded-full hover:bg-sage-400 hover:text-cream-50 transition-colors" data-name="${p.name}">Add</button>` : ''}
+          ${p.oos ? `<span class="absolute top-2 left-2 bg-slate-800/85 text-cream-50 text-[10px] font-bold px-2 py-0.5 rounded-full" data-bn="স্টকে নেই">Out of Stock</span>` : ''}
+          ${!p.oos ? `<button class="add-btn absolute bottom-2 right-2 bg-cream-50 text-slate-800 text-[10px] font-bold uppercase tracking-wide px-3 py-1.5 rounded-full hover:bg-sage-400 hover:text-cream-50 transition-colors" data-name="${p.name}" data-bn="অ্যাড">Add</button>` : ''}
         </div>
         <div class="mt-2.5">
           <p class="text-sm text-slate-800 font-medium leading-snug line-clamp-2">${p.name}</p>
@@ -274,20 +274,20 @@ setInterval(() => showHero((heroIndex + 1) % heroSlides.length), 5000);
 
 /* ---------------- FAQ accordion ---------------- */
 const faqData = [
-  { q: 'How long does shipping take?', a: 'We offer free express shipping nationwide. Expected delivery is within 9–15 working days from the date of order.' },
-  { q: 'Do you offer Cash on Delivery (COD)?', a: 'Yes, we support COD. To secure your order and prevent fraudulent requests, all COD deliveries require a small advance payment at checkout.' },
-  { q: 'Can I track my order?', a: 'Absolutely. Once your order has been dispatched from our warehouse, you\'ll receive tracking information via email and SMS.' },
+  { q: 'How long does shipping take?', bq: 'ডেলিভারি পেতে কত সময় লাগে?', ba: 'সারা দেশে আমরা ফ্রি এক্সপ্রেস শিপিং দিই। অর্ডারের তারিখ থেকে 9–15 কর্মদিবসের মধ্যে ডেলিভারি পাওয়া যায়।', a: 'We offer free express shipping nationwide. Expected delivery is within 9–15 working days from the date of order.' },
+  { q: 'Do you offer Cash on Delivery (COD)?', bq: 'ক্যাশ অন ডেলিভারি (COD) আছে?', ba: 'হ্যাঁ, COD আছে। অর্ডার কনফার্ম রাখতে আর ফেক অর্ডার ঠেকাতে চেকআউটের সময় সব COD ডেলিভারিতে অল্প কিছু অ্যাডভান্স দিতে হয়।', a: 'Yes, we support COD. To secure your order and prevent fraudulent requests, all COD deliveries require a small advance payment at checkout.' },
+  { q: 'Can I track my order?', bq: 'অর্ডার ট্র্যাক করা যায়?', ba: 'অবশ্যই। আমাদের ওয়্যারহাউস থেকে অর্ডার পাঠানো হলে ইমেইল আর SMS-এ ট্র্যাকিং তথ্য পেয়ে যাবেন।', a: 'Absolutely. Once your order has been dispatched from our warehouse, you\'ll receive tracking information via email and SMS.' },
 ];
 
 const faqList = document.getElementById('faqList');
 faqList.innerHTML = faqData.map((item, i) => `
   <div class="faq-item">
     <button class="faq-toggle w-full flex items-center justify-between gap-4 py-5 text-left" data-index="${i}" aria-expanded="false">
-      <span class="font-semibold text-slate-800 text-sm sm:text-base">${item.q}</span>
+      <span data-bn="${item.bq}" class="font-semibold text-slate-800 text-sm sm:text-base">${item.q}</span>
       <i data-lucide="chevron-down" class="faq-chevron w-5 h-5 text-sage-500 shrink-0"></i>
     </button>
     <div class="faq-answer" id="faq-answer-${i}">
-      <p class="text-sm text-slate-500/80 leading-relaxed pb-5 pr-8">${item.a}</p>
+      <p data-bn="${item.ba}" class="text-sm text-slate-500/80 leading-relaxed pb-5 pr-8">${item.a}</p>
     </div>
   </div>
 `).join('');

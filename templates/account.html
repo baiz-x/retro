@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>My Account | RetroFit BD</title>
+<title data-bn="আমার অ্যাকাউন্ট | RetroFit BD">My Account | RetroFit BD</title>
 <meta name="robots" content="noindex, nofollow" />
 <meta name="csrf-token" content="{{ csrf_token() }}" />
 
@@ -25,8 +25,8 @@
 
 <main class="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16 pb-28 lg:pb-16">
 
-  <h1 class="font-display text-3xl sm:text-4xl uppercase tracking-wide mb-1">My Account</h1>
-  <p class="text-sm text-slate-500/70 mb-8">Update your details, email, and password.</p>
+  <h1 data-bn="আমার অ্যাকাউন্ট" class="font-display text-3xl sm:text-4xl uppercase tracking-wide mb-1">My Account</h1>
+  <p data-bn="আপনার তথ্য, ইমেইল আর পাসওয়ার্ড আপডেট করুন।" class="text-sm text-slate-500/70 mb-8">Update your details, email, and password.</p>
 
   <!-- Inline status banner — account.js shows/hides this, single spot
        for both success and error feedback across every form on the
@@ -37,33 +37,33 @@
 
     <!-- ============ PROFILE ============ -->
     <section class="bg-sand-50 border border-sage-200/60 rounded-3xl p-5 sm:p-7">
-      <h2 class="font-display text-xl uppercase tracking-wide mb-1">Profile</h2>
-      <p class="text-xs text-slate-500/70 mb-5">Your name, phone, address, and social contact.</p>
+      <h2 data-bn="প্রোফাইল" class="font-display text-xl uppercase tracking-wide mb-1">Profile</h2>
+      <p data-bn="আপনার নাম, ফোন, ঠিকানা আর সোশ্যাল কন্টাক্ট।" class="text-xs text-slate-500/70 mb-5">Your name, phone, address, and social contact.</p>
 
       <form id="profileForm" class="flex flex-col gap-4">
         <div>
-          <label for="nameInput" class="account-label">Full name</label>
+          <label data-bn="পুরো নাম" for="nameInput" class="account-label">Full name</label>
           <input id="nameInput" name="name" type="text" required maxlength="120"
                  value="{{ user.name }}" class="account-input" />
         </div>
 
         <div>
-          <label for="phoneInput" class="account-label">Phone number</label>
+          <label data-bn="ফোন নম্বর" for="phoneInput" class="account-label">Phone number</label>
           <input id="phoneInput" name="phone_number" type="tel" required
                  value="{{ user.phone_number }}" class="account-input" />
         </div>
 
         <div>
-          <label for="addressInput" class="account-label">Address</label>
+          <label data-bn="ঠিকানা" for="addressInput" class="account-label">Address</label>
           <textarea id="addressInput" name="address" required rows="3"
                     class="account-input resize-none">{{ user.address }}</textarea>
         </div>
 
         <div class="grid sm:grid-cols-2 gap-4">
           <div>
-            <label for="socialPlatformInput" class="account-label">Social platform</label>
+            <label data-bn="সোশ্যাল প্ল্যাটফর্ম" for="socialPlatformInput" class="account-label">Social platform</label>
             <select id="socialPlatformInput" name="social_platform" class="account-input">
-              <option value="" {% if not user.social_platform %}selected{% endif %}>None</option>
+              <option data-bn="কিছু না" value="" {% if not user.social_platform %}selected{% endif %}>None</option>
               <option value="WhatsApp" {% if user.social_platform == 'WhatsApp' %}selected{% endif %}>WhatsApp</option>
               <option value="Instagram" {% if user.social_platform == 'Instagram' %}selected{% endif %}>Instagram</option>
               <option value="Facebook" {% if user.social_platform == 'Facebook' %}selected{% endif %}>Facebook</option>
@@ -71,22 +71,22 @@
             </select>
           </div>
           <div>
-            <label for="socialHandleInput" class="account-label">Handle / number</label>
-            <input id="socialHandleInput" name="social_handle" type="text"
+            <label data-bn="হ্যান্ডেল / নম্বর" for="socialHandleInput" class="account-label">Handle / number</label>
+            <input data-bn-placeholder="ঐচ্ছিক" id="socialHandleInput" name="social_handle" type="text"
                    value="{{ user.social_handle or '' }}" class="account-input" placeholder="Optional" />
           </div>
         </div>
 
-        <button type="submit" class="account-btn-primary self-start mt-1">Save profile</button>
+        <button data-bn="প্রোফাইল সেভ করুন" type="submit" class="account-btn-primary self-start mt-1">Save profile</button>
       </form>
     </section>
 
     <!-- ============ EMAIL ============ -->
     <section class="bg-sand-50 border border-sage-200/60 rounded-3xl p-5 sm:p-7">
-      <h2 class="font-display text-xl uppercase tracking-wide mb-1">Email address</h2>
-      <p class="text-xs text-slate-500/70 mb-5">Changing your email takes effect immediately, but you'll need to verify it with a code before you can log in with it again.</p>
+      <h2 data-bn="ইমেইল অ্যাড্রেস" class="font-display text-xl uppercase tracking-wide mb-1">Email address</h2>
+      <p data-bn="ইমেইল বদলালে সাথে সাথেই কার্যকর হয়, তবে আবার এই ইমেইল দিয়ে লগইন করতে হলে আগে কোড দিয়ে ভেরিফাই করতে হবে।" class="text-xs text-slate-500/70 mb-5">Changing your email takes effect immediately, but you'll need to verify it with a code before you can log in with it again.</p>
 
-      <p class="text-sm font-semibold mb-5">
+      <p data-bn="বর্তমান:" class="text-sm font-semibold mb-5">
         Current: <span id="currentEmailValue" class="text-sage-700">{{ user.email }}</span>
       </p>
 
@@ -95,63 +95,63 @@
            entering the code). account.js reads this from
            data-is-verified on <body>. -->
       <div id="unverifiedEmailBanner" class="hidden mb-5 rounded-2xl bg-sage-100 border border-sage-200/60 px-5 py-4 text-sm">
-        <p class="font-semibold text-sage-800">Your email isn't verified yet</p>
-        <p class="text-slate-500/70 mt-1">Enter the 6-digit code sent to your email to keep this address usable for logging in.</p>
+        <p data-bn="আপনার ইমেইল এখনো ভেরিফাই করা হয়নি" class="font-semibold text-sage-800">Your email isn't verified yet</p>
+        <p data-bn="লগইনের জন্য এই ইমেইল চালু রাখতে আপনার ইমেইলে পাঠানো 6 ডিজিটের কোডটা দিন।" class="text-slate-500/70 mt-1">Enter the 6-digit code sent to your email to keep this address usable for logging in.</p>
       </div>
 
       <form id="requestEmailForm" class="flex flex-col gap-4">
         <div>
-          <label for="newEmailInput" class="account-label">New email address</label>
+          <label data-bn="নতুন ইমেইল অ্যাড্রেস" for="newEmailInput" class="account-label">New email address</label>
           <input id="newEmailInput" name="new_email" type="email" required class="account-input" />
         </div>
         <div>
-          <label for="emailChangePasswordInput" class="account-label">Current password</label>
+          <label data-bn="বর্তমান পাসওয়ার্ড" for="emailChangePasswordInput" class="account-label">Current password</label>
           <input id="emailChangePasswordInput" name="current_password" type="password" required
                  autocomplete="current-password" class="account-input" />
         </div>
-        <button type="submit" class="account-btn-primary self-start mt-1">Change email</button>
+        <button data-bn="ইমেইল বদলান" type="submit" class="account-btn-primary self-start mt-1">Change email</button>
       </form>
 
       <form id="confirmEmailForm" class="hidden flex-col gap-4">
         <div>
-          <label for="emailCodeInput" class="account-label">Verification code</label>
-          <input id="emailCodeInput" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}"
+          <label data-bn="ভেরিফিকেশন কোড" for="emailCodeInput" class="account-label">Verification code</label>
+          <input data-bn-placeholder="6 ডিজিটের কোড" id="emailCodeInput" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}"
                  maxlength="6" required class="account-input" placeholder="6-digit code" />
         </div>
-        <button type="submit" class="account-btn-primary self-start">Confirm code</button>
+        <button data-bn="কোড কনফার্ম করুন" type="submit" class="account-btn-primary self-start">Confirm code</button>
       </form>
     </section>
 
     <!-- ============ PASSWORD ============ -->
     <section class="bg-sand-50 border border-sage-200/60 rounded-3xl p-5 sm:p-7">
-      <h2 class="font-display text-xl uppercase tracking-wide mb-1">Password</h2>
-      <p class="text-xs text-slate-500/70 mb-5">Use at least 8 characters.</p>
+      <h2 data-bn="পাসওয়ার্ড" class="font-display text-xl uppercase tracking-wide mb-1">Password</h2>
+      <p data-bn="কমপক্ষে 8 অক্ষরের দিন।" class="text-xs text-slate-500/70 mb-5">Use at least 8 characters.</p>
 
       <form id="passwordForm" class="flex flex-col gap-4">
         <div>
-          <label for="currentPasswordInput" class="account-label">Current password</label>
+          <label data-bn="বর্তমান পাসওয়ার্ড" for="currentPasswordInput" class="account-label">Current password</label>
           <input id="currentPasswordInput" name="current_password" type="password" required
                  autocomplete="current-password" class="account-input" />
         </div>
         <div>
-          <label for="newPasswordInput" class="account-label">New password</label>
+          <label data-bn="নতুন পাসওয়ার্ড" for="newPasswordInput" class="account-label">New password</label>
           <input id="newPasswordInput" name="new_password" type="password" required minlength="8"
                  autocomplete="new-password" class="account-input" />
         </div>
         <div>
-          <label for="confirmPasswordInput" class="account-label">Confirm new password</label>
+          <label data-bn="নতুন পাসওয়ার্ড আবার দিন" for="confirmPasswordInput" class="account-label">Confirm new password</label>
           <input id="confirmPasswordInput" name="confirm_password" type="password" required minlength="8"
                  autocomplete="new-password" class="account-input" />
         </div>
-        <button type="submit" class="account-btn-primary self-start mt-1">Update password</button>
+        <button data-bn="পাসওয়ার্ড আপডেট করুন" type="submit" class="account-btn-primary self-start mt-1">Update password</button>
       </form>
     </section>
 
     <section class="bg-sand-50 border border-sage-200/60 rounded-3xl p-5 sm:p-7">
-      <h2 class="font-display text-xl uppercase tracking-wide mb-1">Account</h2>
-      <p class="text-xs text-slate-500/70 mb-5">Sign out of your account on this device.</p>
+      <h2 data-bn="অ্যাকাউন্ট" class="font-display text-xl uppercase tracking-wide mb-1">Account</h2>
+      <p data-bn="এই ডিভাইসে আপনার অ্যাকাউন্ট থেকে লগ আউট করুন।" class="text-xs text-slate-500/70 mb-5">Sign out of your account on this device.</p>
 
-      <button id="logoutBtn" type="button" class="account-btn-secondary gap-2">
+      <button data-bn="লগ আউট" id="logoutBtn" type="button" class="account-btn-secondary gap-2">
         <svg class="w-4 h-4" aria-hidden="true"><use href="#icon-log-out"></use></svg>
         Log Out
       </button>

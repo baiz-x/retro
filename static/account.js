@@ -78,6 +78,10 @@ if (searchOverlay && (searchBtn || mobileSearchBtn)) {
    it's needed. */
 const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
+/* i18n: returns the Bangla string when the Bangla switch is on (see static/i18n.js).
+   Used for text this file writes at runtime; static markup uses data-bn attributes. */
+const rfT = (en, bn) => (window.RFi18n ? window.RFi18n.t(en, bn) : en);
+
 async function postJSON(url, body) {
   const res = await fetch(url, {
     method: 'POST',
@@ -109,7 +113,7 @@ function wireLogout(btn) {
       window.location.href = '/';
     } else {
       btn.disabled = false;
-      showBanner('Something went wrong logging out. Please try again.', 'error');
+      showBanner(rfT('Something went wrong logging out. Please try again.', 'লগ আউট করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।'), 'error');
     }
   });
 }
@@ -136,7 +140,7 @@ function withSubmitLock(form, fn) {
     const btn = form.querySelector('button[type="submit"]');
     const originalText = btn.textContent;
     btn.disabled = true;
-    btn.textContent = 'Saving...';
+    btn.textContent = rfT('Saving...', 'সেভ হচ্ছে...');
     try {
       await fn();
     } finally {
@@ -156,7 +160,7 @@ profileForm.addEventListener('submit', withSubmitLock(profileForm, async () => {
     social_platform: document.getElementById('socialPlatformInput').value,
     social_handle: document.getElementById('socialHandleInput').value,
   });
-  showBanner(ok ? 'Profile updated.' : (payload.message || 'Could not update profile.'), ok ? 'success' : 'error');
+  showBanner(ok ? rfT('Profile updated.', 'প্রোফাইল আপডেট হয়েছে।') : (payload.message || rfT('Could not update profile.', 'প্রোফাইল আপডেট করা যায়নি।')), ok ? 'success' : 'error');
 }));
 
 /* ---------------- Email change: request / confirm ----------------
@@ -194,12 +198,12 @@ requestEmailForm.addEventListener('submit', withSubmitLock(requestEmailForm, asy
     current_password: document.getElementById('emailChangePasswordInput').value,
   });
   if (ok) {
-    showBanner(payload.message || 'Email changed — please verify it.', 'success');
+    showBanner(payload.message || rfT('Email changed — please verify it.', 'ইমেইল বদলানো হয়েছে — এবার ভেরিফাই করুন।'), 'success');
     document.getElementById('currentEmailValue').textContent = payload.data.email;
     requestEmailForm.reset();
     showUnverifiedState();
   } else {
-    showBanner(payload.message || 'Could not change email.', 'error');
+    showBanner(payload.message || rfT('Could not change email.', 'ইমেইল বদলানো যায়নি।'), 'error');
   }
 }));
 
@@ -208,10 +212,10 @@ confirmEmailForm.addEventListener('submit', withSubmitLock(confirmEmailForm, asy
     code: document.getElementById('emailCodeInput').value,
   });
   if (ok) {
-    showBanner('Email address verified.', 'success');
+    showBanner(rfT('Email address verified.', 'ইমেইল অ্যাড্রেস ভেরিফাই হয়েছে।'), 'success');
     showVerifiedState();
   } else {
-    showBanner(payload.message || 'Could not confirm email change.', 'error');
+    showBanner(payload.message || rfT('Could not confirm email change.', 'ইমেইল বদল কনফার্ম করা যায়নি।'), 'error');
   }
 }));
 
@@ -222,7 +226,7 @@ passwordForm.addEventListener('submit', withSubmitLock(passwordForm, async () =>
   const confirmPassword = document.getElementById('confirmPasswordInput').value;
 
   if (newPassword !== confirmPassword) {
-    showBanner('New password and confirmation do not match.', 'error');
+    showBanner(rfT('New password and confirmation do not match.', 'নতুন পাসওয়ার্ড আর কনফার্মেশন মিলছে না।'), 'error');
     return;
   }
 
@@ -230,7 +234,7 @@ passwordForm.addEventListener('submit', withSubmitLock(passwordForm, async () =>
     current_password: document.getElementById('currentPasswordInput').value,
     new_password: newPassword,
   });
-  showBanner(ok ? 'Password updated.' : (payload.message || 'Could not update password.'), ok ? 'success' : 'error');
+  showBanner(ok ? rfT('Password updated.', 'পাসওয়ার্ড আপডেট হয়েছে।') : (payload.message || rfT('Could not update password.', 'পাসওয়ার্ড আপডেট করা যায়নি।')), ok ? 'success' : 'error');
   if (ok) passwordForm.reset();
 }));
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Your Bag — RetroFit BD</title>
+<title data-bn="আপনার ব্যাগ — RetroFit BD">Your Bag — RetroFit BD</title>
 <meta name="robots" content="noindex, nofollow" />
 <meta name="theme-color" content="#657d69" />
 <meta name="csrf-token" content="{{ csrf_token() }}" />
@@ -21,7 +21,7 @@
 {% include "partials/_icon_sprite.html" %}
 
 <!-- ============ TOP ANNOUNCEMENT BAR — same as index.html/product.html ============ -->
-<div class="bg-sage-300 text-sage-950 text-center text-[11px] sm:text-xs font-semibold tracking-wide py-2 px-4">
+<div data-bn="সব প্রিপেইড অর্ডারে ডেলিভারি ফ্রি" class="bg-sage-300 text-sage-950 text-center text-[11px] sm:text-xs font-semibold tracking-wide py-2 px-4">
   Free delivery on all prepaid orders
 </div>
 
@@ -31,7 +31,7 @@
      also clears the fixed bottom nav) so the last card is never hidden
      behind either fixed element. -->
 <main class="max-w-4xl mx-auto px-4 sm:px-6 pt-6 pb-40 sm:pb-32">
-  <h1 class="font-display text-3xl sm:text-4xl text-slate-800 uppercase tracking-wide mb-8">Your Bag</h1>
+  <h1 data-bn="আপনার ব্যাগ" class="font-display text-3xl sm:text-4xl text-slate-800 uppercase tracking-wide mb-8">Your Bag</h1>
 
   <!-- ============ LOADING SKELETON ============ -->
   <div id="cartLoading" class="space-y-3">
@@ -48,9 +48,9 @@
     <div class="w-20 h-20 rounded-full bg-sand-200/60 flex items-center justify-center mx-auto mb-8">
       <i data-lucide="shopping-bag" class="w-8 h-8 text-sage-500"></i>
     </div>
-    <h2 class="font-display text-2xl text-slate-800 uppercase tracking-wide mb-4">Your bag is empty</h2>
-    <p class="text-slate-500/70 mb-8 text-sm">Looks like you haven't reserved any jerseys yet.</p>
-    <a href="/products" class="inline-block bg-sage-400 text-cream-50 font-bold uppercase text-xs tracking-widest px-8 py-4 rounded-full hover:bg-sage-500 transition-colors">Start Shopping</a>
+    <h2 data-bn="আপনার ব্যাগ খালি" class="font-display text-2xl text-slate-800 uppercase tracking-wide mb-4">Your bag is empty</h2>
+    <p data-bn="মনে হচ্ছে এখনো কোনো জার্সি রিজার্ভ করেননি।" class="text-slate-500/70 mb-8 text-sm">Looks like you haven't reserved any jerseys yet.</p>
+    <a data-bn="শপিং শুরু করুন" href="/products" class="inline-block bg-sage-400 text-cream-50 font-bold uppercase text-xs tracking-widest px-8 py-4 rounded-full hover:bg-sage-500 transition-colors">Start Shopping</a>
   </div>
 
   <!-- ============ CART CONTENTS ============ -->
@@ -72,16 +72,16 @@
 <div id="cartActionBar" class="cart-action-bar hidden">
   <div class="max-w-4xl mx-auto px-4 sm:px-6 py-6">
     <div class="flex items-center justify-between mb-2">
-      <span class="text-[10px] uppercase tracking-widest font-bold text-slate-500/70">Items Total</span>
+      <span data-bn="আইটেম টোটাল" class="text-[10px] uppercase tracking-widest font-bold text-slate-500/70">Items Total</span>
       <span id="cartGrandTotal" class="font-display text-2xl sm:text-3xl text-slate-800 leading-none">৳0</span>
     </div>
-    <p class="text-xs text-slate-500/60 mb-4">Shipping is calculated at checkout based on your delivery zone.</p>
+    <p data-bn="ডেলিভারি জোন অনুযায়ী শিপিং চার্জ চেকআউটে হিসাব হবে।" class="text-xs text-slate-500/60 mb-4">Shipping is calculated at checkout based on your delivery zone.</p>
     <div class="flex items-center gap-4">
-      <button id="clearBtn" class="cart-action-clear-btn" aria-label="Clear bag">
+      <button data-bn-aria-label="ব্যাগ খালি করুন" id="clearBtn" class="cart-action-clear-btn" aria-label="Clear bag">
         <i data-lucide="trash-2" class="w-4 h-4"></i>
-        <span class="hidden sm:inline">Clear Bag</span>
+        <span data-bn="ব্যাগ খালি করুন" class="hidden sm:inline">Clear Bag</span>
       </button>
-      <a href="/checkout" id="checkoutBtn" class="cart-action-order-btn">
+      <a data-bn="অর্ডার করুন" href="/checkout" id="checkoutBtn" class="cart-action-order-btn">
         Order
       </a>
     </div>
