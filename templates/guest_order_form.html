@@ -32,6 +32,7 @@
   .gl-totals .gl-discount { color:var(--sage-600); font-weight:600; }
   .gl-totals .gl-total { font-weight:800; font-size:17px; color:var(--slate-800); border-top:1px solid var(--sand-300); margin-top:6px; padding-top:11px; }
 
+  .gl-lang { display:flex; justify-content:flex-end; margin-bottom:14px; }
   .gl-contact { margin-bottom:4px; }
   .gl-contact-note { font-size:12px; line-height:1.5; color:var(--slate-500); margin:2px 0 10px; }
   .gl-contact-note strong { color:var(--slate-800); }
@@ -66,6 +67,12 @@
 {% include "partials/_navbar.html" %}
 
 <main class="max-w-lg mx-auto px-4 sm:px-6 py-10 sm:py-14 pb-28">
+
+  <div class="gl-lang">
+    <button type="button" data-lang-toggle aria-pressed="false" aria-label="Switch language" data-bn-aria-label="ভাষা পাল্টান" class="lang-switch">
+      <span class="lang-opt-en">English</span><span class="lang-opt-bn">বাংলা</span>
+    </button>
+  </div>
 
   {% if error %}
   <!-- ============ DEAD LINK STATE ============
@@ -203,7 +210,27 @@
 
 {% include "partials/_footer.html" %}
 
-<script src="/static/guest_order_form.js?v=20261102"></script>
+<!-- Search overlay — the navbar's search icon needs this on the page (same markup as index.html). -->
+<div id="searchOverlay" class="search-overlay fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-start justify-center px-4 pt-20 sm:pt-28">
+  <div class="search-panel w-full max-w-xl bg-cream-50 border border-sand-200 rounded-2xl p-5 sm:p-6" role="dialog" aria-modal="true" aria-label="Search the catalog" data-bn-aria-label="প্রোডাক্ট সার্চ করুন">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="font-display text-xl text-slate-800 uppercase tracking-wide" data-bn="পছন্দের জার্সি খুঁজুন">Find your next jersey</h2>
+      <button id="searchCloseBtn" aria-label="Close search" data-bn-aria-label="সার্চ বন্ধ করুন" class="p-1.5 text-slate-500/80 hover:text-slate-800">
+        <svg class="w-5 h-5" aria-hidden="true"><use href="#icon-x"></use></svg>
+      </button>
+    </div>
+    <label for="searchInput" class="sr-only" data-bn="প্রোডাক্ট সার্চ করুন">Search the catalog</label>
+    <div class="relative">
+      <svg class="w-4 h-4 text-slate-500/50 absolute left-4 top-1/2 -translate-y-1/2" aria-hidden="true"><use href="#icon-search"></use></svg>
+      <input id="searchInput" type="text" placeholder="Search the catalog" data-bn-placeholder="প্রোডাক্ট সার্চ করুন" class="w-full bg-sand-100 border border-sand-200 rounded-full pl-11 pr-4 py-3 text-sm text-slate-800 placeholder:text-slate-500/50 focus:border-sage-400 outline-none" />
+    </div>
+    <p class="text-xs text-slate-500 mt-3" data-bn="মেসি, বার্সেলোনা, আর্জেন্টিনা বা রিয়াল মাদ্রিদ লিখে সার্চ করে দেখুন।">Try searches like Messi, Barcelona, Argentina, or Real Madrid.</p>
+  </div>
+</div>
+
+<script src="/static/nav.js"></script>
+<script src="/static/guest_order_form.js?v=20261123"></script>
 
 </body>
 </html>
+

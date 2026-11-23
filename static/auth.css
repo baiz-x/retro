@@ -1,5 +1,5 @@
 /* =====================================================================
-   auth.css — shared layout for login.html / signup.html
+   auth.css — shared layout for login / signup / reset_password
    Imports index.css for design tokens (--sage-*, --sand-*, --cream-*,
    --clay, fonts) — this file only adds the auth-page-specific layout
    and form elements on top, same pattern as product.css.
@@ -19,7 +19,7 @@
   background: var(--cream-50);
   border: 1px solid var(--sand-200);
   border-radius: 1.75rem;
-  padding: 2.25rem 2rem;
+  padding: 2.5rem 2rem 2.25rem;
   box-shadow: 0 20px 40px -20px rgba(23, 29, 25, 0.15);
 }
 
@@ -29,23 +29,23 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--slate-500);
-  margin-bottom: 0.4rem;
+  color: var(--slate-700);
+  margin-bottom: 0.5rem;
 }
 
 .auth-label-hint {
   font-weight: 500;
   text-transform: none;
   letter-spacing: normal;
-  color: rgba(91, 101, 94, 0.6);
+  color: var(--slate-500);
 }
 
 .auth-input {
   width: 100%;
   background: var(--cream-50);
-  border: 1.5px solid var(--sand-200);
+  border: 1.5px solid var(--slate-300);
   border-radius: 0.75rem;
-  padding: 0.7rem 0.9rem;
+  padding: 0.75rem 0.95rem;
   font-size: 0.9rem;
   font-family: var(--font-body);
   color: var(--slate-800);
@@ -53,9 +53,10 @@
 }
 .auth-input:focus {
   outline: none;
-  border-color: var(--sage-400);
+  border-color: var(--sage-600);
+  box-shadow: 0 0 0 3px rgba(101, 125, 105, 0.25);
 }
-.auth-input::placeholder { color: rgba(91, 101, 94, 0.45); }
+.auth-input::placeholder { color: var(--slate-500); opacity: 0.9; }
 
 .auth-input-icon-btn {
   position: absolute;
@@ -73,7 +74,7 @@
 .auth-error {
   background: rgba(181, 87, 58, 0.1);
   border: 1px solid rgba(181, 87, 58, 0.25);
-  color: var(--clay);
+  color: #7a2f1a; /* darker clay (same shade orders.css uses for failed status) — AA contrast on the tint */
   font-size: 0.8125rem;
   font-weight: 600;
   padding: 0.7rem 0.95rem;
@@ -105,3 +106,64 @@
   transition: max-height 0.3s ease;
 }
 .auth-optional-fields.open { max-height: 160px; }
+
+/* Primary action button — same pill shape as the site's sage CTAs, one shade
+   darker (sage-600) so the cream label passes WCAG AA (5.7:1; sage-400 gives 3.2:1).
+   This replaces the old `pdp-add-btn` class, which lives in product.css and
+   was never loaded on the auth pages. */
+.auth-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: var(--sage-600);
+  color: var(--cream-50);
+  border: none;
+  border-radius: 9999px;
+  padding: 0.8rem 1.5rem;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease, opacity 0.15s ease;
+}
+.auth-btn:hover { background: var(--sage-700); }
+.auth-btn:focus-visible { outline: 3px solid var(--sage-300); outline-offset: 2px; }
+.auth-btn:disabled { opacity: 0.6; cursor: default; }
+
+/* ---- Spacing + readability pass (signup / login / reset) ---- */
+.auth-stack > * + * { margin-top: 1.25rem; }
+.auth-stack > .auth-btn,
+.auth-stack > .flex { margin-top: 1.75rem; }
+.auth-stack > .flex { gap: 0.75rem; }
+
+.auth-card h1 { margin-bottom: 0.5rem; line-height: 1.15; }
+.auth-card h1 + p { margin-bottom: 1.75rem; line-height: 1.5; color: var(--slate-500); }
+
+.auth-step-dots { display: flex; align-items: center; justify-content: center; gap: 0.625rem; margin: 0 0 0.75rem; }
+#stepLabel { margin-bottom: 2rem; color: var(--slate-500); }
+#loginLink { margin-top: 2rem; color: var(--slate-500); }
+.auth-card .text-slate-500 { color: var(--slate-500); }
+.auth-card > .flex.justify-end { margin-bottom: 1.25rem; } /* language switch row above the logo */
+
+/* Secondary pill buttons on signup (Back, Resend code) — they reused the old accordion-toggle
+   style (sand rectangle), which didn't match the pill primary button next to them. */
+#step2BackBtn, #resendCodeBtn {
+  border: 1.5px solid var(--slate-300);
+  border-radius: 9999px;
+  background: transparent;
+  padding: 0.8rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  color: var(--slate-700);
+}
+#step2BackBtn:hover, #resendCodeBtn:hover { background: var(--sand-100); border-color: var(--slate-500); }
+#step2BackBtn { width: auto; flex: 0 0 auto; }
+#step2BackBtn + .auth-btn { flex: 1 1 auto; }
+#resendCodeBtn:disabled { cursor: default; color: var(--slate-500); background: var(--sand-50); }
+

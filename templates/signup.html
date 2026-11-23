@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Create Account — Kit Collective</title>
+<title data-bn="অ্যাকাউন্ট খুলুন — RetroFit BD">Create Account — RetroFit BD</title>
 <meta name="robots" content="noindex, nofollow" />
 
 <!-- Fonts -->
@@ -11,8 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-<!-- Icons -->
-<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<!-- Icons: inline SVG sprite (partials/_icon_sprite.html, included in <body>) — no CDN script -->
 
 <meta name="csrf-token" content="{{ csrf_token() }}" />
 
@@ -23,77 +22,81 @@
 
 <body class="bg-cream-50 text-slate-800 antialiased">
 
+{% include "partials/_icon_sprite.html" %}
+
 <div class="auth-page">
   <div class="auth-card">
 
-    <a href="/" class="flex items-center gap-2 justify-center mb-6" aria-label="Kit Collective home">
-      <svg width="30" height="30" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M17 1L31 8.5V19.5C31 26.4 24.9 31.6 17 33C9.1 31.6 3 26.4 3 19.5V8.5L17 1Z" stroke="#657d69" stroke-width="1.7"/>
-        <path d="M17 7L25 11.2V18.2C25 22.4 21.5 25.6 17 26.5C12.5 25.6 9 22.4 9 18.2V11.2L17 7Z" fill="#a7bda2"/>
-        <path d="M17 12L14 17H16.3L14.7 22L21 15.5H18.2L20 12H17Z" fill="#2C3531"/>
-      </svg>
-      <span class="font-display text-xl tracking-wider text-sage-950">KIT COLLECTIVE</span>
+    <div class="flex justify-end mb-3">
+      <button type="button" data-lang-toggle aria-pressed="false" aria-label="Switch language" data-bn-aria-label="ভাষা পাল্টান" class="lang-switch">
+        <span class="lang-opt-en">English</span><span class="lang-opt-bn">বাংলা</span>
+      </button>
+    </div>
+
+    <a href="/" class="flex items-center gap-2 justify-center mb-6" aria-label="RetroFit BD home">
+      <img src="/static/img/retrofit-bd-logo.webp" alt="RetroFit BD logo" width="28" height="28" class="shrink-0 object-contain" />
+      <span class="font-display text-xl tracking-wider text-sage-950 whitespace-nowrap">RETROFIT BD</span>
     </a>
 
-    <h1 class="font-display text-3xl text-slate-800 uppercase tracking-wide text-center mb-1.5">Create account</h1>
-    <p class="text-sm text-slate-500/70 text-center mb-5">Save your cart, track orders, checkout faster.</p>
+    <h1 data-bn="অ্যাকাউন্ট খুলুন" class="font-display text-3xl text-slate-800 uppercase tracking-wide text-center mb-1.5">Create account</h1>
+    <p data-bn="কার্ট সেভ করুন, অর্ডার ট্র্যাক করুন, দ্রুত চেকআউট করুন।" class="text-sm text-slate-500 text-center mb-5">Save your cart, track orders, checkout faster.</p>
 
     <!-- Progress indicator: 3 dots + "Step X of 3" label. Built from
          existing sage/sand tokens only — no new color classes. -->
-    <div class="flex items-center justify-center gap-2 mb-2" aria-hidden="true">
+    <div class="auth-step-dots" aria-hidden="true">
       <span class="auth-step-dot" data-step-dot="1"></span>
       <span class="auth-step-dot" data-step-dot="2"></span>
       <span class="auth-step-dot" data-step-dot="3"></span>
     </div>
-    <p id="stepLabel" class="text-center text-[11px] font-bold uppercase tracking-widest text-slate-500/70 mb-6">Step 1 of 3</p>
+    <p id="stepLabel" class="text-center text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-6">Step 1 of 3</p>
 
     <div id="formError" class="auth-error hidden" role="alert"></div>
 
     <!-- ============ STEP 1: Account ============ -->
-    <form id="step1Form" class="space-y-4" novalidate data-step="1">
+    <form id="step1Form" class="auth-stack" novalidate data-step="1">
       <label class="block">
-        <span class="auth-label">Name</span>
+        <span data-bn="নাম" class="auth-label">Name</span>
         <input id="name" name="name" type="text" class="auth-input" autocomplete="name" required />
       </label>
 
       <label class="block">
-        <span class="auth-label">Email</span>
+        <span data-bn="ইমেইল" class="auth-label">Email</span>
         <input id="email" name="email" type="email" class="auth-input" autocomplete="email" required />
       </label>
 
       <label class="block">
-        <span class="auth-label">Password <span class="auth-label-hint">(min. 8 characters)</span></span>
+        <span data-bn="পাসওয়ার্ড" class="auth-label">Password <span data-bn="(কমপক্ষে 8 অক্ষর)" class="auth-label-hint">(min. 8 characters)</span></span>
         <div class="relative">
           <input id="password" name="password" type="password" class="auth-input pr-11" autocomplete="new-password" required minlength="8" />
-          <button type="button" id="togglePassword" aria-label="Show password" class="auth-input-icon-btn">
-            <i data-lucide="eye" class="w-4 h-4"></i>
+          <button data-bn-aria-label="পাসওয়ার্ড দেখান" type="button" id="togglePassword" aria-label="Show password" class="auth-input-icon-btn">
+            <svg class="w-4 h-4" aria-hidden="true"><use href="#icon-eye"></use></svg>
           </button>
         </div>
       </label>
 
-      <button type="submit" class="pdp-add-btn w-full mt-2">
-        <span>Next</span>
+      <button type="submit" class="auth-btn w-full mt-2">
+        <span data-bn="পরের ধাপ">Next</span>
       </button>
     </form>
 
     <!-- ============ STEP 2: Phone / Address / Social ============ -->
-    <form id="step2Form" class="space-y-4 hidden" novalidate data-step="2">
+    <form id="step2Form" class="auth-stack hidden" novalidate data-step="2">
       <label class="block">
-        <span class="auth-label">Phone Number</span>
+        <span data-bn="ফোন নম্বর" class="auth-label">Phone Number</span>
         <input id="phone_number" name="phone_number" type="tel" class="auth-input" placeholder="01XXXXXXXXX" autocomplete="tel" required />
       </label>
 
       <label class="block">
-        <span class="auth-label">Address</span>
-        <textarea id="address" name="address" rows="3" class="auth-input resize-none" placeholder="House, Road, Area, City" required></textarea>
+        <span data-bn="ঠিকানা" class="auth-label">Address</span>
+        <textarea data-bn-placeholder="বাসা, রোড, এলাকা, শহর" id="address" name="address" rows="3" class="auth-input resize-none" placeholder="House, Road, Area, City" required></textarea>
       </label>
 
       <!-- Social contact (required): platform + handle, always visible. -->
       <div class="grid grid-cols-2 gap-3">
         <label class="block">
-          <span class="auth-label">Platform</span>
+          <span data-bn="প্ল্যাটফর্ম" class="auth-label">Platform</span>
           <select id="social_platform" name="social_platform" class="auth-input" required>
-            <option value="" disabled selected>Select</option>
+            <option data-bn="বেছে নিন" value="" disabled selected>Select</option>
             <option value="WhatsApp">WhatsApp</option>
             <option value="Instagram">Instagram</option>
             <option value="Facebook">Facebook</option>
@@ -101,41 +104,41 @@
           </select>
         </label>
         <label class="block">
-          <span class="auth-label">Handle</span>
+          <span data-bn="হ্যান্ডেল" class="auth-label">Handle</span>
           <input id="social_handle" name="social_handle" type="text" class="auth-input" placeholder="@yourhandle" autocomplete="off" maxlength="100" required />
         </label>
       </div>
 
       <div class="flex gap-3 mt-2">
-        <button type="button" id="step2BackBtn" class="auth-optional-toggle justify-center flex-1">Back</button>
-        <button type="submit" id="submitBtn" class="pdp-add-btn flex-1">
-          <span id="submitLabel">Create Account</span>
+        <button data-bn="পিছনে" type="button" id="step2BackBtn" class="auth-optional-toggle justify-center flex-1">Back</button>
+        <button type="submit" id="submitBtn" class="auth-btn flex-1">
+          <span data-bn="অ্যাকাউন্ট খুলুন" id="submitLabel">Create Account</span>
         </button>
       </div>
     </form>
 
-    <p id="loginLink" class="text-center text-sm text-slate-500/70 mt-6">
-      Already have an account? <a href="/login" class="text-sage-600 font-semibold hover:text-sage-700">Log in</a>
+    <p data-bn="আগেই অ্যাকাউন্ট আছে?" id="loginLink" class="text-center text-sm text-slate-500 mt-6">
+      Already have an account? <a data-bn="লগইন করুন" href="/login" class="text-sage-600 font-semibold hover:text-sage-700">Log in</a>
     </p>
 
     <!-- ============ STEP 3: Verify email ============ -->
     <!-- Hidden until step2Form succeeds, then swapped in inline (no
          page navigation) via signup.js. -->
-    <form id="verifyForm" class="space-y-4 hidden" novalidate data-step="3">
-      <p class="text-sm text-slate-500/70 text-center mb-2">
+    <form id="verifyForm" class="auth-stack hidden" novalidate data-step="3">
+      <p data-bn="আমরা এই ঠিকানায় 6 ডিজিটের কোড পাঠিয়েছি:" class="text-sm text-slate-500 text-center mb-2">
         We've sent a 6-digit code to <strong id="verifyEmailDisplay"></strong>.
       </p>
 
       <label class="block">
-        <span class="auth-label">Verification Code</span>
+        <span data-bn="ভেরিফিকেশন কোড" class="auth-label">Verification Code</span>
         <input id="verification_code" name="verification_code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" class="auth-input" autocomplete="one-time-code" required />
       </label>
 
-      <button type="submit" id="verifySubmitBtn" class="pdp-add-btn w-full mt-2">
-        <span id="verifySubmitLabel">Verify Email</span>
+      <button type="submit" id="verifySubmitBtn" class="auth-btn w-full mt-2">
+        <span data-bn="ইমেইল ভেরিফাই করুন" id="verifySubmitLabel">Verify Email</span>
       </button>
 
-      <button type="button" id="resendCodeBtn" class="auth-optional-toggle w-full justify-center">
+      <button data-bn="আবার কোড পাঠান" type="button" id="resendCodeBtn" class="auth-optional-toggle w-full justify-center">
         Resend code
       </button>
     </form>
@@ -149,11 +152,11 @@
     width: 8px;
     height: 8px;
     border-radius: 9999px;
-    background: var(--sand-200);
+    background: var(--slate-300);
     transition: background-color 0.2s ease, transform 0.2s ease;
   }
   .auth-step-dot.active {
-    background: var(--sage-400);
+    background: var(--sage-600);
     transform: scale(1.25);
   }
   .auth-step-dot.complete {
@@ -161,9 +164,11 @@
   }
 </style>
 
+<script src="/static/i18n.js"></script>
 <script src="/static/auth.js"></script>
 <script src="/static/signup.js"></script>
 </body>
 </html>
+
 
 

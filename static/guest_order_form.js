@@ -62,6 +62,18 @@
   renderChannel(channelInput.value || 'whatsapp');
   document.addEventListener('rf:langchange', function () { renderChannel(channelInput.value); });
 
+  // Native "required" bubbles use the browser's UI language; show Bangla when the Bangla switch is on.
+  Array.prototype.forEach.call(form.elements, function (el) {
+    if (!el.addEventListener || el.tagName === 'BUTTON' || el.type === 'hidden') return;
+    el.addEventListener('invalid', function () {
+      el.setCustomValidity(el.validity.valueMissing
+        ? rfT('', el.tagName === 'SELECT' ? 'একটা অপশন বেছে নিন।' : 'এই ঘরটা পূরণ করুন।')
+        : '');
+    });
+    el.addEventListener('input', function () { el.setCustomValidity(''); });
+    el.addEventListener('change', function () { el.setCustomValidity(''); });
+  });
+
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     errorEl.classList.add('hidden');
@@ -112,4 +124,5 @@
       });
   });
 })();
+
 
